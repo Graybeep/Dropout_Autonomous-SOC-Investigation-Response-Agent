@@ -31,7 +31,7 @@ Then show the guardrails are checkable, not just claimed:
 
 ```bash
 python compliance.py     # 12 structural checks
-python selfcheck.py      # 62 behavioural checks
+python selfcheck.py      # 65 behavioural checks
 ```
 
 > "No outcome branches on scenario identity. No code branches on the alert's

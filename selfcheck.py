@@ -106,6 +106,32 @@ def offline_selfcheck() -> int:
     check("audit log records both actions",
           len(sandbox.read_json(config.FIREWALL_STATE)["audit_log"]) == 2)
 
+    # -- seed immutability (section 5.2) ---------------------------------
+    section("fixture immutability")
+    import hashlib
+    seed_before = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+                   for p in sorted(config.SEED_DIR.glob("*.json"))}
+    tools.block_ip(ctx, "203.0.113.99", "immutability probe")
+    tools.get_server_logs(ctx, "SRV-DB-02")
+    control.inject_new_evidence(
+        "CASE-X", {"asset_id": "SRV-DB-02",
+                   "entries": [{"ts": "2026-09-11T09:00:00Z", "source": "t",
+                                "event_type": "t", "raw": "probe"}]})
+    seed_after = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+                  for p in sorted(config.SEED_DIR.glob("*.json"))}
+    check("writes never touch fixtures/seed", seed_before == seed_after)
+    check("the same writes DID change fixtures/run",
+          hashlib.sha256((config.RUN_DIR / config.FIREWALL_STATE).read_bytes())
+          .hexdigest()
+          != hashlib.sha256((config.SEED_DIR / config.FIREWALL_STATE).read_bytes())
+          .hexdigest())
+    control.reset_sandbox()
+    check("reset_sandbox restores run to match seed",
+          hashlib.sha256((config.RUN_DIR / config.FIREWALL_STATE).read_bytes())
+          .hexdigest()
+          == hashlib.sha256((config.SEED_DIR / config.FIREWALL_STATE).read_bytes())
+          .hexdigest())
+
     # -- fault injection -------------------------------------------------
     section("fault injection (Scenario 6)")
     tr = trace_mod.Trace(case_id="CASE-SELFCHECK", scenario="selfcheck")

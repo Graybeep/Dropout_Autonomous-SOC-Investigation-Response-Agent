@@ -20,7 +20,7 @@ new evidence, a tool failure, or a human override arrives.
 
 ```bash
 cp .env.example .env          # then put your key in SOC_API_KEY
-python selfcheck.py           # 62 behavioural checks, no API key needed
+python selfcheck.py           # 65 behavioural checks, no API key needed
 python compliance.py          # 12 guardrail checks, no API key needed
 python run_all.py             # run all six scenarios against the model
 python -m http.server 8000    # then open http://localhost:8000/viewer.html
@@ -161,7 +161,7 @@ traces/           saved traces — these feed the viewer
 reports/          generated per-case markdown reports
 viewer.html       single-file trace replay UI
 run_all.py        evaluation harness
-selfcheck.py      62 behavioural checks, no API key required
+selfcheck.py      65 behavioural checks, no API key required
 compliance.py     12 guardrail checks, no API key required
 rebuild_reports.py  regenerate reports from saved traces, no model run
 DEMO.md           presenter's walkthrough
@@ -193,7 +193,7 @@ CVE KB carrying no per-host patch status, control-plane tools absent from the
 agent's toolset, only `sandbox.py` touching `fixtures/seed`, and the §7.2
 constants matching the spec exactly.
 
-`python selfcheck.py` runs 62 behavioural checks with no API key: sandbox reset, every tool's
+`python selfcheck.py` runs 65 behavioural checks with no API key: sandbox reset, every tool's
 success and miss paths, the block→verify round trip against the real file,
 fault injection persistence across retries, every scoring boundary, the action
 policy matrix, schema/implementation agreement, guardrail 6 enforcement, and
