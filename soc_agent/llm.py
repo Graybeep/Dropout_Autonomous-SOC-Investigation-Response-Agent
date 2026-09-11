@@ -15,6 +15,7 @@ else. See Toknow/DECISIONS.md D-002.
 from __future__ import annotations
 
 import json
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
@@ -119,18 +120,62 @@ def _to_anthropic(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
 # --------------------------------------------------------------------------
 # Transport
 # --------------------------------------------------------------------------
+_last_call: float = 0.0
+
+
+def _pace() -> None:
+    """Keep a minimum gap between requests.
+
+    The free tier enforces a per-minute request limit, and an agent loop is
+    bursty by nature - a six-scenario run fires dozens of calls back to back.
+    Spacing them is cheaper than absorbing 429s.
+    """
+    global _last_call
+    if config.MIN_INTERVAL <= 0:
+        return
+    gap = time.monotonic() - _last_call
+    if gap < config.MIN_INTERVAL:
+        time.sleep(config.MIN_INTERVAL - gap)
+    _last_call = time.monotonic()
+
+
 def _post(url: str, headers: dict[str, str], body: dict[str, Any],
           timeout: int = 120) -> dict[str, Any]:
+    """POST with backoff on rate limits and transient server errors.
+
+    Retries 429 and 5xx; never retries a 4xx that reflects a bad request, since
+    replaying it would just fail identically.
+    """
     data = json.dumps(body).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", "replace")[:1200]
-        raise LLMError(f"HTTP {exc.code} from {url}: {detail}") from exc
-    except urllib.error.URLError as exc:
-        raise LLMError(f"Could not reach {url}: {exc.reason}") from exc
+    last: Exception | None = None
+
+    for attempt in range(config.RETRY_MAX + 1):
+        _pace()
+        req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", "replace")[:1200]
+            last = LLMError(f"HTTP {exc.code} from {url}: {detail}")
+            if exc.code not in (408, 429, 500, 502, 503, 504):
+                raise last from exc
+            if attempt == config.RETRY_MAX:
+                break
+            # Honour Retry-After when the gateway sends one.
+            try:
+                wait = float(exc.headers.get("Retry-After", "") or 0)
+            except (TypeError, ValueError):
+                wait = 0.0
+            wait = wait or config.RETRY_BASE * (2 ** attempt)
+            time.sleep(min(wait, 90.0))
+        except urllib.error.URLError as exc:
+            last = LLMError(f"Could not reach {url}: {exc.reason}")
+            if attempt == config.RETRY_MAX:
+                break
+            time.sleep(config.RETRY_BASE * (2 ** attempt))
+
+    raise last or LLMError(f"Request to {url} failed with no diagnostic.")
 
 
 def _parse_openai(payload: dict[str, Any]) -> LLMResponse:

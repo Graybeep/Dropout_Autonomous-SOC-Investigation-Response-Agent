@@ -166,8 +166,15 @@ function outcomePill(o){
 
 function argsOf(a){
   if (!a) return "";
-  return Object.entries(a).filter(([k]) => k !== "reason")
-    .map(([k,v]) => `${k}=${JSON.stringify(v)}`).join(", ");
+  // submit_assessment's full payload is rendered properly by the scoring and
+  // conclusion steps; inline it would drown the timeline.
+  return Object.entries(a).filter(([k]) => k !== "reason").map(([k,v]) => {
+    if (k === "factors" && Array.isArray(v))
+      return `factors=[${v.map(f => f && f.factor).join(", ")}]`;
+    let t = JSON.stringify(v);
+    if (t && t.length > 80) t = t.slice(0, 79) + '…"';
+    return `${k}=${t}`;
+  }).join(", ");
 }
 
 function render(s){
@@ -191,7 +198,8 @@ function render(s){
 
   if (k === "tool_result"){
     const st = s.status || "ok";
-    const p = st === "ok" ? "ok" : st === "no_data" ? "warn" : "dim";
+    const p = st === "ok" ? "ok" : st === "no_data" ? "warn"
+            : st === "rejected" ? "bad" : "dim";
     return `<div class="lbl">Result ${pill(st, p)}${tag}</div>
       <details><summary>inspect payload</summary>
       <pre>${esc(JSON.stringify(s.result, null, 2))}</pre></details>`;

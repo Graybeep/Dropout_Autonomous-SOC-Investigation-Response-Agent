@@ -55,5 +55,12 @@ API_STYLE = os.environ.get("SOC_API_STYLE", "openai")  # "openai" | "anthropic"
 MAX_TOKENS = int(os.environ.get("SOC_MAX_TOKENS", "4096"))
 TEMPERATURE = float(os.environ.get("SOC_TEMPERATURE", "0"))
 
+# Rate-limit handling. The free tier enforces a per-minute request cap and an
+# agent loop is bursty, so requests are paced and 429/5xx are retried with
+# exponential backoff.
+MIN_INTERVAL = float(os.environ.get("SOC_MIN_INTERVAL", "3.0"))
+RETRY_MAX = int(os.environ.get("SOC_RETRY_MAX", "5"))
+RETRY_BASE = float(os.environ.get("SOC_RETRY_BASE", "15.0"))
+
 # Hard ceiling on agent loop turns, so a confused model cannot spin forever.
 MAX_TURNS_PER_PHASE = int(os.environ.get("SOC_MAX_TURNS", "14"))

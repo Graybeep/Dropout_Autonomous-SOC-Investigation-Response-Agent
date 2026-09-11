@@ -216,3 +216,96 @@ substantive `reason` field.
 
 **Selected `ling-3.0-flash-fin-free`.** Recorded here because the operator asked
 for Qwen and did not get it — through no choice of the build.
+
+### P-005 — A duplicate `required` entry made every action-phase call fail
+**Severity:** blocked the ACT phase of every scenario
+**Symptom:** `HTTP 400 … The model rejected this request … or a parameter is invalid`
+
+Decision D-003 adds `reason` to every evidence tool's schema. But `block_ip` and
+`unblock_ip` **already declared** a `reason` property — there it is a genuine
+implementation parameter (the justification persisted into firewall state), not
+trace narration. The injector appended `"reason"` to `required` a second time,
+producing `required: ["ip", "reason", "reason"]`. A duplicate entry in a JSON
+Schema `required` array is invalid, and the gateway rejected the whole request.
+
+**Why it was hard to see:** the gather phase worked perfectly — the 400 only
+appeared once the agent reached ACT, whose tools were never in the set being
+probed. The generic gateway error message named no field. Bisecting parameters
+one at a time (temperature, max_tokens, message shapes, then each tool schema
+individually) localised it to `block_ip` and `unblock_ip` alone.
+
+**Second bug found in the same place:** the tool bus stripped `reason` from the
+arguments before dispatch. For `block_ip`/`unblock_ip` that would have removed a
+*required function argument*, so even with a valid schema the call would have
+raised `TypeError`.
+
+**Fix, both halves:**
+- The schema injector now skips any tool that already declares `reason`.
+- The bus inspects the implementation's signature and only strips `reason` when
+  the function does not accept it.
+
+Regression guards added: a check that no schema has duplicate `required`
+entries, and a dispatch check that `block_ip` actually receives and persists its
+justification.
+
+### P-006 — The agent claimed corroboration from an empty lookup
+**Severity:** would have flipped outcomes on other scenarios
+**Found:** by reading the first successful Scenario 1 report, not by a test
+
+Scenario 1 passed its assertions, but the report showed the agent had declared
+`related_alert_corroborates` (**+0.15**) while citing
+*"get_related_alerts: no_data — no other alerts recorded against SRV-WEB-01."*
+
+The citation contradicts the factor. Absence of related alerts is not
+corroboration. The raw sum came out `+0.00` instead of `−0.15`; Scenario 1
+survived only because the clamp floor pulled it to 0.05 anyway. On a scenario
+sitting near a threshold, that spurious +0.15 would have changed the verdict.
+
+**Fix — factor preconditions.** A factor may only be declared if the source that
+could establish it returned `status: "ok"`. Explicitly, `no_data` and
+`unavailable` do **not** count as successful reads. This is guardrail 3 (never
+fabricate evidence) enforced structurally.
+
+Care was taken to keep this on the right side of D-001: the check does **not**
+judge what the evidence *means* — that remains the agent's call. It only refuses
+a finding drawn from a source the agent never successfully read.
+
+The schema description was also tightened to say that a factor asserts the
+finding *is true*, and that an empty or failed lookup establishes nothing.
+
+**It worked on the very next run, visibly:** the agent's first
+`submit_assessment` was **rejected** with an explanation, and it resubmitted
+without the bogus factor, landing the correct `-0.15`. That rejection and
+recovery is now part of the Scenario 1 trace — an unplanned but genuine
+demonstration of the agent adapting to a tool refusing its input.
+
+### P-007 — Free-tier per-minute rate limit killed scenarios 3–6
+**Severity:** blocked four of six scenarios
+
+With 1 and 2 passing (13/13 checks), scenarios 3–6 all failed with
+`HTTP 429 … Per-minute request limit reached for your plan`.
+
+An agent loop is inherently bursty: each scenario fires roughly 8–14 requests
+back to back, and scenarios 3–5 run the loop *twice* because of reconsideration.
+
+**Fix:** proper transport-layer rate-limit handling in `soc_agent/llm.py` —
+- request pacing with a minimum interval between calls (`SOC_MIN_INTERVAL`),
+- exponential backoff retry on 429/408/5xx, honouring `Retry-After` when sent,
+- and deliberately **no** retry on other 4xx, since replaying a malformed
+  request just fails identically.
+
+Worth noting this is genuine robustness rather than a workaround — an agent that
+cannot survive its own upstream rate limits is not a resilient agent.
+
+### P-008 — Minor: a hallucinated digit in one citation
+**Severity:** cosmetic, not corrected
+
+In the Scenario 2 report the agent wrote the exfil destination as
+`198.51.100.22`; the actual source IP is `198.51.100.23`. The **action** used the
+correct address (the block record and verification both show `.23`), so nothing
+downstream was affected — it is a slip in free-text citation only.
+
+Recorded rather than fixed: it is model output, not a code defect, and the
+citation text is deliberately the agent's own words. It is a fair illustration of
+why the scoring arithmetic is done in Python (D-001 / §7.2) rather than trusted
+to the model's prose.

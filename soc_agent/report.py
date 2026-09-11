@@ -12,11 +12,28 @@ from . import trace as trace_mod
 from .agent import Case
 
 
-def _fmt_args(args: dict[str, Any]) -> str:
+def _fmt_args(args: dict[str, Any], limit: int = 90) -> str:
+    """Compact one-line argument summary.
+
+    submit_assessment carries the full hypothesis, every citation and the
+    disconfirmation text; dumping it inline drowns the evidence chain, and all
+    of it is already rendered properly in section 3. So it is summarised to the
+    factor names it declared.
+    """
     shown = {k: v for k, v in args.items() if k != "reason"}
     if not shown:
         return ""
-    return ", ".join(f"{k}={v!r}" for k, v in shown.items())
+    parts = []
+    for k, v in shown.items():
+        if k == "factors" and isinstance(v, list):
+            names = [f.get("factor", "?") for f in v if isinstance(f, dict)]
+            parts.append(f"factors=[{', '.join(names)}]")
+            continue
+        text = repr(v)
+        if len(text) > limit:
+            text = text[: limit - 1] + "…'"
+        parts.append(f"{k}={text}")
+    return ", ".join(parts)
 
 
 def render(case: Case, tr: trace_mod.Trace, scenario_title: str = "") -> str:

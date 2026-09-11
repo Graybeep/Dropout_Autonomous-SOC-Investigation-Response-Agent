@@ -1,0 +1,64 @@
+{
+  "case_id": "CASE-6001",
+  "scenario": "6",
+  "steps": [
+    {
+      "seq": 1,
+      "t": 0.0,
+      "kind": "scenario_meta",
+      "case_id": "CASE-6",
+      "title": "Tool failure, degraded recovery",
+      "summary": "get_server_logs is configured to fail on SRV-DB-05, a critical asset. The agent must notice the failure rather than read it as 'no evidence of attack', retry, route to alternates, and let the gap cap its confidence - landing INCONCLUSIVE with a precautionary block instead of the SUCCEEDED the raw evidence would imply.",
+      "expectation": {
+        "outcome": "INCONCLUSIVE",
+        "action_fired": true,
+        "reconsideration_fired": false,
+        "notes": "Degraded clamp must be cited as the reason for the ceiling."
+      }
+    },
+    {
+      "seq": 2,
+      "t": 0.0,
+      "kind": "state_change",
+      "case_id": "CASE-6001",
+      "state": "INGEST_ALERT",
+      "note": "Case CASE-6001 opened for alert ALERT-6001."
+    },
+    {
+      "seq": 3,
+      "t": 0.001,
+      "kind": "state_change",
+      "case_id": "CASE-6001",
+      "state": "HYPOTHESIZE",
+      "note": "Agent forms a hypothesis and decides what to check."
+    },
+    {
+      "seq": 4,
+      "t": 0.001,
+      "kind": "state_change",
+      "case_id": "CASE-6001",
+      "state": "GATHER_EVIDENCE",
+      "note": "Agent chooses tools at runtime; order is not scripted."
+    },
+    {
+      "seq": 5,
+      "t": 0.624,
+      "kind": "error",
+      "case_id": "CASE-6001",
+      "stage": "llm",
+      "detail": "HTTP 429 from https://router.bynara.id/v1/chat/completions: {\"error\":{\"type\":\"rate_limited\",\"message\":\"Per-minute request limit reached for your plan. Try again shortly.\",\"request_id\":\"28c90090-9477-4bfe-92d4-ad38c0d5d1c9\"}}\n"
+    },
+    {
+      "seq": 6,
+      "t": 0.626,
+      "kind": "error",
+      "case_id": "CASE-6001",
+      "stage": "scenario",
+      "detail": "LLMError: HTTP 429 from https://router.bynara.id/v1/chat/completions: {\"error\":{\"type\":\"rate_limited\",\"message\":\"Per-minute request limit reached for your plan. Try again shortly.\",\"request_id\":\"28c90090-9477-4bfe-92d4-ad38c0d5d1c9\"}}\n",
+      "traceback": "Traceback (most recent call last):\n  File \"D:\\EXPERIMENTS\\Autonomous SOC Investigation & Response Agent\\soc_agent\\llm.py\", line 127, in _post\n    with urllib.request.urlopen(req, timeout=timeout) as resp:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\\Lib\\urllib\\request.py\", line 216, in urlopen\n    return opener.open(url, data, timeout)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\\Lib\\urllib\\request.py\", line 525, in open\n    response = meth(req, response)\n               ^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\\Lib\\urllib\\request.py\", line 634, in http_response\n    response = self.parent.error(\n               ^^^^^^^^^^^^^^^^^^\n  File \"C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\\Lib\\urllib\\request.py\", line 563, in error\n    return self._call_chain(*args)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\\Lib\\urllib\\request.py\", line 496, in _call_chain\n    result = func(*args)\n             ^^^^^^^^^^^\nurllib.error.HTTPError: HTTP Error 429: Too Many Requests\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"D:\\EXPERIMENTS\\Autonomous SOC Investigation & Response Agent\\run_all.py\", line 82, in run_one\n    result = scenario.run(tr)\n             ^^^^^^^^^^^^^^^^\n  File \"D:\\EXPERIMENTS\\Autonomous SOC Investigation & Response Agent\\scenarios\\definitions.py\", line 165, in run_s6\n    inv = agent.investigate(case, tr, fail_tools=[\"get_server_logs\"])\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\EXPERIMENTS\\Autonomous SOC Investigation & Response Agent\\soc_agent\\agent.py\", line 318, in investigate\n    assessment = inv.gather(opening or prompts.framing(case.alert_id, case.case_id))\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\EXPERIMENTS\\Autonomous SOC Investigation & Response Agent\\soc_agent\\agent.py\", line 186, in gather\n    self._loop(prompts.SYSTEM, messages, schemas.GATHER_TOOLS,\n  File \"D:\\EXPERIMENTS\\Autonomous SOC Investigation & Response Agent\\soc_agent\\agent.py\", line 144, in _loop\n    resp = llm.chat(system, messages, tool_names)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\EXPERIMENTS\\Autonomous SOC Investigation & Response Agent\\soc_agent\\llm.py\", line 208, in chat\n    return _parse_openai(_post(f\"{base}/chat/completions\", headers, body))\n                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nsoc_agent.llm.LLMError: HTTP 429 from https://router.bynara.id/v1/chat/completions: {\"error\":{\"type\":\"rate_limited\",\"message\":\"Per-minute request limit reached for your plan. Try again shortly.\",\"request_id\":\"28c90090-9477-4bfe-92d4-ad38c0d5d1c9\"}}\n\n"
+    }
+  ],
+  "title": "Tool failure, degraded recovery",
+  "summary": "get_server_logs is configured to fail on SRV-DB-05, a critical asset. The agent must notice the failure rather than read it as 'no evidence of attack', retry, route to alternates, and let the gap cap its confidence - landing INCONCLUSIVE with a precautionary block instead of the SUCCEEDED the raw evidence would imply.",
+  "error": "LLMError: HTTP 429 from https://router.bynara.id/v1/chat/completions: {\"error\":{\"type\":\"rate_limited\",\"message\":\"Per-minute request limit reached for your plan. Try again shortly.\",\"request_id\":\"28c90090-9477-4bfe-92d4-ad38c0d5d1c9\"}}\n"
+}
