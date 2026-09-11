@@ -20,12 +20,15 @@ new evidence, a tool failure, or a human override arrives.
 
 ```bash
 cp .env.example .env          # then put your key in SOC_API_KEY
-python selfcheck.py           # 55 offline checks, no API calls, no key needed
+python selfcheck.py           # 62 behavioural checks, no API key needed
+python compliance.py          # 12 guardrail checks, no API key needed
 python run_all.py             # run all six scenarios against the model
 python -m http.server 8000    # then open http://localhost:8000/viewer.html
 ```
 
 `run_all.py` accepts scenario numbers: `python run_all.py 3 6`.
+
+A presenter's walkthrough is in **[DEMO.md](DEMO.md)**.
 
 **The viewer must be served over HTTP**, not opened as a `file://` URL — browsers
 block `fetch` on local files, so the trace JSON will not load.
@@ -99,7 +102,7 @@ Starts at `S = 0.50` (no prior). Each factor applies at most once:
 | Evidence finding | Δ |
 |---|---|
 | Running version falls inside a CVE's affected range | +0.25 |
-| Server logs show activity consistent with the signature | +0.25 |
+| Server logs show the attack actually did something | +0.25 |
 | Packet metadata shows exfil / payload-anomaly indicators | +0.15 |
 | A related alert on the same asset corroborates | +0.15 |
 | Running version outside all affected ranges (patched) | −0.30 |
@@ -158,8 +161,11 @@ traces/           saved traces — these feed the viewer
 reports/          generated per-case markdown reports
 viewer.html       single-file trace replay UI
 run_all.py        evaluation harness
-selfcheck.py      55 offline checks, no API key required
-Toknow/           decision & problem log
+selfcheck.py      62 behavioural checks, no API key required
+compliance.py     12 guardrail checks, no API key required
+rebuild_reports.py  regenerate reports from saved traces, no model run
+DEMO.md           presenter's walkthrough
+Toknow/           decision & problem log — every decision and every problem hit
 ```
 
 ## Configuration
@@ -179,7 +185,15 @@ switch back.
 
 ## Verification
 
-`python selfcheck.py` runs 55 checks with no API key: sandbox reset, every tool's
+`python compliance.py` runs 12 structural checks with no API key. These make
+"the decision logic is not scripted" a *checkable* claim rather than an
+assertion: no outcome branches keyed on scenario identity, no code branching on
+the alert's severity label, outcome values produced only by `confidence.py`, the
+CVE KB carrying no per-host patch status, control-plane tools absent from the
+agent's toolset, only `sandbox.py` touching `fixtures/seed`, and the §7.2
+constants matching the spec exactly.
+
+`python selfcheck.py` runs 62 behavioural checks with no API key: sandbox reset, every tool's
 success and miss paths, the block→verify round trip against the real file,
 fault injection persistence across retries, every scoring boundary, the action
 policy matrix, schema/implementation agreement, guardrail 6 enforcement, and

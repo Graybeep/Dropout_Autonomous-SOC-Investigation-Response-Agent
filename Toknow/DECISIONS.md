@@ -309,3 +309,98 @@ Recorded rather than fixed: it is model output, not a code defect, and the
 citation text is deliberately the agent's own words. It is a fair illustration of
 why the scoring arithmetic is done in Python (D-001 / §7.2) rather than trusted
 to the model's prose.
+
+### P-009 — Scenario 4 reported `unblock_ip` as never called, although it ran
+**Severity:** false failure in the harness, incomplete report
+
+Scenario 4 came back 5/6: `expected tools called (missing: ['unblock_ip'])` —
+yet the case status was `OVERRIDDEN_BENIGN` and firewall verification passed
+with the IP unblocked. The action had plainly happened.
+
+**Cause:** `gather()` and `act_and_verify()` each copied their tool bus's call
+list onto the case, but the human-override short-circuit in `reconsider()` —
+which is the *only* path that calls `unblock_ip` — did not. The call executed
+and mutated firewall state; it just never got recorded against the case, so the
+report's tool list was incomplete too.
+
+**Fix:** one `_sync_tools()` helper on `Investigation`, called by every phase
+including the override branch. The duplicated inline loops are gone.
+
+**Worth noting:** the harness caught this precisely because it asserts on tool
+calls *and* on independently-verified firewall state. The two disagreed, and the
+disagreement was the bug.
+
+### P-010 — Scenarios 3 and 5 passed their assertions but not their intent
+**Severity:** the two headline demos were demonstrating nothing
+**Found:** by reading the traces, not from the pass/fail table
+
+Both scenarios went green. Both were hollow:
+
+- **Scenario 3** is supposed to run `INCONCLUSIVE` → (new evidence) →
+  `SUCCEEDED`. Its initial conclusion came out **`SUCCEEDED` at 0.90**, so the
+  before/after was `SUCCEEDED → SUCCEEDED`.
+- **Scenario 5** case A is supposed to start `INCONCLUSIVE`. It also started
+  `SUCCEEDED` at 0.90.
+
+The harness only asserts the *final* outcome, so neither failure surfaced.
+
+**Cause — a factor description that was too loose.** `logs_consistent` read
+*"server logs show activity consistent with the signature"*. At T0, SRV-APP-03's
+logs show a SQL injection that **errored out** (`ERROR 1064`, *"request
+rejected, 0 rows returned to caller"*), and SRV-WEB-04's show only **failed**
+logins (`Access denied`). Read literally, both *are* "consistent with a SQLi
+signature" — the attempt is right there in the log. The agent was not being
+careless; the factor's wording genuinely covered a failed attempt.
+
+**Fix — sharpen the semantics, not the numbers.** §14 forbids changing the
+confidence constants, and none were changed. Only description text:
+
+> `logs_consistent` — host logs show the attack **actually did something**: a
+> query that executed, rows returned, a process spawned, an account created. An
+> attempt that errored out, was blocked, or returned zero rows is **not** this.
+>
+> `logs_clean` — no successful attacker activity in the window, **including
+> where the attempt is visible but demonstrably failed**.
+
+Re-verified every scenario's arithmetic afterwards. Scenario 3 T0 now lands
+`INCONCLUSIVE` under either honest reading — `logs_clean` gives 0.40, declaring
+no log factor gives 0.65 — and the T1 flip to `SUCCEEDED` is unaffected.
+
+**Lesson:** a green assertion is not proof the scenario demonstrated what it
+exists to demonstrate. These two were only caught by reading the trace. Coarse
+assertions are still the right call (pinning a tool sequence would re-introduce
+scripted behaviour, §3 guardrail 2) — but they must be paired with actually
+reading the output.
+
+### P-011 — Case B recorded "no action taken" while a DROP rule was in force
+**Severity:** misleading report, no functional impact
+
+In Scenario 5 both cases share source IP `192.0.2.66`. Case A blocks it. Case B
+then concludes `SUCCEEDED` (0.95), policy calls for a block, the agent calls
+`block_ip` — and gets `already_blocked`, correctly making no change.
+
+But `act_and_verify()` only recorded an action when firewall state *transitioned*
+(`not before and after`). With no transition, case B's report said **"No action
+taken"** while the IP was demonstrably blocked and verified.
+
+**Fix:** when the policy called for a block and the IP is already blocked, record
+the action with `status: "already_in_effect"`, naming the case that placed the
+rule. No duplicate rule is written; the report now states that containment is in
+force rather than implying nothing happened.
+
+### P-012 — Model wandered through unrelated alert ids after reconsideration
+**Severity:** trace noise, contained by the turn cap
+
+Re-reading Scenario 3's post-reconsideration trace showed the agent calling
+`get_packet_metadata` on `ALERT-4001`, `ALERT-5001` and `ALERT-6001` — alerts
+belonging to entirely different scenarios. The run copy of `alerts.json`
+naturally holds every alert, so guessing ids "works".
+
+Not a correctness bug (`get_related_alerts` scopes properly by asset, and
+`MAX_TURNS_PER_PHASE` caps the wandering), but it clutters the trace, and trace
+legibility is explicitly what is being graded.
+
+**Fix:** the reconsideration framing now tells the agent to stay on its own case
+and its evidence-implicated hosts, and to use `get_related_alerts` rather than
+fishing through alert ids. Prompt-side, per §11's guidance that flaky behaviour
+is fixed prompt-side.

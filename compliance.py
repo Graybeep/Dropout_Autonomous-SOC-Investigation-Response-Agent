@@ -1,0 +1,134 @@
+#!/usr/bin/env python
+"""Guardrail compliance audit.
+
+Greps the codebase for the specific failure modes CLAUDE.md forbids, so that
+"the decision logic is not scripted" is a checkable claim rather than an
+assertion. Run with `python compliance.py`. No API key needed.
+
+These are structural checks on the source. They complement selfcheck.py (which
+tests behaviour) and run_all.py (which tests outcomes).
+"""
+from __future__ import annotations
+
+import json
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+PRODUCT = [ROOT / "soc_agent", ROOT / "scenarios", ROOT / "run_all.py"]
+
+results: list[tuple[bool, str, str]] = []
+
+
+def record(ok: bool, name: str, detail: str = "") -> None:
+    results.append((ok, name, detail))
+
+
+def py_files() -> list[Path]:
+    out: list[Path] = []
+    for p in PRODUCT:
+        out.extend(p.rglob("*.py") if p.is_dir() else [p])
+    return [f for f in out if "__pycache__" not in str(f)]
+
+
+def grep(pattern: str, files: list[Path]) -> list[str]:
+    rx = re.compile(pattern)
+    hits = []
+    for f in files:
+        for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+            if rx.search(line):
+                hits.append(f"{f.relative_to(ROOT)}:{i}: {line.strip()}")
+    return hits
+
+
+def main() -> int:
+    files = py_files()
+
+    # Section 13 - no mock outcome logic anywhere in the codebase.
+    hits = grep(r"if\s+scenario\s*==|scenario_?id\s*==|flipped_conclusion", files)
+    record(not hits, "13: no outcome branches keyed on scenario identity",
+           "; ".join(hits[:3]))
+
+    # Section 3 guardrail 2 - the decision path must not branch on the
+    # sensor's severity label. That label is the thing the agent is supposed
+    # to distrust.
+    hits = grep(r"severity(_label)?\s*==|\.severity\b", files)
+    record(not hits, "3.2: no code branches on the alert severity_label",
+           "; ".join(hits[:3]))
+
+    # Outcomes may only be PRODUCED by the deterministic scorer. Reading one
+    # back (to pick explanatory prose in a report, or to state an expectation
+    # in a scenario definition) is fine; assigning or returning one is not.
+    # scenarios/definitions.py is exempt: the outcome strings there are the
+    # harness's EXPECTATIONS (what each scenario should land on), which is what
+    # makes a failure detectable. They are never fed back into a conclusion.
+    assign = r"(?:outcome\s*=\s*|return\s+)[\"'](?:SUCCEEDED|FAILED|INCONCLUSIVE)[\"']"
+    exempt = ("confidence.py", "definitions.py")
+    hits = [h for h in grep(assign, files) if not any(e in h for e in exempt)]
+    record(not hits, "7.2: outcome values are produced only by confidence.py",
+           "; ".join(hits[:3]))
+
+    # Section 5.1 - the CVE KB must not pre-resolve patch status.
+    kb = (ROOT / "fixtures/seed/cve_kb.json").read_text(encoding="utf-8")
+    record("patched" not in kb.lower() and "is_vulnerable" not in kb.lower(),
+           "5.1: cve_kb.json carries no per-host patch status")
+    kb_data = json.loads(kb)
+    record(all("affected_versions" in c
+               for k, v in kb_data.items() if not k.startswith("_")
+               for c in v),
+           "5.1: every CVE entry exposes an affected_versions range")
+
+    # Section 8 - control-plane tools are never exposed as agent tools.
+    sys.path.insert(0, str(ROOT))
+    from soc_agent import schemas, tools
+    names = {t["name"] for t in schemas.ANTHROPIC_TOOLS}
+    control = {"inject_new_evidence", "inject_alert", "human_override",
+               "reset_sandbox", "related_case_event"}
+    record(not (names & control), "8: control-plane tools are not agent-facing",
+           str(names & control))
+    record(names == set(tools.IMPLEMENTATIONS),
+           "8: every schema has exactly one implementation")
+
+    # Every schema must be valid enough to send: no duplicate required entries.
+    dupes = [t["name"] for t in schemas.ANTHROPIC_TOOLS
+             if len(t["input_schema"].get("required", []))
+             != len(set(t["input_schema"].get("required", [])))]
+    record(not dupes, "8: no duplicate entries in any schema's `required`",
+           str(dupes))
+
+    # Section 5.2 - tools must read the run copy, never the committed seed.
+    hits = grep(r"SEED_DIR", [f for f in files if f.name not in ("sandbox.py", "config.py")])
+    record(not hits, "5.2: only sandbox.py touches fixtures/seed",
+           "; ".join(hits[:3]))
+
+    # Section 7.2 - the scoring constants must be exactly as specified.
+    from soc_agent import confidence
+    expected = {"version_in_range": 0.25, "logs_consistent": 0.25,
+                "exfil_indicators": 0.15, "related_alert_corroborates": 0.15,
+                "version_patched": -0.30, "logs_clean": -0.25,
+                "packet_benign": -0.10}
+    actual = {k: v[0] for k, v in confidence.FACTORS.items()}
+    record(actual == expected, "7.2: confidence factors match the spec exactly",
+           f"got {actual}" if actual != expected else "")
+    record(confidence.BASE == 0.50 and confidence.CLAMP == (0.05, 0.95)
+           and confidence.DEGRADED_CLAMP == (0.35, 0.65),
+           "7.2: base, clamp and degraded clamp match the spec")
+
+    # Section 4 - exactly six scenarios, no seventh.
+    from scenarios.definitions import SCENARIOS
+    record(len(SCENARIOS) == 6, "4: exactly six scenarios",
+           f"found {len(SCENARIOS)}")
+
+    failed = 0
+    for ok, name, detail in results:
+        if not ok:
+            failed += 1
+        print(f"  [{'PASS' if ok else 'FAIL'}] {name}"
+              + (f"\n         {detail}" if detail and not ok else ""))
+    print(f"\n{len(results) - failed}/{len(results)} guardrail checks passed.")
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

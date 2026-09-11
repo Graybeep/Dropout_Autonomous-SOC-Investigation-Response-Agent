@@ -304,6 +304,21 @@ class Investigation:
             self.case.actions.append(
                 {"action": "unblock_ip", "ip": self.case.src_ip, "at": _now(),
                  "verified": True})
+        elif expected_blocked and after["blocked"] and before["blocked"]:
+            # Another case on the same source IP already contained it. The
+            # policy outcome holds, so record it rather than reporting "no
+            # action taken" while a DROP rule is demonstrably in place.
+            self.case.actions.append(
+                {"action": "block_ip", "ip": self.case.src_ip,
+                 "precautionary": bool((after["record"] or {}).get("precautionary")),
+                 "reason": (after["record"] or {}).get("reason", ""),
+                 "at": (after["record"] or {}).get("blocked_at"),
+                 "verified": True, "status": "already_in_effect",
+                 "note": (
+                     "This case's policy called for a block and the IP was already "
+                     f"blocked under case "
+                     f"{(after['record'] or {}).get('case_id')}. No duplicate rule "
+                     "was written; containment is in force and was verified.")})
 
         self.case.persist()
 

@@ -141,9 +141,13 @@ def render(case: Case, tr: trace_mod.Trace, scenario_title: str = "") -> str:
     if case.actions:
         for a in case.actions:
             flag = " **[PRECAUTIONARY]**" if a.get("precautionary") else ""
+            if a.get("status") == "already_in_effect":
+                flag += " **[ALREADY IN EFFECT]**"
             A(f"- **`{a['action']}`** on `{a['ip']}` at {a.get('at')}{flag}")
             if a.get("reason"):
                 A(f"  - Justification: {a['reason']}")
+            if a.get("note"):
+                A(f"  - {a['note']}")
             if a.get("precautionary"):
                 A("  - This is containment under uncertainty, **not** a verdict "
                   "that the attack succeeded.")
@@ -196,10 +200,9 @@ def render(case: Case, tr: trace_mod.Trace, scenario_title: str = "") -> str:
             A(f"| Outcome | `{po}` | `{no}` |")
             A(f"| Confidence | {pc} | {nc} |")
             A("")
-            if r.get("note"):
-                A(f"*{r['note']}*")
-                A("")
-            A("*The prior conclusion is preserved above and is never overwritten.*")
+            A(f"*{r['note']}*" if r.get("note")
+              else "*The prior conclusion is preserved above and is never "
+                   "overwritten.*")
             A("")
     else:
         A("None. The case reached its conclusion in a single pass.")
