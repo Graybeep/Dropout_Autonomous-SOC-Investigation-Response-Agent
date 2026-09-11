@@ -75,8 +75,13 @@ established, and never a factor together with its opposite.
 
   version_in_range            running version IS inside a CVE's affected range
   version_patched             running version is outside ALL affected ranges
-  logs_consistent             host logs show activity matching the signature
-  logs_clean                  host logs are clean across the relevant window
+  logs_consistent             host logs show the attack ACTUALLY DID SOMETHING
+                              (a query that executed, rows returned, a process
+                              spawned). An attempt that errored out, was blocked,
+                              or returned zero rows is NOT this.
+  logs_clean                  no successful attacker activity in the window -
+                              including where the attempt is visible but
+                              demonstrably failed
   exfil_indicators            packet metadata shows exfil / payload anomaly
   packet_benign               packet metadata looks benign
   related_alert_corroborates  another alert on this asset corroborates
@@ -141,4 +146,9 @@ have the full toolset available.
 Re-hypothesise first, then gather, then submit a fresh assessment. Your new
 assessment replaces the old score, but the prior conclusion is preserved in the
 record either way.
+
+Stay on this case. Investigate this case's asset and any host, account or alert
+that the evidence in front of you actually implicates. Do not go fishing through
+unrelated alert ids - use get_related_alerts if you want to know what else
+touched an asset.
 """

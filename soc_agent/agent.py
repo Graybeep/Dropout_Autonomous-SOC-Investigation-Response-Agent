@@ -124,6 +124,19 @@ class Investigation:
         self.fail_tools = list(fail_tools or [])
         self.bus = self._new_bus()
 
+    def _sync_tools(self) -> None:
+        """Record this bus's calls against the case.
+
+        Called from every phase that uses a bus - including the override
+        short-circuit, which previously left its unblock_ip call unrecorded.
+        """
+        for name in self.bus.calls:
+            if name not in self.case.tools_called:
+                self.case.tools_called.append(name)
+        for src in self.bus.degraded_sources:
+            if src not in self.case.degraded_sources:
+                self.case.degraded_sources.append(src)
+
     def _new_bus(self) -> ToolBus:
         ctx = {"case_id": self.case.case_id, "alert_id": self.case.alert_id,
                "asset_id": self.case.asset_id, "scenario": self.case.scenario}
@@ -185,12 +198,7 @@ class Investigation:
         messages = [llm.user(opening)]
         self._loop(prompts.SYSTEM, messages, schemas.GATHER_TOOLS,
                    stop_on_assessment=True)
-        for name in self.bus.calls:
-            if name not in self.case.tools_called:
-                self.case.tools_called.append(name)
-        for src in self.bus.degraded_sources:
-            if src not in self.case.degraded_sources:
-                self.case.degraded_sources.append(src)
+        self._sync_tools()
         return self.bus.assessment
 
     # ------------------------------------------------------------------
@@ -266,9 +274,7 @@ class Investigation:
         self._loop(prompts.ACT_SYSTEM, [llm.user(opening)], schemas.ACT_TOOLS,
                    stop_on_assessment=False, max_turns=6)
 
-        for name in self.bus.calls:
-            if name not in self.case.tools_called:
-                self.case.tools_called.append(name)
+        self._sync_tools()
 
         # VERIFY - independent re-read from disk, regardless of what the agent did.
         self.trace.state("VERIFY", "Re-reading firewall state from disk.")
@@ -369,6 +375,7 @@ def reconsider(inv: Investigation, event: dict[str, Any]) -> Conclusion | None:
             "resulting_status": case.status,
             "firewall_result": result,
         }
+        inv._sync_tools()
         case.overrides.append(override_record)
         case.reconsiderations.append(
             {"trigger": "HUMAN_OVERRIDE", "detail": event.get("detail", ""),

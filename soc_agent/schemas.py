@@ -197,7 +197,29 @@ ANTHROPIC_TOOLS: list[dict[str, Any]] = [
                     "items": {
                         "type": "object",
                         "properties": {
-                            "factor": {"type": "string", "enum": FACTOR_ENUM},
+                            "factor": {
+                                "type": "string", "enum": FACTOR_ENUM,
+                                "description": (
+                                    "version_in_range: the running version IS "
+                                    "inside a CVE's affected range. "
+                                    "version_patched: it is outside ALL affected "
+                                    "ranges. "
+                                    "logs_consistent: host logs show the attack "
+                                    "ACTUALLY DID SOMETHING - a malicious query "
+                                    "that executed, rows returned, a process "
+                                    "spawned, an account created. An attempt that "
+                                    "errored out, was blocked, or returned zero "
+                                    "rows is NOT logs_consistent. "
+                                    "logs_clean: logs show no successful attacker "
+                                    "activity in the window - including the case "
+                                    "where the attempt is visible but demonstrably "
+                                    "failed. "
+                                    "exfil_indicators / packet_benign: what the "
+                                    "flow metadata shows. "
+                                    "related_alert_corroborates: another alert on "
+                                    "this asset actually corroborates."
+                                ),
+                            },
                             "citation": {
                                 "type": "string",
                                 "description": (
