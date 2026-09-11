@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOC Agent - Trace Replay</title>
+<style>
+  :root{
+    --bg:#0f1216; --panel:#161b22; --panel2:#1c2129; --line:#2a313b;
+    --ink:#e6edf3; --dim:#8b98a5; --dim2:#6b7784;
+    --accent:#4493f8; --ok:#3fb950; --warn:#d29922; --bad:#f85149;
+    --purple:#bc8cff; --cyan:#39c5cf;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+  code,pre,.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+
+  header{position:sticky;top:0;z-index:20;background:rgba(15,18,22,.96);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:14px 22px}
+  .bar{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  h1{font-size:15px;margin:0;font-weight:650;letter-spacing:.2px}
+  h1 span{color:var(--dim);font-weight:400}
+  select,button{background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+    border-radius:7px;padding:7px 12px;font-size:13px;font-family:inherit;cursor:pointer}
+  select{min-width:290px}
+  button:hover:not(:disabled){border-color:var(--accent)}
+  button:disabled{opacity:.4;cursor:default}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#04121f;font-weight:600}
+  .grow{flex:1}
+
+  .meta{max-width:1080px;margin:22px auto 0;padding:0 22px}
+  .summary{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 16px;color:var(--dim);font-size:13.5px}
+  .summary b{color:var(--ink)}
+
+  .verdicts{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+  .verdict{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:11px 14px;min-width:172px;flex:1}
+  .verdict .k{font-size:10.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2)}
+  .verdict .v{font-size:17px;font-weight:650;margin-top:3px}
+
+  main{max-width:1080px;margin:0 auto;padding:22px 22px 120px}
+  .tl{position:relative;padding-left:30px}
+  .tl::before{content:"";position:absolute;left:9px;top:6px;bottom:6px;width:2px;background:var(--line)}
+
+  .step{position:relative;margin:0 0 11px;opacity:0;transform:translateY(5px);
+    transition:opacity .3s,transform .3s}
+  .step.on{opacity:1;transform:none}
+  .step::before{content:"";position:absolute;left:-26px;top:15px;width:10px;height:10px;
+    border-radius:50%;background:var(--dim2);border:2px solid var(--bg)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:11px 14px}
+  .lbl{font-size:10.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2);
+    display:flex;gap:9px;align-items:center;margin-bottom:5px}
+  .txt{white-space:pre-wrap}
+
+  /* kinds */
+  .k-state::before{background:var(--purple);width:13px;height:13px;left:-27px}
+  .k-state .card{background:transparent;border:0;padding:3px 0}
+  .k-state .name{font-size:11.5px;letter-spacing:1.7px;color:var(--purple);font-weight:700}
+  .k-state .note{color:var(--dim2);font-size:12.5px;margin-top:1px}
+
+  .k-thought::before,.k-sufficiency::before{background:var(--cyan)}
+  .k-thought .card,.k-sufficiency .card{border-left:3px solid var(--cyan)}
+  .k-sufficiency .lbl{color:var(--cyan)}
+
+  .k-tool_call::before{background:var(--accent)}
+  .k-tool_call .card{border-left:3px solid var(--accent)}
+  .sig{color:var(--accent);font-weight:600}
+  .reason{color:var(--dim);margin-top:5px;font-size:13px}
+  .reason b{color:var(--dim2);font-weight:600}
+
+  .k-tool_result::before{background:var(--ok)}
+  .k-tool_result .card{border-left:3px solid #26402c;background:var(--panel2)}
+  .k-tool_failure::before{background:var(--bad)}
+  .k-tool_failure .card{border-left:3px solid var(--bad);background:#2a1618}
+  .k-error::before{background:var(--bad)}
+  .k-error .card{border-left:3px solid var(--bad);background:#2a1618}
+
+  .k-scoring::before{background:var(--warn)}
+  .k-scoring .card{border-left:3px solid var(--warn)}
+  .k-conclusion::before{background:var(--ok);width:13px;height:13px;left:-27px}
+  .k-conclusion .card{border-left:3px solid var(--ok);background:#13251a}
+  .k-action::before{background:var(--warn)}
+  .k-action .card{border-left:3px solid var(--warn);background:#251f13}
+  .k-verification::before{background:var(--ok)}
+  .k-verification .card{border-left:3px solid var(--ok)}
+
+  /* reconsideration fork */
+  .k-reconsider::before,.k-event::before{background:var(--purple);width:13px;height:13px;left:-27px}
+  .k-reconsider .card,.k-event .card{border:1px dashed var(--purple);background:#1d1726}
+  .fork{display:flex;align-items:center;gap:9px;color:var(--purple);font-weight:700;
+    font-size:11.5px;letter-spacing:1.3px;text-transform:uppercase}
+  .fork::before{content:"";flex:0 0 26px;height:2px;background:var(--purple);
+    box-shadow:0 -6px 0 var(--purple)}
+
+  table{border-collapse:collapse;width:100%;margin-top:8px;font-size:12.5px}
+  th,td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}
+  th{color:var(--dim2);font-weight:600;font-size:10.5px;letter-spacing:.7px;text-transform:uppercase}
+  td.d{white-space:nowrap;font-weight:650}
+  .pos{color:var(--ok)} .neg{color:var(--bad)}
+
+  .pill{display:inline-block;padding:1.5px 8px;border-radius:99px;font-size:11px;
+    font-weight:650;letter-spacing:.4px}
+  .p-ok{background:#12351c;color:var(--ok)} .p-bad{background:#3d1d1d;color:var(--bad)}
+  .p-warn{background:#3a2e10;color:var(--warn)} .p-dim{background:#232a33;color:var(--dim)}
+
+  .side{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:9px}
+  .side>div{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:9px 11px}
+  .side .h{font-size:10.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2);margin-bottom:4px}
+
+  details{margin-top:7px}
+  summary{cursor:pointer;color:var(--dim2);font-size:12px;user-select:none}
+  summary:hover{color:var(--accent)}
+  pre{background:#0c0f13;border:1px solid var(--line);border-radius:6px;padding:9px;
+    overflow-x:auto;font-size:11.5px;color:var(--dim);margin:6px 0 0;max-height:300px}
+  .case-tag{margin-left:auto;font-size:10.5px;color:var(--dim2);letter-spacing:.5px}
+  .empty{color:var(--dim2);text-align:center;padding:60px 20px}
+  @media(max-width:640px){.side{grid-template-columns:1fr}select{min-width:0;width:100%}}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>SOC Agent <span>/ trace replay</span></h1>
+    <select id="pick"></select>
+    <button id="play" class="primary">Play</button>
+    <button id="all">Show all</button>
+    <button id="reset">Reset</button>
+    <span class="grow"></span>
+    <span id="count" class="mono" style="color:var(--dim2);font-size:12px"></span>
+  </div>
+</header>
+
+<div class="meta">
+  <div id="summary" class="summary"></div>
+  <div id="verdicts" class="verdicts"></div>
+</div>
+<main><div id="tl" class="tl"></div></main>
+
+<script>
+const SCENARIOS = [
+  ["1","Scenario 1 - False alarm, patched host"],
+  ["2","Scenario 2 - True positive, unpatched host"],
+  ["3","Scenario 3 - Delayed evidence, re-hypothesise"],
+  ["4","Scenario 4 - Human override"],
+  ["5","Scenario 5 - Multi-alert correlation"],
+  ["6","Scenario 6 - Tool failure, degraded recovery"],
+];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pill = (t, k) => `<span class="pill p-${k}">${esc(t)}</span>`;
+
+let steps = [], timer = null, shown = 0;
+
+const pick = $("pick");
+SCENARIOS.forEach(([k, label]) => pick.add(new Option(label, k)));
+
+function outcomePill(o){
+  const k = o === "SUCCEEDED" ? "bad" : o === "FAILED" ? "ok"
+          : o === "INCONCLUSIVE" ? "warn" : "dim";
+  return pill(o, k);
+}
+
+function argsOf(a){
+  if (!a) return "";
+  return Object.entries(a).filter(([k]) => k !== "reason")
+    .map(([k,v]) => `${k}=${JSON.stringify(v)}`).join(", ");
+}
+
+function render(s){
+  const k = s.kind;
+  const tag = s.case_id ? `<span class="case-tag">${esc(s.case_id)}</span>` : "";
+
+  if (k === "state_change")
+    return `<div class="name">${esc(s.state)}</div>`+
+           (s.note ? `<div class="note">${esc(s.note)}</div>` : "");
+
+  if (k === "scenario_meta") return null;
+
+  if (k === "thought" || k === "sufficiency")
+    return `<div class="lbl">${k === "sufficiency" ? "Sufficiency assessment" : "Reasoning"}${tag}</div>
+            <div class="txt">${esc(s.text)}</div>`;
+
+  if (k === "tool_call")
+    return `<div class="lbl">Tool call${s.attempt > 1 ? ` &middot; attempt ${s.attempt}` : ""}${tag}</div>
+      <div class="mono sig">${esc(s.tool)}(${esc(argsOf(s.args))})</div>
+      <div class="reason"><b>Why:</b> ${esc(s.reason)}</div>`;
+
+  if (k === "tool_result"){
+    const st = s.status || "ok";
+    const p = st === "ok" ? "ok" : st === "no_data" ? "warn" : "dim";
+    return `<div class="lbl">Result ${pill(st, p)}${tag}</div>
+      <details><summary>inspect payload</summary>
+      <pre>${esc(JSON.stringify(s.result, null, 2))}</pre></details>`;
+  }
+
+  if (k === "tool_failure"){
+    const r = s.result || {};
+    return `<div class="lbl">Tool failure ${pill(r.status || "unavailable","bad")}${tag}</div>
+      <div class="mono sig" style="color:var(--bad)">${esc(s.tool)} &mdash; ${esc(r.reason||"")}</div>
+      <div class="reason">${esc(r.detail||"")}</div>`;
+  }
+
+  if (k === "scoring"){
+    const rows = (s.applied_factors||[]).map(f =>
+      `<tr><td>${esc(f.label)}</td>
+       <td class="d ${f.delta>0?"pos":"neg"}">${f.delta>0?"+":""}${f.delta.toFixed(2)}</td>
+       <td>${esc(f.citation)}</td></tr>`).join("")
+      || `<tr><td colspan="3" style="color:var(--dim2)">no factors declared</td></tr>`;
+    return `<div class="lbl">Deterministic scoring${tag}</div>
+      <table><tr><th>Evidence finding</th><th>&Delta;</th><th>Citation</th></tr>${rows}</table>
+      <div class="reason" style="margin-top:9px">
+        base ${s.base.toFixed(2)} &rarr; raw <b>${s.raw_sum>0?"+":""}${s.raw_sum.toFixed(2)}</b>
+        &rarr; score <b>${s.score.toFixed(2)}</b> &rarr; ${outcomePill(s.outcome)}
+        confidence <b>${s.confidence.toFixed(2)}</b></div>
+      ${s.ceiling_note ? `<div class="reason" style="color:var(--warn);margin-top:7px">
+        <b>Ceiling:</b> ${esc(s.ceiling_note)}</div>` : ""}`;
+  }
+
+  if (k === "conclusion")
+    return `<div class="lbl">Conclusion &middot; ${esc(s.label)}${tag}</div>
+      <div style="font-size:16px;font-weight:650">${outcomePill(s.outcome)}
+        <span style="color:var(--dim);font-size:13px">score ${s.score.toFixed(2)}
+        &middot; confidence ${s.confidence.toFixed(2)}</span></div>
+      <div class="reason"><b>Hypothesis:</b> ${esc(s.hypothesis)}</div>
+      ${s.sufficiency?`<div class="reason"><b>Sufficiency:</b> ${esc(s.sufficiency)}</div>`:""}
+      ${s.disconfirming_evidence_checked?`<div class="reason">
+        <b>Disconfirming check:</b> ${esc(s.disconfirming_evidence_checked)}</div>`:""}`;
+
+  if (k === "action"){
+    if (s.skipped)
+      return `<div class="lbl">Action withheld ${pill("guardrail 6","warn")}${tag}</div>
+              <div class="txt">${esc(s.detail)}</div>`;
+    if (s.decision)
+      return `<div class="lbl">Human override applied${tag}</div>
+        <div>Decision ${pill(s.decision, s.decision==="benign"?"ok":"bad")}
+        &rarr; status <b>${esc(s.resulting_status)}</b></div>
+        <div class="reason"><b>Justification:</b> ${esc(s.justification)}</div>`;
+    return `<div class="lbl">Action${tag}</div>
+            <div class="txt">${esc(s.detail || s.action || "")}</div>`;
+  }
+
+  if (k === "verification"){
+    const ok = s.matches_policy;
+    return `<div class="lbl">Verification ${pill(ok?"matches policy":"MISMATCH", ok?"ok":"bad")}${tag}</div>
+      <div class="reason">Re-read firewall state from disk for <b>${esc(s.ip)}</b>:
+        expected blocked <b>${s.expected_blocked}</b>, observed <b>${s.blocked_after}</b>.</div>
+      ${s.record?`<div class="reason mono" style="font-size:12px">rule: ${esc(s.record.rule)}
+        ${s.record.precautionary?pill("precautionary","warn"):""}</div>`:""}`;
+  }
+
+  if (k === "event")
+    return `<div class="fork">${esc(s.event_kind || "event")}</div>
+            <div class="txt" style="margin-top:6px">${esc(s.detail)}</div>`;
+
+  if (k === "reconsider"){
+    const p = s.prior_conclusion;
+    return `<div class="fork">Reconsider &middot; ${esc(s.trigger)}</div>
+      <div class="txt" style="margin-top:6px">${esc(s.detail)}</div>
+      <div class="side">
+        <div><div class="h">Prior conclusion</div>
+          ${p?`${outcomePill(p.outcome)} <span style="color:var(--dim)">
+          confidence ${p.confidence.toFixed(2)}</span>
+          <div class="reason">${esc(p.hypothesis)}</div>`:"<span style='color:var(--dim2)'>none</span>"}</div>
+        <div><div class="h">After this trigger</div>
+          <span style="color:var(--dim)">re-entering HYPOTHESIZE &mdash;
+          the agent gathers new evidence before re-scoring</span></div>
+      </div>`;
+  }
+
+  if (k === "error")
+    return `<div class="lbl">Error${tag}</div><div class="txt">${esc(s.detail)}</div>`;
+
+  return `<div class="lbl">${esc(k)}${tag}</div>
+          <pre>${esc(JSON.stringify(s, null, 2))}</pre>`;
+}
+
+function paint(){
+  const tl = $("tl");
+  tl.innerHTML = "";
+  steps.forEach(s => {
+    const html = render(s);
+    if (html === null) return;
+    const d = document.createElement("div");
+    d.className = `step k-${s.kind}`;
+    d.innerHTML = `<div class="card">${html}</div>`;
+    tl.appendChild(d);
+  });
+}
+
+function reveal(n){
+  const els = document.querySelectorAll(".step");
+  els.forEach((e, i) => e.classList.toggle("on", i < n));
+  shown = n;
+  $("count").textContent = `${Math.min(n, els.length)} / ${els.length} steps`;
+  if (n && n <= els.length && els[n-1]) {
+    const r = els[n-1].getBoundingClientRect();
+    if (r.bottom > innerHeight - 40 || r.top < 90)
+      els[n-1].scrollIntoView({behavior:"smooth", block:"center"});
+  }
+}
+
+function stop(){ clearInterval(timer); timer = null; $("play").textContent = "Play"; }
+
+$("play").onclick = () => {
+  const total = document.querySelectorAll(".step").length;
+  if (timer) return stop();
+  if (shown >= total) reveal(0);
+  $("play").textContent = "Pause";
+  timer = setInterval(() => {
+    if (shown >= total) return stop();
+    reveal(shown + 1);
+  }, 400);
+};
+$("all").onclick = () => { stop(); reveal(document.querySelectorAll(".step").length); };
+$("reset").onclick = () => { stop(); reveal(0); };
+
+async function load(key){
+  stop();
+  $("tl").innerHTML = `<div class="empty">loading&hellip;</div>`;
+  $("verdicts").innerHTML = "";
+  let data;
+  try {
+    const r = await fetch(`traces/scenario_${key}.json`);
+    if (!r.ok) throw new Error(r.status);
+    data = await r.json();
+  } catch (e) {
+    $("summary").innerHTML = `<b>traces/scenario_${key}.json not found.</b>
+      Run <code>python run_all.py</code> to generate it.
+      If you opened this file directly, serve the folder instead:
+      <code>python -m http.server 8000</code>, then open
+      <code>http://localhost:8000/viewer.html</code> (browsers block
+      <code>fetch</code> on <code>file://</code> URLs).`;
+    $("tl").innerHTML = `<div class="empty">no trace loaded</div>`;
+    $("count").textContent = "";
+    return;
+  }
+
+  const meta = (data.steps || []).find(s => s.kind === "scenario_meta");
+  $("summary").innerHTML = `<b>${esc(data.title || "")}</b><br>${esc(data.summary || "")}
+    ${meta?.expectation ? `<br><span style="color:var(--dim2)">Expected: ${
+      esc(meta.expectation.outcome)} &middot; ${meta.expectation.notes
+      ? esc(meta.expectation.notes) : ""}</span>` : ""}
+    ${data.error ? `<br><span style="color:var(--bad)">Run error: ${esc(data.error)}</span>` : ""}`;
+
+  $("verdicts").innerHTML = (data.cases || []).map(c => {
+    const last = c.conclusions?.[c.conclusions.length - 1];
+    const act = (c.actions || []).map(a =>
+      a.action + (a.precautionary ? " (precautionary)" : "")).join(", ") || "none";
+    return `<div class="verdict"><div class="k">${esc(c.case_id)}</div>
+      <div class="v">${last ? outcomePill(last.outcome) : pill("no conclusion","dim")}</div>
+      <div class="k" style="margin-top:7px">status</div>
+      <div style="font-size:13px">${esc(c.status)}</div>
+      <div class="k" style="margin-top:7px">action</div>
+      <div style="font-size:13px">${esc(act)}</div>
+      ${c.degraded_sources?.length ? `<div class="k" style="margin-top:7px">degraded</div>
+        <div style="font-size:13px;color:var(--bad)">${esc(c.degraded_sources.join(", "))}</div>` : ""}
+    </div>`;
+  }).join("");
+
+  steps = data.steps || [];
+  paint();
+  reveal(0);
+}
+
+pick.onchange = () => load(pick.value);
+load(pick.value);
+</script>
+</body>
+</html>

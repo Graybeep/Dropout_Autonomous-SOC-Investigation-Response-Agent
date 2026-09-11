@@ -1,0 +1,5 @@
+{
+  "_comment": "MUTABLE AT RUNTIME. block_ip() and unblock_ip() write here; check_firewall_state() reads this same file back from disk. Reset from seed before every scenario run.",
+  "blocked_ips": {},
+  "audit_log": []
+}

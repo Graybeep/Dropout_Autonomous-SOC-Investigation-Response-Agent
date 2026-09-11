@@ -1,0 +1,81 @@
+{
+  "_comment": "ALERT-5002 is NOT seeded. It is introduced at runtime by the control-plane tool inject_alert() during Scenario 5, so that case A cannot see it before it exists.",
+  "ALERT-1001": {
+    "id": "ALERT-1001",
+    "timestamp": "2026-09-11T02:14:07Z",
+    "signature": "ET WEB_SERVER SQL Injection Attempt UNION SELECT",
+    "sid": 2006446,
+    "src_ip": "203.0.113.45",
+    "dst_ip": "10.20.1.11",
+    "dst_port": 443,
+    "protocol": "TCP",
+    "asset_id": "SRV-WEB-01",
+    "severity_label": "critical",
+    "sensor": "suricata-dmz-01"
+  },
+  "ALERT-2001": {
+    "id": "ALERT-2001",
+    "timestamp": "2026-09-11T03:41:52Z",
+    "signature": "ET WEB_SERVER SQL Injection Attempt UNION SELECT",
+    "sid": 2006446,
+    "src_ip": "198.51.100.23",
+    "dst_ip": "10.20.2.22",
+    "dst_port": 3306,
+    "protocol": "TCP",
+    "asset_id": "SRV-DB-02",
+    "severity_label": "critical",
+    "sensor": "suricata-core-02"
+  },
+  "ALERT-3001": {
+    "id": "ALERT-3001",
+    "timestamp": "2026-09-11T01:07:33Z",
+    "signature": "ET WEB_SERVER Possible SQL Injection Attempt SELECT FROM",
+    "sid": 2006445,
+    "src_ip": "203.0.113.77",
+    "dst_ip": "10.20.3.33",
+    "dst_port": 8080,
+    "protocol": "TCP",
+    "asset_id": "SRV-APP-03",
+    "severity_label": "medium",
+    "sensor": "suricata-core-02"
+  },
+  "ALERT-4001": {
+    "id": "ALERT-4001",
+    "timestamp": "2026-09-11T04:22:10Z",
+    "signature": "ET WEB_SERVER SQL Injection Attempt UNION SELECT",
+    "sid": 2006446,
+    "src_ip": "198.51.100.88",
+    "dst_ip": "10.20.4.77",
+    "dst_port": 3306,
+    "protocol": "TCP",
+    "asset_id": "SRV-FIN-07",
+    "severity_label": "critical",
+    "sensor": "suricata-core-02"
+  },
+  "ALERT-5001": {
+    "id": "ALERT-5001",
+    "timestamp": "2026-09-11T05:02:45Z",
+    "signature": "ET SCAN Behavioral Unusual Port 3306 Enumeration",
+    "sid": 2010937,
+    "src_ip": "192.0.2.66",
+    "dst_ip": "10.20.1.44",
+    "dst_port": 3306,
+    "protocol": "TCP",
+    "asset_id": "SRV-WEB-04",
+    "severity_label": "low",
+    "sensor": "suricata-dmz-01"
+  },
+  "ALERT-6001": {
+    "id": "ALERT-6001",
+    "timestamp": "2026-09-11T06:18:29Z",
+    "signature": "ET WEB_SERVER SQL Injection Attempt UNION SELECT",
+    "sid": 2006446,
+    "src_ip": "203.0.113.150",
+    "dst_ip": "10.20.2.55",
+    "dst_port": 3306,
+    "protocol": "TCP",
+    "asset_id": "SRV-DB-05",
+    "severity_label": "high",
+    "sensor": "suricata-core-02"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "_comment": "Keyed by service name only. This KB deliberately contains NO per-host patch status. Resolving whether a given host is affected requires joining a running version (get_asset_info) against affected_versions here. See CLAUDE.md section 5.1.",
+  "mysql": [
+    {
+      "cve_id": "CVE-2023-21980",
+      "affected_versions": ">=5.7.0,<5.7.30",
+      "fixed_in": "5.7.30",
+      "cvss": 9.8,
+      "attack_class": "sql_injection",
+      "description": "Improper neutralisation of crafted UNION payloads in the MySQL Server parser component. Permits authentication bypass and arbitrary read of arbitrary tables by an unauthenticated remote attacker."
+    },
+    {
+      "cve_id": "CVE-2022-21444",
+      "affected_versions": ">=8.0.0,<8.0.30",
+      "fixed_in": "8.0.30",
+      "cvss": 7.5,
+      "attack_class": "denial_of_service",
+      "description": "Improper input validation in the MySQL Server replication subsystem permitting remote denial of service. Does not permit data disclosure."
+    }
+  ],
+  "apache": [
+    {
+      "cve_id": "CVE-2021-41773",
+      "affected_versions": ">=2.4.49,<=2.4.50",
+      "fixed_in": "2.4.51",
+      "cvss": 7.5,
+      "attack_class": "path_traversal",
+      "description": "Path traversal and file disclosure in Apache HTTP Server 2.4.49/2.4.50 when files outside the document root are not protected by 'require all denied'."
+    }
+  ],
+  "tomcat": [
+    {
+      "cve_id": "CVE-2020-1938",
+      "affected_versions": ">=9.0.0,<9.0.31",
+      "fixed_in": "9.0.31",
+      "cvss": 9.8,
+      "attack_class": "file_read",
+      "description": "Ghostcat. The AJP connector permits reading of arbitrary files under the web application root and, where upload is permitted, remote code execution."
+    }
+  ],
+  "openssh": [
+    {
+      "cve_id": "CVE-2024-6387",
+      "affected_versions": ">=9.0p1,<9.8p1",
+      "fixed_in": "9.8p1",
+      "cvss": 8.1,
+      "attack_class": "remote_code_execution",
+      "description": "regreSSHion. Signal handler race condition in OpenSSH server permitting unauthenticated remote code execution as root on glibc-based Linux."
+    }
+  ]
+}

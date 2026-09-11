@@ -1,0 +1,80 @@
+{
+  "_comment": "Keyed by alert_id. Packet metadata only, never full payload capture.",
+  "ALERT-1001": {
+    "alert_id": "ALERT-1001",
+    "bytes_to_server": 412,
+    "bytes_to_client": 1840,
+    "duration_ms": 96,
+    "tls": true,
+    "protocol_anomalies": [],
+    "exfil_indicators": false,
+    "payload_entropy": 4.1,
+    "notes": "Single request/response pair. Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob, no anomalous flag combinations."
+  },
+  "ALERT-2001": {
+    "alert_id": "ALERT-2001",
+    "bytes_to_server": 2210,
+    "bytes_to_client": 2517483,
+    "duration_ms": 41870,
+    "tls": false,
+    "protocol_anomalies": ["mysql_response_size_outlier", "sustained_egress_off_hours"],
+    "exfil_indicators": true,
+    "payload_entropy": 7.8,
+    "notes": "2.4 MB returned to an external host over 41 seconds against a 3306 listener. Response volume is ~1400x the 30-day median for this asset. High-entropy payload consistent with base64-encoded bulk record export."
+  },
+  "ALERT-3001": {
+    "alert_id": "ALERT-3001",
+    "bytes_to_server": 680,
+    "bytes_to_client": 2932,
+    "duration_ms": 148,
+    "tls": true,
+    "protocol_anomalies": [],
+    "exfil_indicators": false,
+    "payload_entropy": 4.4,
+    "notes": "Short exchange. Response size consistent with an application error page. No sustained egress observed on this flow."
+  },
+  "ALERT-4001": {
+    "alert_id": "ALERT-4001",
+    "bytes_to_server": 1975,
+    "bytes_to_client": 1988342,
+    "duration_ms": 33210,
+    "tls": false,
+    "protocol_anomalies": ["mysql_response_size_outlier", "sustained_egress_off_hours"],
+    "exfil_indicators": true,
+    "payload_entropy": 7.7,
+    "notes": "1.9 MB returned to an external host. Volume far outside baseline for this asset."
+  },
+  "ALERT-5001": {
+    "alert_id": "ALERT-5001",
+    "bytes_to_server": 1144,
+    "bytes_to_client": 892,
+    "duration_ms": 7420,
+    "tls": false,
+    "protocol_anomalies": ["repeated_connection_resets"],
+    "exfil_indicators": false,
+    "payload_entropy": 3.2,
+    "notes": "28 short-lived connections to 3306 in 7 seconds, most reset. Pattern consistent with port/service enumeration. No meaningful data returned to the client on any flow."
+  },
+  "ALERT-5002": {
+    "alert_id": "ALERT-5002",
+    "bytes_to_server": 2402,
+    "bytes_to_client": 1743908,
+    "duration_ms": 28940,
+    "tls": false,
+    "protocol_anomalies": ["mysql_response_size_outlier", "credential_reuse_same_src"],
+    "exfil_indicators": true,
+    "payload_entropy": 7.6,
+    "notes": "1.7 MB returned to 192.0.2.66, the same source that enumerated this asset earlier. High-entropy bulk transfer."
+  },
+  "ALERT-6001": {
+    "alert_id": "ALERT-6001",
+    "bytes_to_server": 2680,
+    "bytes_to_client": 3284119,
+    "duration_ms": 52140,
+    "tls": false,
+    "protocol_anomalies": ["mysql_response_size_outlier", "sustained_egress_off_hours"],
+    "exfil_indicators": true,
+    "payload_entropy": 7.9,
+    "notes": "3.1 MB returned to an external host over 52 seconds. Strong volumetric exfiltration signal."
+  }
+}

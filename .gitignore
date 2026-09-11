@@ -1,0 +1,6 @@
+.env
+fixtures/run/
+__pycache__/
+*.pyc
+.venv/
+reports/
