@@ -404,3 +404,64 @@ legibility is explicitly what is being graded.
 and its evidence-implicated hosts, and to use `get_related_alerts` rather than
 fishing through alert ids. Prompt-side, per §11's guidance that flaky behaviour
 is fixed prompt-side.
+
+---
+
+## Part 3 — Results
+
+### Final run — all six scenarios, 38/38 checks
+
+Model `ling-3.0-flash-fin-free` via `https://router.bynara.id/v1`.
+`reset_sandbox()` before each scenario.
+
+| # | Scenario | Checks | Trajectory | Action | Final status |
+|---|---|---|---|---|---|
+| 1 | False alarm, patched | 6/6 | `FAILED` (0.05) | none | CONCLUDED |
+| 2 | True positive | 7/7 | `SUCCEEDED` (0.95) | block_ip | CONCLUDED |
+| 3 | Delayed evidence | 6/6 | `INCONCLUSIVE` (0.40) → `SUCCEEDED` (0.95) | block_ip | CONCLUDED |
+| 4 | Human override | 6/6 | `SUCCEEDED` (0.95) | block_ip → unblock_ip | OVERRIDDEN_BENIGN |
+| 5 | Correlation, case A | 6/6 | `INCONCLUSIVE` (0.40) → `SUCCEEDED` (0.95) | block_ip | CONCLUDED |
+| 5 | Correlation, case B | — | `SUCCEEDED` (0.95) | block_ip | CONCLUDED |
+| 6 | Tool failure | 7/7 | `INCONCLUSIVE` (0.65, raw 0.90) | block_ip **precautionary** | CONCLUDED |
+
+Offline: **65/65** behavioural checks (`selfcheck.py`), **12/12** guardrail
+checks (`compliance.py`), both without an API key.
+
+### Stability across runs
+
+Four multi-scenario runs were made during the build. What varied and what did
+not:
+
+- **Tool-call ordering varies every run** and is deliberately *not* asserted.
+  Pinning a sequence would re-introduce precisely the scripted behaviour §3
+  guardrail 2 forbids. Across runs the agent has opened with `get_alert`, with
+  `get_asset_info`, and once by checking firewall state first — all defensible.
+- **Which factors get declared varies slightly** — Scenario 3's T0 has landed on
+  both `{version_in_range, logs_clean, packet_benign}` (0.40) and
+  `{version_in_range, packet_benign}` (0.65). Both are `INCONCLUSIVE`, which is
+  why the thresholds have margin either side rather than sitting on a boundary.
+- **Outcomes are stable** once P-010's factor semantics were fixed. Every
+  scenario has landed on its expected outcome class in every run since.
+- **The number of turns varies**, and `submit_assessment` is sometimes rejected
+  once (preconditions or citations) before being accepted. The agent recovers
+  each time.
+
+The deterministic scoring function (§7.2) is what makes this tolerable: the
+model's *judgement* varies at the margins, but the arithmetic turning judgement
+into a verdict does not.
+
+### Known limitations, stated plainly
+
+- **Rate limits dominate wall-clock time.** A full six-scenario run takes roughly
+  20–30 minutes, almost all of it request pacing and backoff on the free tier —
+  not model latency. `SOC_MIN_INTERVAL` can be lowered on a paid key.
+- **The model occasionally slips a digit in free-text citations** (P-008). The
+  actions it takes use the correct values; only prose is affected. This is an
+  argument for, not against, computing the score in Python.
+- **Disconfirmation quality varies.** The agent always fills the
+  `disconfirming_evidence_checked` field and often does go and check — but
+  sometimes it reports checks it performed incidentally rather than deliberately
+  seeking falsification. A stronger model would do this better; §2's escalation
+  path is one config line.
+- **`nemotron-3.5-lightning-free` is unusable** for this workload — it returned
+  responses with no `choices` key when handed tool schemas.
