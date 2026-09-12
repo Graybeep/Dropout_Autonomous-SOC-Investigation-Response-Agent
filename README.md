@@ -20,8 +20,8 @@ new evidence, a tool failure, or a human override arrives.
 
 ```bash
 cp .env.example .env          # then put your key in SOC_API_KEY
-python selfcheck.py           # 84 behavioural checks, no API key needed
-python compliance.py          # 17 guardrail checks, no API key needed
+python selfcheck.py           # 99 behavioural checks, no API key needed
+python compliance.py          # 22 guardrail checks, no API key needed
 python run_all.py             # run all six scenarios against the model
 python -m http.server 8000    # then open http://localhost:8000/viewer.html
 ```
@@ -159,10 +159,11 @@ scenarios/        the six scenario definitions + expected trajectories
 fixtures/seed/    pristine evidence, human-readable, committed
 traces/           saved traces — these feed the viewer
 reports/          generated per-case markdown reports
-viewer.html       single-file trace replay UI
+viewer.html       single-file trace replay UI (Swiss/Minimalism, dark)
+vendor/motion.js  Motion, vendored and pinned - the viewer has NO external refs
 run_all.py        evaluation harness
-selfcheck.py      84 behavioural checks, no API key required
-compliance.py     17 guardrail checks, no API key required
+selfcheck.py      99 behavioural checks, no API key required
+compliance.py     22 guardrail checks, no API key required
 rebuild_reports.py  regenerate reports from saved traces, no model run
 DEMO.md           presenter's walkthrough
 Toknow/           decision & problem log — every decision and every problem hit
@@ -185,7 +186,7 @@ switch back.
 
 ## Verification
 
-`python compliance.py` runs 12 structural checks with no API key. These make
+`python compliance.py` runs 22 structural checks with no API key. These make
 "the decision logic is not scripted" a *checkable* claim rather than an
 assertion: no outcome branches keyed on scenario identity, no code branching on
 the alert's severity label, outcome values produced only by `confidence.py`, the
@@ -193,7 +194,7 @@ CVE KB carrying no per-host patch status, control-plane tools absent from the
 agent's toolset, only `sandbox.py` touching `fixtures/seed`, and the §7.2
 constants matching the spec exactly.
 
-`python selfcheck.py` runs 84 behavioural checks with no API key: sandbox reset, every tool's
+`python selfcheck.py` runs 99 behavioural checks with no API key: sandbox reset, every tool's
 success and miss paths, the block→verify round trip against the real file,
 fault injection persistence across retries, every scoring boundary, the action
 policy matrix, schema/implementation agreement, guardrail 6 enforcement, and
@@ -212,6 +213,30 @@ service first and corrected only later. Scenarios 3 and 5 additionally assert
 they **gathered new evidence** after reconsidering rather than re-scoring what
 they already had (16 and 10 new tool calls respectively; a scenario with no
 reconsideration scores 0, which is the negative control).
+
+### The four guard families
+
+Every guard refuses the **form** of a claim, never its content. §7.2's three
+positive factors are *existential* (one witness settles them); its three
+negatives are *universal* ("I looked and found nothing" is meaningless without a
+stated scope). Each family enforces that distinction on a different axis:
+
+| family | refuses |
+|---|---|
+| `check_preconditions` | any factor drawn from a source that never returned `ok` |
+| `check_version_patched_coverage` | `version_patched` claimed from a subset of the host's KB-covered services |
+| `check_negative_scope` | `logs_clean` from a window not containing the alert (or a known sibling); packet factors not grounded in this case's own alert |
+| `check_sibling_verdict_conflict` | `logs_clean` when a sibling case already concluded `SUCCEEDED` on the same asset inside that window |
+
+None inspects evidence *content* — they compare a declared factor against what
+was read (a status, a service list, a timestamp, a stored outcome). A rule like
+"SQLi alerts must check SQL services" would be the line; "you cannot say *all*
+after checking *some*" is not.
+
+The refuse/resubmit cycle is **bounded**: after three refusals the bus stops
+arguing, drops the factors the guards named, scores what survives, and records an
+**impasse** in the report. An unbounded cycle grows the conversation every round
+without adding evidence.
 
 The guards are verified **load-bearing, not merely wired**: each is monkeypatched
 to a no-op and the suite must fail. Ablating `check_preconditions` breaks 4
