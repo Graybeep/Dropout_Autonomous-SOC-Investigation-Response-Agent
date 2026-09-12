@@ -3,3 +3,4 @@ fixtures/run/
 __pycache__/
 *.pyc
 .venv/
+.soc_run.lock

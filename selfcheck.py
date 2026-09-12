@@ -433,13 +433,18 @@ def offline_selfcheck() -> int:
           == ["rejected"] * config.MAX_ASSESSMENT_REJECTIONS)
     check("the loop terminates at the bound instead of arguing forever",
           outcomes[-1] == "accepted")
+    # Defensive: under guard ablation no problems are raised, so no impasse is
+    # reached. These assert the impasse SHAPE when one occurred, without
+    # assuming it did - otherwise ablating an unrelated guard crashes the suite
+    # instead of failing a check.
+    imp = bus_i.impasse or {}
     check("the impasse is recorded, not silently swallowed",
-          bus_i.impasse is not None
-          and "related_alert_corroborates" in bus_i.impasse["dropped_factors"])
+          "related_alert_corroborates" in imp.get("dropped_factors", []))
     check("the unresolved objection is kept on the record",
-          bool(bus_i.impasse.get("unresolved")))
+          bool(imp.get("unresolved")))
     check("an impasse that drops everything scores the bare base",
-          confidence.score(bus_i.assessment["factors"]).score == confidence.BASE)
+          confidence.score((bus_i.assessment or {}).get("factors", [])).score
+          == confidence.BASE)
     check("the impasse surfaces in the trace as its own step",
           any(s["kind"] == trace_mod.ERROR and s.get("status") == "impasse"
               for s in tr_i.steps))

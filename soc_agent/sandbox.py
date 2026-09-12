@@ -20,7 +20,11 @@ from typing import Any
 from . import config
 
 
-LOCK = "_run.lock"
+# The lock lives OUTSIDE fixtures/run, deliberately. An earlier version put it
+# inside, where reset_sandbox's rmtree deleted it between scenarios - leaving an
+# unlocked window in which a concurrent process saw no lock and wiped the live
+# run's directory. The lock cannot live in the directory it protects.
+LOCK = ".soc_run.lock"
 
 
 class SandboxBusy(RuntimeError):
@@ -28,7 +32,7 @@ class SandboxBusy(RuntimeError):
 
 
 def _lock_path() -> Path:
-    return config.RUN_DIR / LOCK
+    return config.ROOT / LOCK
 
 
 def acquire(owner: str) -> None:
@@ -41,7 +45,6 @@ def acquire(owner: str) -> None:
     and the scenario fails for a reason that has nothing to do with the agent.
     That happened during a live run; hence the guard.
     """
-    config.RUN_DIR.mkdir(parents=True, exist_ok=True)
     _lock_path().write_text(
         json.dumps({"owner": owner, "pid": os.getpid(),
                     "started": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}),

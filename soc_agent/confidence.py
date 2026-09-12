@@ -156,6 +156,47 @@ def check_version_patched_coverage(
     return problems
 
 
+def check_sibling_verdict_conflict(
+    declared: list[str],
+    related_alerts: list[dict[str, Any]],
+    covered,
+) -> list[str]:
+    """A FOURTH guard family - and the first whose input is an agent conclusion.
+
+    The other three compare a declared factor against BOOKKEEPING: which tools
+    returned ok, which services were looked up, which windows were queried.
+    This one compares it against a SIBLING CASE'S VERDICT, which the agent
+    itself produced earlier. That difference has three consequences worth
+    stating rather than discovering:
+
+      order-dependent   It fires only if the sibling concluded first. Run the
+                        same two cases in the opposite order and it is silent.
+      error-propagating A sibling that wrongly concluded SUCCEEDED constrains
+                        this case. The guard inherits the earlier case's
+                        mistake instead of catching it.
+      SUCCEEDED only    A sibling at INCONCLUSIVE does NOT fire it - including
+                        an INCONCLUSIVE that triggered a precautionary block.
+                        Containment under uncertainty is explicitly not a
+                        finding that the asset was breached (section 7.3), so
+                        it cannot contradict "logs clean". Verified: SUCCEEDED
+                        fires, INCONCLUSIVE / FAILED / unconcluded do not.
+    """
+    problems: list[str] = []
+    for rel in related_alerts:
+        rts, outcome = rel.get("timestamp"), rel.get("outcome")
+        if outcome == SUCCEEDED and rts and covered(rts):
+            problems.append(
+                f"factor 'logs_clean' cannot stand: case {rel.get('case_id')} "
+                f"has already concluded {outcome} for alert {rel.get('id')} "
+                f"at {rts} on this same asset, and the window you read covers "
+                f"that time. 'No successful attacker activity' contradicts a "
+                f"stored verdict you retrieved yourself. Either declare "
+                f"logs_consistent, or drop the log factor - you cannot call "
+                f"the asset clean over a period another case found it breached."
+            )
+    return problems
+
+
 def check_negative_scope(
     declared: list[str],
     case_alert_id: str,
@@ -230,23 +271,9 @@ def check_negative_scope(
                     f"the asset clean."
                 )
 
-        # (b) A sibling case that already concluded SUCCEEDED on this asset is a
-        # stored verdict, not an opinion. Declaring the same asset's logs clean
-        # over a window containing that alert contradicts evidence you have read.
-        # This is the CONTRADICTIONS table extended across cases; it inspects a
-        # stored outcome, never log content.
-        for rel in related_alerts:
-            rts, outcome = rel.get("timestamp"), rel.get("outcome")
-            if outcome == SUCCEEDED and rts and _covered(rts):
-                problems.append(
-                    f"factor 'logs_clean' cannot stand: case {rel.get('case_id')} "
-                    f"has already concluded {outcome} for alert {rel.get('id')} "
-                    f"at {rts} on this same asset, and the window you read covers "
-                    f"that time. 'No successful attacker activity' contradicts a "
-                    f"stored verdict you retrieved yourself. Either declare "
-                    f"logs_consistent, or drop the log factor - you cannot call "
-                    f"the asset clean over a period another case found it breached."
-                )
+        problems += check_sibling_verdict_conflict(
+            declared, related_alerts, _covered)
+
     return problems
 
 
