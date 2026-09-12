@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 """Guardrail compliance audit.
 
+ADVERSARIAL TESTS THAT EDIT SOURCE MUST CLEAR __pycache__ AFTER RESTORING.
+Restoring a file with shutil.move carries the backup's mtime, which can be older
+than the .pyc built from the edited version - Python then serves stale bytecode
+to every later process in the session and a passing suite reports as failing.
+See Toknow J-7.
+
 Greps the codebase for the specific failure modes CLAUDE.md forbids, so that
 "the decision logic is not scripted" is a checkable claim rather than an
 assertion. Run with `python compliance.py`. No API key needed.

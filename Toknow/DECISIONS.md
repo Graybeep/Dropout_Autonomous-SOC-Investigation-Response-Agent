@@ -1495,3 +1495,35 @@ that line; "you cannot say *all* after checking *some*" does not.
 `logs_clean` just did — not a new factor. The review's instruction not to hunt a
 fifth guard is right; the place to look, if one surfaces in a trace, is the
 scope of an existing negative.
+
+### J-7 — Stale bytecode made a passing suite report as failing
+
+Immediately after adding the J-5/J-6 artefacts, `compliance.py` reported **19/20**
+and `selfcheck.py` **89/91**. The three failures were all S5 union-coverage
+checks. The commit had already gone out.
+
+**The source was never wrong.** `scenarios/definitions.py` held the correct
+`07:14:02Z` throughout, and the pushed commit is clean — no corrupted fixture, no
+stray `.bak`, no `__pycache__`.
+
+**Cause:** the adversarial test for that very invariant edits
+`scenarios/definitions.py`, runs `compliance.py` in a subprocess, then restores
+the file with `shutil.move`. `move` carries the backup's mtime, which was older
+than the `.pyc` compiled from the *modified* source — so Python kept serving
+stale bytecode to every later process in the session. `find . -name __pycache__
+-delete` restored 20/20 and 91/91 immediately.
+
+**Two things worth keeping from it:**
+
+1. The adversarial-fixture pattern used throughout this project (edit → run →
+   restore) is safe for the *file*, but not for the *interpreter cache*. Any such
+   test must clear `__pycache__` after restoring, or the next several checks in
+   the same session report against code that no longer exists on disk.
+2. I misread the failing count as the adversarial result and committed on it.
+   The adversarial FAIL line and the post-restore total printed adjacently, and I
+   took the second for the first. The check that caught it was re-reading the
+   numbers rather than the narrative — the same habit that found P-010, P-016 and
+   P-019.
+
+No fix to product code was required. The lesson is about the test harness and
+about reading output, not about the guard.
