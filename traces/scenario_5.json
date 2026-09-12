@@ -26,7 +26,7 @@
     },
     {
       "seq": 3,
-      "t": 0.0,
+      "t": 0.001,
       "kind": "state_change",
       "case_id": "CASE-5001",
       "state": "HYPOTHESIZE",
@@ -34,7 +34,7 @@
     },
     {
       "seq": 4,
-      "t": 0.0,
+      "t": 0.001,
       "kind": "state_change",
       "case_id": "CASE-5001",
       "state": "GATHER_EVIDENCE",
@@ -42,7 +42,7 @@
     },
     {
       "seq": 5,
-      "t": 3.731,
+      "t": 3.306,
       "kind": "thought",
       "case_id": "CASE-5001",
       "text": "I'll start by retrieving the alert details to understand what kind of attack was flagged, then form a hypothesis and gather evidence.",
@@ -50,7 +50,7 @@
     },
     {
       "seq": 6,
-      "t": 3.731,
+      "t": 3.306,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "get_alert",
@@ -58,11 +58,11 @@
         "alert_id": "ALERT-5001"
       },
       "attempt": 1,
-      "reason": "Get the alert details: signature, source/destination IP, target asset, and severity label to understand what attack was detected and form initial hypothesis."
+      "reason": "Get the alert details: signature, source/destination IP, target asset, and severity label to understand what attack was detected and form an initial hypothesis."
     },
     {
       "seq": 7,
-      "t": 3.733,
+      "t": 3.309,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "get_alert",
@@ -86,15 +86,15 @@
     },
     {
       "seq": 8,
-      "t": 7.729,
+      "t": 8.558,
       "kind": "sufficiency",
       "case_id": "CASE-5001",
-      "text": "Now I have the alert details. It's a **low-severity** alert about \"ET SCAN Behavioral Unusual Port 3306 Enumeration\" targeting SRV-WEB-04 (MySQL port) from 192.0.2.66.\n\n**Initial Hypothesis**: For this attack to have *succeeded*, SRV-WEB-04 would need to be running a vulnerable MySQL version, and the attacker would need to have actually executed queries or gained access (visible in logs/data exfiltration). For it to have *failed*, the host might not be running MySQL, the version might be patched, or the attempt might have been blocked.\n\nLet me gather all the evidence in parallel:",
+      "text": "Now I have the alert details. Let me form my hypothesis and gather evidence.\n\n**Initial Analysis:**\n- **Alert**: \"ET SCAN Behavioral Unusual Port 3306 Enumeration\" targeting SRV-WEB-04 on port 3306 (MySQL)\n- **Source**: 192.0.2.66 \u2192 **Destination**: 10.20.1.44 (SRV-WEB-04)\n- **Severity**: LOW (sensor's opinion \u2014 not evidence)\n- **Hypothesis**: For this attack to have *succeeded*, SRV-WEB-04 must be running a vulnerable MySQL version, the enumeration must have actually connected/succeeded on the host, and potentially data was exfiltrated.\n\nLet me now gather all the evidence in parallel: asset info, related alerts, server logs, and packet metadata",
       "turn": 2
     },
     {
       "seq": 9,
-      "t": 7.729,
+      "t": 8.558,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "get_asset_info",
@@ -102,11 +102,11 @@
         "asset_id": "SRV-WEB-04"
       },
       "attempt": 1,
-      "reason": "Determine what MySQL version SRV-WEB-04 is actually running, to check if it's vulnerable to the port 3306 enumeration/attack."
+      "reason": "Determine what MySQL version SRV-WEB-04 is actually running, to check if it falls within any CVE's affected range for MySQL."
     },
     {
       "seq": 10,
-      "t": 7.732,
+      "t": 8.56,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "get_asset_info",
@@ -131,7 +131,7 @@
     },
     {
       "seq": 11,
-      "t": 7.732,
+      "t": 8.56,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "get_related_alerts",
@@ -139,11 +139,11 @@
         "asset_id": "SRV-WEB-04"
       },
       "attempt": 1,
-      "reason": "Check if SRV-WEB-04 has a history of alerts that might change how we read this current alert."
+      "reason": "Check if SRV-WEB-04 has a history of alerts that might change how we read this current alert \u2014 e.g., prior successful breaches or repeated scan attempts."
     },
     {
       "seq": 12,
-      "t": 7.734,
+      "t": 8.568,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "get_related_alerts",
@@ -156,43 +156,7 @@
     },
     {
       "seq": 13,
-      "t": 7.734,
-      "kind": "tool_call",
-      "case_id": "CASE-5001",
-      "tool": "get_packet_metadata",
-      "args": {
-        "alert_id": "ALERT-5001"
-      },
-      "attempt": 1,
-      "reason": "Check if data actually left the target or if there were exfiltration indicators in the packet flow."
-    },
-    {
-      "seq": 14,
-      "t": 7.735,
-      "kind": "tool_result",
-      "case_id": "CASE-5001",
-      "tool": "get_packet_metadata",
-      "status": "ok",
-      "result": {
-        "status": "ok",
-        "packet_metadata": {
-          "alert_id": "ALERT-5001",
-          "bytes_to_server": 1144,
-          "bytes_to_client": 892,
-          "duration_ms": 7420,
-          "tls": false,
-          "protocol_anomalies": [
-            "repeated_connection_resets"
-          ],
-          "exfil_indicators": false,
-          "payload_entropy": 3.2,
-          "notes": "28 short-lived connections to 3306 in 7 seconds, most reset. Pattern consistent with port/service enumeration. No meaningful data returned to the client on any flow."
-        }
-      }
-    },
-    {
-      "seq": 15,
-      "t": 7.735,
+      "t": 8.568,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "get_server_logs",
@@ -200,11 +164,11 @@
         "asset_id": "SRV-WEB-04"
       },
       "attempt": 1,
-      "reason": "Check host-side logs for any successful attacker activity - queries executed, processes spawned, accounts created."
+      "reason": "Check host-side logs for any MySQL activity from 192.0.2.66 around the alert time (2026-09-11T05:02:45Z) \u2014 did the enumeration actually connect and execute queries?"
     },
     {
-      "seq": 16,
-      "t": 7.736,
+      "seq": 14,
+      "t": 8.57,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "get_server_logs",
@@ -249,16 +213,52 @@
       }
     },
     {
+      "seq": 15,
+      "t": 8.57,
+      "kind": "tool_call",
+      "case_id": "CASE-5001",
+      "tool": "get_packet_metadata",
+      "args": {
+        "alert_id": "ALERT-5001"
+      },
+      "attempt": 1,
+      "reason": "Check packet-level metadata: bytes transferred, protocol anomalies, payload entropy, and exfil_indicators \u2014 did data actually leave the host?"
+    },
+    {
+      "seq": 16,
+      "t": 8.572,
+      "kind": "tool_result",
+      "case_id": "CASE-5001",
+      "tool": "get_packet_metadata",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "packet_metadata": {
+          "alert_id": "ALERT-5001",
+          "bytes_to_server": 1144,
+          "bytes_to_client": 892,
+          "duration_ms": 7420,
+          "tls": false,
+          "protocol_anomalies": [
+            "repeated_connection_resets"
+          ],
+          "exfil_indicators": false,
+          "payload_entropy": 3.2,
+          "notes": "28 short-lived connections to 3306 in 7 seconds, most reset. Pattern consistent with port/service enumeration. No meaningful data returned to the client on any flow."
+        }
+      }
+    },
+    {
       "seq": 17,
-      "t": 11.183,
+      "t": 21.368,
       "kind": "sufficiency",
       "case_id": "CASE-5001",
-      "text": "Now I have key evidence. Let me check MySQL vulnerabilities to determine if the running version (5.7.25) is in any affected range.",
+      "text": "Now let me check MySQL CVEs to determine if the running version (5.7.25) is in any affected range.",
       "turn": 3
     },
     {
       "seq": 18,
-      "t": 11.183,
+      "t": 21.368,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "get_vulnerabilities",
@@ -266,11 +266,11 @@
         "service_name": "mysql"
       },
       "attempt": 1,
-      "reason": "Check what CVEs affect MySQL and whether version 5.7.25 falls inside any affected version range."
+      "reason": "Check what CVEs affect MySQL and whether version 5.7.25 (running on SRV-WEB-04) falls within any affected version range."
     },
     {
       "seq": 19,
-      "t": 11.185,
+      "t": 21.371,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "get_vulnerabilities",
@@ -301,77 +301,77 @@
     },
     {
       "seq": 20,
-      "t": 16.939,
+      "t": 28.487,
       "kind": "sufficiency",
       "case_id": "CASE-5001",
-      "text": "I now have all the evidence needed. Let me summarize my findings and submit the assessment.\n\n**Evidence Summary:**\n\n1. **Alert**: ALERT-5001 \u2014 \"ET SCAN Behavioral Unusual Port 3306 Enumeration\", severity **low**, targeting SRV-WEB-04 (MySQL port 3306) from 192.0.2.66.\n\n2. **Vulnerability**: SRV-WEB-04 runs MySQL **5.7.25**. CVE-2023-21980 affects `>=5.7.0,<5.7.30` \u2014 so 5.7.25 **IS inside** the affected range. The host *is* vulnerable.\n\n3. **Server Logs**: All connection attempts from 192.0.2.66 resulted in **\"connection refused (max_connect_errors)\"** and **\"Access denied\"** for root, admin, and web_ro. No queries executed, no successful authentication, no processes spawned.\n\n4. **Packet Metadata**: 28 short-lived connections in 7 seconds, most reset, `exfil_indicators: false`, \"No meaningful data returned to the client on any flow.\"\n\n5. **Related Alerts**: None on this asset.\n\n**Conclusion**: The host *is* running a vulnerable MySQL version, but the attack **did not succeed**. The attacker was blocked by `max_connect_errors`, all authentication attempts were denied, no data was exfiltrated, and the packet metadata confirms no meaningful data was returned. This was a failed enumeration attempt",
+      "text": "I now have all the evidence needed. Let me summarize my findings before submitting.\n\n**Evidence Summary:**\n\n1. **Vulnerability check**: SRV-WEB-04 runs MySQL **5.7.25**. CVE-2023-21980 affects `>=5.7.0,<5.7.30` \u2014 so 5.7.25 **IS inside** the affected range. The host *is* vulnerable to this SQL injection CVE (CVSS 9.8).\n\n2. **Server logs**: The MySQL error log shows the attack was **blocked**:\n   - `Host 192.0.2.66 connection refused (max_connect_errors), 12 attempts` \u2014 the host refused the connection entirely\n   - All three authentication attempts (root, admin, web_ro) returned **\"Access denied\"**\n   - No successful queries, no rows returned, no processes spawned\n\n3. **Packet metadata**: 28 short-lived connections to port 3306 in 7 seconds, **most reset**. `exfil_indicators: false`. \"No meaningful data returned to the client on any flow.\"\n\n4. **Related alerts**: No prior alerts on SRV-WEB-04 \u2014 no history that changes the reading.\n\n**Hypothesis**: For the attack to have *succeeded*, the attacker would have needed to (a) connect to MySQL, (b) authenticate, and (c) exfiltrate data. The logs show all three failed \u2014 connections were refused, authentication was denied, and no data left the host.\n\n**Disconfirming check performed**: I looked for any sign of successful post-exploitation activity (successful queries, data exfiltration, process spawns). None exists. The evidence is clear that the attack was attempted but blocked",
       "turn": 4
     },
     {
       "seq": 21,
-      "t": 16.939,
+      "t": 28.487,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "submit_assessment",
       "args": {
-        "hypothesis": "The attack was a MySQL port 3306 enumeration/scan attempt against SRV-WEB-04. The host runs a vulnerable MySQL version (5.7.25, inside CVE-2023-21980's range), but the attack did NOT succeed \u2014 the attacker was blocked by max_connect_errors, all authentication attempts were denied, and no data was exfiltrated.",
+        "hypothesis": "The attack (MySQL port 3306 enumeration by 192.0.2.66 against SRV-WEB-04) did NOT succeed. While the host runs a vulnerable MySQL version (5.7.25, inside CVE-2023-21980's affected range), the connection was refused by the host, all authentication attempts were denied, and no data was exfiltrated.",
         "factors": [
           {
             "factor": "version_in_range",
-            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable.",
-            "rationale": "The running MySQL version 5.7.25 falls within the CVE-2023-21980 affected range, meaning the host was theoretically exploitable."
+            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable to this CVE.",
+            "rationale": "The host is running a MySQL version that falls within the affected range of CVE-2023-21980 (SQL injection, CVSS 9.8), meaning the vulnerability exists and could theoretically be exploited."
           },
           {
             "factor": "logs_clean",
-            "citation": "get_server_logs: All entries from 192.0.2.66 show 'connection refused (max_connect_errors)' and 'Access denied' for root/admin/web_ro. No queries executed, no successful auth, no processes spawned.",
-            "rationale": "The host logs show the attacker was blocked by connection limits and all authentication attempts were denied. No successful attacker activity occurred."
+            "citation": "get_server_logs: MySQL error log shows 'Host 192.0.2.66 connection refused (max_connect_errors), 12 attempts' at 05:02:38Z, followed by 'Access denied' for root, admin, and web_ro users. No successful queries, no rows returned, no processes spawned.",
+            "rationale": "The host-side logs show the attack was blocked at the connection level (connection refused due to max_connect_errors) and all authentication attempts were denied. No attacker activity actually executed on the host."
           },
           {
             "factor": "packet_benign",
-            "citation": "get_packet_metadata: exfil_indicators: false, 'No meaningful data returned to the client on any flow', 28 short-lived connections mostly reset, payload entropy 3.2.",
-            "rationale": "Packet metadata confirms no data exfiltration occurred and the flow was limited to enumeration attempts with most connections reset."
+            "citation": "get_packet_metadata: 28 short-lived connections to 3306 in 7 seconds, most reset, exfil_indicators: false, 'No meaningful data returned to the client on any flow.'",
+            "rationale": "Packet-level metadata confirms no data exfiltration occurred. The flow pattern is consistent with a blocked enumeration attempt \u2014 connections were reset and no meaningful payload was returned."
           }
         ],
-        "sufficiency": "The evidence is sufficient to classify this as a FAILED attack. While the host IS running a vulnerable MySQL version (5.7.25 inside CVE-2023-21980's range), the attack did not succeed: the attacker was blocked by max_connect_errors, all auth attempts were denied, no data was exfiltrated, and packet metadata confirms no meaningful data was returned. The low severity label is consistent with this being a failed enumeration attempt.",
-        "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) any successful authentication in logs \u2014 none found, all denied; (2) any data exfiltration in packet metadata \u2014 exfil_indicators is false, no meaningful data returned; (3) any successful queries or process spawns in server logs \u2014 none found. All disconfirming checks came back clean, confirming the attack did not succeed."
+        "sufficiency": "The evidence is sufficient to classify this as a failed/blocked attack attempt. The host is vulnerable (version_in_range), but the logs show the connection was refused and all auth attempts denied (logs_clean), and packet metadata confirms no data left the host (packet_benign). The low severity label from the sensor is consistent with this being an attempted scan that did not succeed. No further evidence is needed.",
+        "disconfirming_evidence_checked": "I checked for any sign of successful post-exploitation activity: successful MySQL queries, data exfiltration, process spawns, or account creation. None were found in the server logs. The connection was refused at the host level (max_connect_errors), all authentication attempts were denied, and packet metadata shows no meaningful data returned and no exfil indicators. The attack was demonstrably blocked."
       },
       "attempt": 1,
       "reason": "(no stated reason)"
     },
     {
       "seq": 22,
-      "t": 16.939,
+      "t": 28.487,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "submit_assessment",
       "status": "accepted",
       "result": {
         "status": "accepted",
-        "hypothesis": "The attack was a MySQL port 3306 enumeration/scan attempt against SRV-WEB-04. The host runs a vulnerable MySQL version (5.7.25, inside CVE-2023-21980's range), but the attack did NOT succeed \u2014 the attacker was blocked by max_connect_errors, all authentication attempts were denied, and no data was exfiltrated.",
+        "hypothesis": "The attack (MySQL port 3306 enumeration by 192.0.2.66 against SRV-WEB-04) did NOT succeed. While the host runs a vulnerable MySQL version (5.7.25, inside CVE-2023-21980's affected range), the connection was refused by the host, all authentication attempts were denied, and no data was exfiltrated.",
         "factors": [
           {
             "factor": "version_in_range",
-            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable.",
-            "rationale": "The running MySQL version 5.7.25 falls within the CVE-2023-21980 affected range, meaning the host was theoretically exploitable."
+            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable to this CVE.",
+            "rationale": "The host is running a MySQL version that falls within the affected range of CVE-2023-21980 (SQL injection, CVSS 9.8), meaning the vulnerability exists and could theoretically be exploited."
           },
           {
             "factor": "logs_clean",
-            "citation": "get_server_logs: All entries from 192.0.2.66 show 'connection refused (max_connect_errors)' and 'Access denied' for root/admin/web_ro. No queries executed, no successful auth, no processes spawned.",
-            "rationale": "The host logs show the attacker was blocked by connection limits and all authentication attempts were denied. No successful attacker activity occurred."
+            "citation": "get_server_logs: MySQL error log shows 'Host 192.0.2.66 connection refused (max_connect_errors), 12 attempts' at 05:02:38Z, followed by 'Access denied' for root, admin, and web_ro users. No successful queries, no rows returned, no processes spawned.",
+            "rationale": "The host-side logs show the attack was blocked at the connection level (connection refused due to max_connect_errors) and all authentication attempts were denied. No attacker activity actually executed on the host."
           },
           {
             "factor": "packet_benign",
-            "citation": "get_packet_metadata: exfil_indicators: false, 'No meaningful data returned to the client on any flow', 28 short-lived connections mostly reset, payload entropy 3.2.",
-            "rationale": "Packet metadata confirms no data exfiltration occurred and the flow was limited to enumeration attempts with most connections reset."
+            "citation": "get_packet_metadata: 28 short-lived connections to 3306 in 7 seconds, most reset, exfil_indicators: false, 'No meaningful data returned to the client on any flow.'",
+            "rationale": "Packet-level metadata confirms no data exfiltration occurred. The flow pattern is consistent with a blocked enumeration attempt \u2014 connections were reset and no meaningful payload was returned."
           }
         ],
-        "sufficiency": "The evidence is sufficient to classify this as a FAILED attack. While the host IS running a vulnerable MySQL version (5.7.25 inside CVE-2023-21980's range), the attack did not succeed: the attacker was blocked by max_connect_errors, all auth attempts were denied, no data was exfiltrated, and packet metadata confirms no meaningful data was returned. The low severity label is consistent with this being a failed enumeration attempt.",
-        "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) any successful authentication in logs \u2014 none found, all denied; (2) any data exfiltration in packet metadata \u2014 exfil_indicators is false, no meaningful data returned; (3) any successful queries or process spawns in server logs \u2014 none found. All disconfirming checks came back clean, confirming the attack did not succeed."
+        "sufficiency": "The evidence is sufficient to classify this as a failed/blocked attack attempt. The host is vulnerable (version_in_range), but the logs show the connection was refused and all auth attempts denied (logs_clean), and packet metadata confirms no data left the host (packet_benign). The low severity label from the sensor is consistent with this being an attempted scan that did not succeed. No further evidence is needed.",
+        "disconfirming_evidence_checked": "I checked for any sign of successful post-exploitation activity: successful MySQL queries, data exfiltration, process spawns, or account creation. None were found in the server logs. The connection was refused at the host level (max_connect_errors), all authentication attempts were denied, and packet metadata shows no meaningful data returned and no exfil indicators. The attack was demonstrably blocked."
       }
     },
     {
       "seq": 23,
-      "t": 16.939,
+      "t": 28.487,
       "kind": "state_change",
       "case_id": "CASE-5001",
       "state": "DETERMINE_OUTCOME",
@@ -379,7 +379,7 @@
     },
     {
       "seq": 24,
-      "t": 16.939,
+      "t": 28.487,
       "kind": "scoring",
       "case_id": "CASE-5001",
       "base": 0.5,
@@ -392,22 +392,22 @@
           "factor": "version_in_range",
           "label": "Running version falls inside a CVE's affected range",
           "delta": 0.25,
-          "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable.",
-          "rationale": "The running MySQL version 5.7.25 falls within the CVE-2023-21980 affected range, meaning the host was theoretically exploitable."
+          "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable to this CVE.",
+          "rationale": "The host is running a MySQL version that falls within the affected range of CVE-2023-21980 (SQL injection, CVSS 9.8), meaning the vulnerability exists and could theoretically be exploited."
         },
         {
           "factor": "logs_clean",
           "label": "Server logs clean across the relevant window",
           "delta": -0.25,
-          "citation": "get_server_logs: All entries from 192.0.2.66 show 'connection refused (max_connect_errors)' and 'Access denied' for root/admin/web_ro. No queries executed, no successful auth, no processes spawned.",
-          "rationale": "The host logs show the attacker was blocked by connection limits and all authentication attempts were denied. No successful attacker activity occurred."
+          "citation": "get_server_logs: MySQL error log shows 'Host 192.0.2.66 connection refused (max_connect_errors), 12 attempts' at 05:02:38Z, followed by 'Access denied' for root, admin, and web_ro users. No successful queries, no rows returned, no processes spawned.",
+          "rationale": "The host-side logs show the attack was blocked at the connection level (connection refused due to max_connect_errors) and all authentication attempts were denied. No attacker activity actually executed on the host."
         },
         {
           "factor": "packet_benign",
           "label": "Packet metadata benign",
           "delta": -0.1,
-          "citation": "get_packet_metadata: exfil_indicators: false, 'No meaningful data returned to the client on any flow', 28 short-lived connections mostly reset, payload entropy 3.2.",
-          "rationale": "Packet metadata confirms no data exfiltration occurred and the flow was limited to enumeration attempts with most connections reset."
+          "citation": "get_packet_metadata: 28 short-lived connections to 3306 in 7 seconds, most reset, exfil_indicators: false, 'No meaningful data returned to the client on any flow.'",
+          "rationale": "Packet-level metadata confirms no data exfiltration occurred. The flow pattern is consistent with a blocked enumeration attempt \u2014 connections were reset and no meaningful payload was returned."
         }
       ],
       "ignored_factors": [],
@@ -417,16 +417,16 @@
     },
     {
       "seq": 25,
-      "t": 16.941,
+      "t": 28.488,
       "kind": "conclusion",
       "case_id": "CASE-5001",
       "label": "initial",
       "outcome": "INCONCLUSIVE",
       "confidence": 0.4,
       "score": 0.4,
-      "hypothesis": "The attack was a MySQL port 3306 enumeration/scan attempt against SRV-WEB-04. The host runs a vulnerable MySQL version (5.7.25, inside CVE-2023-21980's range), but the attack did NOT succeed \u2014 the attacker was blocked by max_connect_errors, all authentication attempts were denied, and no data was exfiltrated.",
-      "sufficiency": "The evidence is sufficient to classify this as a FAILED attack. While the host IS running a vulnerable MySQL version (5.7.25 inside CVE-2023-21980's range), the attack did not succeed: the attacker was blocked by max_connect_errors, all auth attempts were denied, no data was exfiltrated, and packet metadata confirms no meaningful data was returned. The low severity label is consistent with this being a failed enumeration attempt.",
-      "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) any successful authentication in logs \u2014 none found, all denied; (2) any data exfiltration in packet metadata \u2014 exfil_indicators is false, no meaningful data returned; (3) any successful queries or process spawns in server logs \u2014 none found. All disconfirming checks came back clean, confirming the attack did not succeed.",
+      "hypothesis": "The attack (MySQL port 3306 enumeration by 192.0.2.66 against SRV-WEB-04) did NOT succeed. While the host runs a vulnerable MySQL version (5.7.25, inside CVE-2023-21980's affected range), the connection was refused by the host, all authentication attempts were denied, and no data was exfiltrated.",
+      "sufficiency": "The evidence is sufficient to classify this as a failed/blocked attack attempt. The host is vulnerable (version_in_range), but the logs show the connection was refused and all auth attempts denied (logs_clean), and packet metadata confirms no data left the host (packet_benign). The low severity label from the sensor is consistent with this being an attempted scan that did not succeed. No further evidence is needed.",
+      "disconfirming_evidence_checked": "I checked for any sign of successful post-exploitation activity: successful MySQL queries, data exfiltration, process spawns, or account creation. None were found in the server logs. The connection was refused at the host level (max_connect_errors), all authentication attempts were denied, and packet metadata shows no meaningful data returned and no exfil indicators. The attack was demonstrably blocked.",
       "scoring": {
         "base": 0.5,
         "raw_sum": 0.4,
@@ -438,22 +438,22 @@
             "factor": "version_in_range",
             "label": "Running version falls inside a CVE's affected range",
             "delta": 0.25,
-            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable.",
-            "rationale": "The running MySQL version 5.7.25 falls within the CVE-2023-21980 affected range, meaning the host was theoretically exploitable."
+            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable to this CVE.",
+            "rationale": "The host is running a MySQL version that falls within the affected range of CVE-2023-21980 (SQL injection, CVSS 9.8), meaning the vulnerability exists and could theoretically be exploited."
           },
           {
             "factor": "logs_clean",
             "label": "Server logs clean across the relevant window",
             "delta": -0.25,
-            "citation": "get_server_logs: All entries from 192.0.2.66 show 'connection refused (max_connect_errors)' and 'Access denied' for root/admin/web_ro. No queries executed, no successful auth, no processes spawned.",
-            "rationale": "The host logs show the attacker was blocked by connection limits and all authentication attempts were denied. No successful attacker activity occurred."
+            "citation": "get_server_logs: MySQL error log shows 'Host 192.0.2.66 connection refused (max_connect_errors), 12 attempts' at 05:02:38Z, followed by 'Access denied' for root, admin, and web_ro users. No successful queries, no rows returned, no processes spawned.",
+            "rationale": "The host-side logs show the attack was blocked at the connection level (connection refused due to max_connect_errors) and all authentication attempts were denied. No attacker activity actually executed on the host."
           },
           {
             "factor": "packet_benign",
             "label": "Packet metadata benign",
             "delta": -0.1,
-            "citation": "get_packet_metadata: exfil_indicators: false, 'No meaningful data returned to the client on any flow', 28 short-lived connections mostly reset, payload entropy 3.2.",
-            "rationale": "Packet metadata confirms no data exfiltration occurred and the flow was limited to enumeration attempts with most connections reset."
+            "citation": "get_packet_metadata: 28 short-lived connections to 3306 in 7 seconds, most reset, exfil_indicators: false, 'No meaningful data returned to the client on any flow.'",
+            "rationale": "Packet-level metadata confirms no data exfiltration occurred. The flow pattern is consistent with a blocked enumeration attempt \u2014 connections were reset and no meaningful payload was returned."
           }
         ],
         "ignored_factors": [],
@@ -461,11 +461,11 @@
         "degraded_sources": [],
         "ceiling_note": ""
       },
-      "at": "2026-09-11T23:25:27Z"
+      "at": "2026-09-12T09:46:46Z"
     },
     {
       "seq": 26,
-      "t": 16.941,
+      "t": 28.489,
       "kind": "state_change",
       "case_id": "CASE-5001",
       "state": "ACT",
@@ -473,15 +473,15 @@
     },
     {
       "seq": 27,
-      "t": 20.387,
+      "t": 51.834,
       "kind": "thought",
       "case_id": "CASE-5001",
-      "text": "Looking at this case, let me apply the action policy:\n\n- **Outcome**: INCONCLUSIVE (score 0.40)\n- **Asset criticality**: High (but explicitly classified as **non-critical** per the standing policy)\n- **Policy match**: \"INCONCLUSIVE on a non-critical asset \u2192 no action, flag for analyst review\"\n\nThe standing policy explicitly states SRV-WEB-04 is high but non-critical, so no automated action is warranted. I'll record the current firewall state to verify nothing was changed.",
+      "text": "The standing policy is clear: the outcome is **INCONCLUSIVE** on a **high (non-critical)** asset, which falls under the \"no action, flag for analyst review\" branch of the policy. Let me verify the current firewall state to confirm nothing has been changed",
       "turn": 1
     },
     {
       "seq": 28,
-      "t": 20.387,
+      "t": 51.834,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "check_firewall_state",
@@ -489,11 +489,11 @@
         "ip": "192.0.2.66"
       },
       "attempt": 1,
-      "reason": "Case CASE-5001, ALERT-5001: INCONCLUSIVE on non-critical asset SRV-WEB-04. Policy dictates no action \u2014 flagging for analyst review. Checking current firewall state to confirm no block exists for this IP."
+      "reason": "Case CASE-5001, ALERT-5001: INCONCLUSIVE outcome (score 0.40) on SRV-WEB-04 (high, non-critical asset). Policy dictates no automated action \u2014 flag for analyst review. Checking current firewall state to confirm no block exists for this IP."
     },
     {
       "seq": 29,
-      "t": 20.387,
+      "t": 51.835,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "check_firewall_state",
@@ -509,15 +509,15 @@
     },
     {
       "seq": 30,
-      "t": 23.532,
+      "t": 54.9,
       "kind": "sufficiency",
       "case_id": "CASE-5001",
-      "text": "**Action taken:** None. Per the standing policy, an INCONCLUSIVE result on a non-critical asset (SRV-WEB-04, despite being high-severity) requires no automated action \u2014 the alert is flagged for analyst review.\n\n**Verification:** The firewall state on disk confirms that 192.0.2.66 is **not blocked** (no DROP rule exists). This is the correct and expected state \u2014 no containment was applied because the policy does not warrant it. The case remains open for analyst triage.",
+      "text": "## Summary\n\n**Case CASE-5001 / Alert ALERT-5001** \u2014 Source IP `192.0.2.66` against asset `SRV-WEB-04` (criticality: high).\n\n**Deterministic scoring**: Outcome = **INCONCLUSIVE** (score 0.40, confidence 0.40).\n\n**Policy applied**: Per section 7.3, an INCONCLUSIVE outcome on a **non-critical** asset (high, not critical) calls for **no automated action** \u2014 the alert is flagged for analyst review. No block was issued.\n\n**Verification**: Checked the firewall state from disk (`firewall_state.json`). The result confirms that `192.0.2.66` is **not blocked** (`blocked: false`, `total_blocked: 0`), which is exactly the expected state under this policy. No rule mutation was made, and none was needed.\n\nThe case is correctly handled \u2014 the alert remains open for human analyst review rather than triggering an automated containment action.",
       "turn": 2
     },
     {
       "seq": 31,
-      "t": 23.532,
+      "t": 54.9,
       "kind": "state_change",
       "case_id": "CASE-5001",
       "state": "VERIFY",
@@ -525,7 +525,7 @@
     },
     {
       "seq": 32,
-      "t": 23.533,
+      "t": 54.901,
       "kind": "verification",
       "case_id": "CASE-5001",
       "ip": "192.0.2.66",
@@ -540,7 +540,7 @@
     },
     {
       "seq": 33,
-      "t": 23.546,
+      "t": 54.914,
       "kind": "event",
       "case_id": "CASE-5002",
       "event_kind": "NEW_ALERT",
@@ -548,7 +548,7 @@
     },
     {
       "seq": 34,
-      "t": 23.546,
+      "t": 54.914,
       "kind": "state_change",
       "case_id": "CASE-5002",
       "state": "INGEST_ALERT",
@@ -556,7 +556,7 @@
     },
     {
       "seq": 35,
-      "t": 23.548,
+      "t": 54.916,
       "kind": "state_change",
       "case_id": "CASE-5002",
       "state": "HYPOTHESIZE",
@@ -564,7 +564,7 @@
     },
     {
       "seq": 36,
-      "t": 23.548,
+      "t": 54.916,
       "kind": "state_change",
       "case_id": "CASE-5002",
       "state": "GATHER_EVIDENCE",
@@ -572,7 +572,7 @@
     },
     {
       "seq": 37,
-      "t": 25.61,
+      "t": 58.832,
       "kind": "thought",
       "case_id": "CASE-5002",
       "text": "I'll start by retrieving the alert details to understand what kind of attack was flagged, then form a hypothesis and gather evidence.",
@@ -580,7 +580,7 @@
     },
     {
       "seq": 38,
-      "t": 25.61,
+      "t": 58.832,
       "kind": "tool_call",
       "case_id": "CASE-5002",
       "tool": "get_alert",
@@ -592,7 +592,7 @@
     },
     {
       "seq": 39,
-      "t": 25.612,
+      "t": 58.842,
       "kind": "tool_result",
       "case_id": "CASE-5002",
       "tool": "get_alert",
@@ -616,15 +616,15 @@
     },
     {
       "seq": 40,
-      "t": 35.356,
+      "t": 63.198,
       "kind": "sufficiency",
       "case_id": "CASE-5002",
-      "text": "The alert is a **SQL Injection Attempt (UNION SELECT)** targeting `SRV-WEB-04` on port 3306 (MySQL), with a \"high\" severity label from source IP `192.0.2.66`.\n\n**Initial Hypothesis:** For this attack to have *succeeded*, the target host must be running a vulnerable version of MySQL, the SQL injection must have actually executed on the host (not just been attempted/blocked), and potentially data may have been exfiltrated.\n\nLet me now gather all the independent evidence sources in parallel.",
+      "text": "The alert is a SQL Injection Attempt (UNION SELECT) targeting SRV-WEB-04 on port 3306 (MySQL), with a \"high\" severity label from source IP 192.0.2.66.\n\n**Initial Hypothesis**: For this attack to have *succeeded*, the target host must be running a vulnerable MySQL version, the SQL injection must have actually executed on the host (not been blocked), and potentially data may have been exfiltrated.\n\nLet me now gather all the independent evidence sources simultaneously",
       "turn": 2
     },
     {
       "seq": 41,
-      "t": 35.356,
+      "t": 63.198,
       "kind": "tool_call",
       "case_id": "CASE-5002",
       "tool": "get_asset_info",
@@ -632,11 +632,11 @@
         "asset_id": "SRV-WEB-04"
       },
       "attempt": 1,
-      "reason": "Determine what MySQL version SRV-WEB-04 is actually running, to check if it's vulnerable to the SQL injection signature."
+      "reason": "Determine what version of MySQL (or other service) SRV-WEB-04 is actually running, to check against CVE affected ranges."
     },
     {
       "seq": 42,
-      "t": 35.356,
+      "t": 63.199,
       "kind": "tool_result",
       "case_id": "CASE-5002",
       "tool": "get_asset_info",
@@ -661,7 +661,7 @@
     },
     {
       "seq": 43,
-      "t": 35.356,
+      "t": 63.199,
       "kind": "tool_call",
       "case_id": "CASE-5002",
       "tool": "get_server_logs",
@@ -669,11 +669,11 @@
         "asset_id": "SRV-WEB-04"
       },
       "attempt": 1,
-      "reason": "Check host-side logs for evidence that the SQL injection actually executed on the host - successful queries, rows returned, processes spawned."
+      "reason": "Check host-side logs for any evidence of the SQL injection actually executing on the host - successful queries, rows returned, processes spawned."
     },
     {
       "seq": 44,
-      "t": 35.373,
+      "t": 63.211,
       "kind": "tool_result",
       "case_id": "CASE-5002",
       "tool": "get_server_logs",
@@ -740,7 +740,7 @@
     },
     {
       "seq": 45,
-      "t": 35.373,
+      "t": 63.211,
       "kind": "tool_call",
       "case_id": "CASE-5002",
       "tool": "get_packet_metadata",
@@ -748,11 +748,11 @@
         "alert_id": "ALERT-5002"
       },
       "attempt": 1,
-      "reason": "Check packet metadata for evidence of data exfiltration or payload anomalies - bytes transferred, protocol anomalies, exfil indicators."
+      "reason": "Check flow-level metadata for exfiltration indicators, bytes transferred, payload entropy - to see if data actually left the host."
     },
     {
       "seq": 46,
-      "t": 35.373,
+      "t": 63.211,
       "kind": "tool_result",
       "case_id": "CASE-5002",
       "tool": "get_packet_metadata",
@@ -777,7 +777,7 @@
     },
     {
       "seq": 47,
-      "t": 35.374,
+      "t": 63.211,
       "kind": "tool_call",
       "case_id": "CASE-5002",
       "tool": "get_related_alerts",
@@ -785,11 +785,11 @@
         "asset_id": "SRV-WEB-04"
       },
       "attempt": 1,
-      "reason": "Check if there are other alerts on this asset that might corroborate or contradict the current alert - history changes the reading."
+      "reason": "Check if there are other alerts on this asset that might corroborate or contradict the current alert."
     },
     {
       "seq": 48,
-      "t": 35.383,
+      "t": 63.22,
       "kind": "tool_result",
       "case_id": "CASE-5002",
       "tool": "get_related_alerts",
@@ -818,8 +818,8 @@
               "status": "CONCLUDED",
               "outcome": "INCONCLUSIVE",
               "confidence": 0.4,
-              "summary": "INCONCLUSIVE (score 0.40, confidence 0.40) - The attack was a MySQL port 3306 enumeration/scan attempt against SRV-WEB-04. The host runs a vulnerable MySQL version (5.7.25, inside CVE-2023-21980's range), but the attack did NOT succeed \u2014 the attacker was blocked by max_connect_errors, all authentication attempts were denied, and no data was exfiltrated.",
-              "concluded_at": "2026-09-11T23:25:27Z"
+              "summary": "INCONCLUSIVE (score 0.40, confidence 0.40) - The attack (MySQL port 3306 enumeration by 192.0.2.66 against SRV-WEB-04) did NOT succeed. While the host runs a vulnerable MySQL version (5.7.25, inside CVE-2023-21980's affected range), the connection was refused by the host, all authentication attempts were denied, and no data was exfiltrated.",
+              "concluded_at": "2026-09-12T09:46:46Z"
             }
           }
         ]
@@ -827,15 +827,15 @@
     },
     {
       "seq": 49,
-      "t": 39.574,
+      "t": 69.697,
       "kind": "sufficiency",
       "case_id": "CASE-5002",
-      "text": "Now let me verify the CVE vulnerability for MySQL to confirm the version is in the affected range.",
+      "text": "Now let me check the CVE details for MySQL to confirm whether version 5.7.25 falls within an affected range",
       "turn": 3
     },
     {
       "seq": 50,
-      "t": 39.574,
+      "t": 69.697,
       "kind": "tool_call",
       "case_id": "CASE-5002",
       "tool": "get_vulnerabilities",
@@ -843,11 +843,11 @@
         "service_name": "mysql"
       },
       "attempt": 1,
-      "reason": "Check what CVEs affect MySQL and whether version 5.7.25 falls within any affected version range."
+      "reason": "Check CVE entries for MySQL to determine if version 5.7.25 (running on SRV-WEB-04) falls within any affected version range."
     },
     {
       "seq": 51,
-      "t": 39.575,
+      "t": 69.698,
       "kind": "tool_result",
       "case_id": "CASE-5002",
       "tool": "get_vulnerabilities",
@@ -878,87 +878,87 @@
     },
     {
       "seq": 52,
-      "t": 46.099,
+      "t": 78.976,
       "kind": "sufficiency",
       "case_id": "CASE-5002",
-      "text": "I now have all the evidence needed. Let me summarize my findings before submitting.\n\n**Evidence Summary:**\n\n1. **Vulnerability:** SRV-WEB-04 runs MySQL **5.7.25**. CVE-2023-21980 affects `>=5.7.0,<5.7.30` \u2014 so 5.7.25 is **inside** the affected range. This is a SQL injection CVE (CVSS 9.8) matching the alert signature exactly.\n\n2. **Host Logs:** The MySQL general log shows the injection query actually **executed** at 07:14:02Z: `SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--` (marked `injected: true`). A second injected query at 07:14:31Z returned **38,402 rows** from `portal_users`. The connection closed at 07:15:09Z after sending **1,743,908 bytes**.\n\n3. **Packet Metadata:** **1.7 MB returned** to the attacker IP, `exfil_indicators: true`, with `mysql_response_size_outlier` and `credential_reuse_same_src` anomalies, high payload entropy (7.6).\n\n4. **Related Alerts:** ALERT-5001 (earlier scan from same IP) was blocked, but the later ALERT-5002 attack clearly succeeded \u2014 the earlier failure does not negate the later success.\n\n**Disconfirming check:** I looked for evidence the attack was blocked or errored \u2014 none found. The logs show successful query execution and data return.",
+      "text": "I now have all the evidence needed. Let me summarize my findings before submitting.\n\n**Evidence Summary:**\n\n1. **Vulnerability**: SRV-WEB-04 runs MySQL 5.7.25. CVE-2023-21980 affects `>=5.7.0,<5.7.30` \u2014 so 5.7.25 is **inside** the affected range. This is a SQL injection CVE (CVSS 9.8) matching the alert signature.\n\n2. **Host Logs**: The MySQL general log shows the UNION SELECT injection query actually **executed** at 07:14:02Z (`injected: true`), and a second injected query at 07:14:31Z returned 38,402 rows from `portal_users`. The connection closed after sending 1,743,908 bytes.\n\n3. **Packet Metadata**: 1.7 MB returned to the attacker IP, `exfil_indicators: true`, high payload entropy (7.6), and protocol anomalies including `mysql_response_size_outlier`.\n\n4. **Related Alerts**: ALERT-5001 (earlier scan from same IP) was inconclusive/blocked, but the attacker returned later and succeeded.\n\nThe earlier scan was blocked, but the SQL injection attack at 07:14:02Z clearly **succeeded** \u2014 the query executed, rows were returned, and 1.7 MB of data was exfiltrated",
       "turn": 4
     },
     {
       "seq": 53,
-      "t": 46.099,
+      "t": 78.976,
       "kind": "tool_call",
       "case_id": "CASE-5002",
       "tool": "submit_assessment",
       "args": {
-        "hypothesis": "The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The host runs a vulnerable MySQL version, the injection query executed on the host returning data, and 1.7 MB was exfiltrated.",
+        "hypothesis": "The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The attacker exploited CVE-2023-21980 on MySQL 5.7.25 to execute UNION SELECT queries and exfiltrate data.",
         "factors": [
           {
             "factor": "version_in_range",
-            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. CVSS 9.8, attack class: sql_injection.",
-            "rationale": "The target host is running a MySQL version that is vulnerable to the exact CVE matching the alert signature. The attack could succeed."
+            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range and matches the SQL injection attack class.",
+            "rationale": "The host is running a vulnerable version of MySQL that is directly exploitable by the alert's signature."
           },
           {
             "factor": "logs_consistent",
-            "citation": "get_server_logs: At 2026-09-11T07:14:02Z, MySQL general log shows 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' with injected:true. At 07:14:31Z, 'SELECT email,password_hash,address FROM portal_users' returned 38,402 rows, injected:true.",
-            "rationale": "The SQL injection query actually executed on the host and returned data. This is not a blocked or failed attempt \u2014 the malicious queries ran successfully."
+            "citation": "get_server_logs: At 2026-09-11T07:14:02Z, mysql/general shows 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' with injected:true. At 07:14:31Z, a second injected query returned 38,402 rows from portal_users.",
+            "rationale": "The SQL injection queries actually executed on the host \u2014 they were not blocked or errored out. Malicious queries ran and returned data."
           },
           {
             "factor": "exfil_indicators",
-            "citation": "get_packet_metadata: 1,743,908 bytes returned to 192.0.2.66, exfil_indicators:true, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src, payload_entropy 7.6.",
-            "rationale": "1.7 MB of data was transferred back to the attacker source with exfiltration indicators and high-entropy bulk transfer, confirming data left the network."
+            "citation": "get_packet_metadata: 1,743,908 bytes sent to 192.0.2.66, exfil_indicators:true, payload_entropy:7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
+            "rationale": "1.7 MB of data was transferred out of the host to the attacker, with high entropy and response size anomalies confirming bulk data exfiltration."
           },
           {
             "factor": "related_alert_corroborates",
-            "citation": "get_related_alerts: ALERT-5001 (same src_ip 192.0.2.66, same asset SRV-WEB-04) was an earlier MySQL port 3306 enumeration scan at 05:02Z, concluded INCONCLUSIVE (blocked at that time). The same attacker IP later succeeded at 07:14Z.",
-            "rationale": "The related alert shows the same attacker IP targeting the same asset earlier. While the earlier scan was blocked, the later attack succeeded \u2014 the history confirms this is a persistent, sophisticated attacker who eventually succeeded."
+            "citation": "get_related_alerts: ALERT-5001 (earlier scan from same IP 192.0.2.66) was INCONCLUSIVE with connection refused and access denied, but the attacker returned at 07:14:02Z and succeeded. The same source IP targeted the same asset twice.",
+            "rationale": "The earlier failed scan from the same IP provides context \u2014 the attacker pivoted from enumeration to successful exploitation. The related alert corroborates the attack pattern from the same source."
           }
         ],
-        "sufficiency": "All four evidence classes are established: the host is vulnerable (version_in_range), the attack executed on the host (logs_consistent), data was exfiltrated (exfil_indicators), and the attacker has a history on this asset (related_alert_corroborates). No disconfirming evidence was found \u2014 the earlier scan was blocked but the later injection succeeded. The evidence is sufficient to classify the attack as SUCCESSFUL.",
-        "disconfirming_evidence_checked": "I checked for evidence the attack was blocked or errored out. The earlier scan (ALERT-5001) at 05:02Z was blocked by max_connect_errors and all auth attempts were denied \u2014 but that was a different event hours earlier. The actual SQL injection at 07:14Z shows successful query execution, rows returned, and 1.7 MB sent to the attacker. No blocking or error evidence exists for the actual injection attempt."
+        "sufficiency": "All four evidence classes are established: the host runs a vulnerable MySQL version (5.7.25 inside CVE-2023-21980's range), the SQL injection queries actually executed on the host (logs show injected queries returning rows), 1.7 MB of data was exfiltrated (exfil_indicators confirmed), and a related alert from the same source IP corroborates the attack pattern. The earlier scan (ALERT-5001) was blocked, but the current attack clearly succeeded. No disconfirming evidence was found \u2014 the logs show no errors or blocks for the 07:14:02Z attack, and packet metadata confirms data left the host.",
+        "disconfirming_evidence_checked": "I checked for signs the attack was blocked or failed: (1) The earlier scan at 05:02-05:03Z showed connection refused and access denied \u2014 but that was a different, earlier event. (2) The 07:14:02Z attack shows successful query execution in mysql/general logs with injected:true, rows returned, and 1.7 MB sent \u2014 no error or block. (3) Packet metadata confirms exfil, not a benign or blocked flow. The disconfirming check (was it blocked?) returned negative \u2014 the attack was not blocked."
       },
       "attempt": 1,
       "reason": "(no stated reason)"
     },
     {
       "seq": 54,
-      "t": 46.099,
+      "t": 78.976,
       "kind": "tool_result",
       "case_id": "CASE-5002",
       "tool": "submit_assessment",
       "status": "accepted",
       "result": {
         "status": "accepted",
-        "hypothesis": "The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The host runs a vulnerable MySQL version, the injection query executed on the host returning data, and 1.7 MB was exfiltrated.",
+        "hypothesis": "The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The attacker exploited CVE-2023-21980 on MySQL 5.7.25 to execute UNION SELECT queries and exfiltrate data.",
         "factors": [
           {
             "factor": "version_in_range",
-            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. CVSS 9.8, attack class: sql_injection.",
-            "rationale": "The target host is running a MySQL version that is vulnerable to the exact CVE matching the alert signature. The attack could succeed."
+            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range and matches the SQL injection attack class.",
+            "rationale": "The host is running a vulnerable version of MySQL that is directly exploitable by the alert's signature."
           },
           {
             "factor": "logs_consistent",
-            "citation": "get_server_logs: At 2026-09-11T07:14:02Z, MySQL general log shows 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' with injected:true. At 07:14:31Z, 'SELECT email,password_hash,address FROM portal_users' returned 38,402 rows, injected:true.",
-            "rationale": "The SQL injection query actually executed on the host and returned data. This is not a blocked or failed attempt \u2014 the malicious queries ran successfully."
+            "citation": "get_server_logs: At 2026-09-11T07:14:02Z, mysql/general shows 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' with injected:true. At 07:14:31Z, a second injected query returned 38,402 rows from portal_users.",
+            "rationale": "The SQL injection queries actually executed on the host \u2014 they were not blocked or errored out. Malicious queries ran and returned data."
           },
           {
             "factor": "exfil_indicators",
-            "citation": "get_packet_metadata: 1,743,908 bytes returned to 192.0.2.66, exfil_indicators:true, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src, payload_entropy 7.6.",
-            "rationale": "1.7 MB of data was transferred back to the attacker source with exfiltration indicators and high-entropy bulk transfer, confirming data left the network."
+            "citation": "get_packet_metadata: 1,743,908 bytes sent to 192.0.2.66, exfil_indicators:true, payload_entropy:7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
+            "rationale": "1.7 MB of data was transferred out of the host to the attacker, with high entropy and response size anomalies confirming bulk data exfiltration."
           },
           {
             "factor": "related_alert_corroborates",
-            "citation": "get_related_alerts: ALERT-5001 (same src_ip 192.0.2.66, same asset SRV-WEB-04) was an earlier MySQL port 3306 enumeration scan at 05:02Z, concluded INCONCLUSIVE (blocked at that time). The same attacker IP later succeeded at 07:14Z.",
-            "rationale": "The related alert shows the same attacker IP targeting the same asset earlier. While the earlier scan was blocked, the later attack succeeded \u2014 the history confirms this is a persistent, sophisticated attacker who eventually succeeded."
+            "citation": "get_related_alerts: ALERT-5001 (earlier scan from same IP 192.0.2.66) was INCONCLUSIVE with connection refused and access denied, but the attacker returned at 07:14:02Z and succeeded. The same source IP targeted the same asset twice.",
+            "rationale": "The earlier failed scan from the same IP provides context \u2014 the attacker pivoted from enumeration to successful exploitation. The related alert corroborates the attack pattern from the same source."
           }
         ],
-        "sufficiency": "All four evidence classes are established: the host is vulnerable (version_in_range), the attack executed on the host (logs_consistent), data was exfiltrated (exfil_indicators), and the attacker has a history on this asset (related_alert_corroborates). No disconfirming evidence was found \u2014 the earlier scan was blocked but the later injection succeeded. The evidence is sufficient to classify the attack as SUCCESSFUL.",
-        "disconfirming_evidence_checked": "I checked for evidence the attack was blocked or errored out. The earlier scan (ALERT-5001) at 05:02Z was blocked by max_connect_errors and all auth attempts were denied \u2014 but that was a different event hours earlier. The actual SQL injection at 07:14Z shows successful query execution, rows returned, and 1.7 MB sent to the attacker. No blocking or error evidence exists for the actual injection attempt."
+        "sufficiency": "All four evidence classes are established: the host runs a vulnerable MySQL version (5.7.25 inside CVE-2023-21980's range), the SQL injection queries actually executed on the host (logs show injected queries returning rows), 1.7 MB of data was exfiltrated (exfil_indicators confirmed), and a related alert from the same source IP corroborates the attack pattern. The earlier scan (ALERT-5001) was blocked, but the current attack clearly succeeded. No disconfirming evidence was found \u2014 the logs show no errors or blocks for the 07:14:02Z attack, and packet metadata confirms data left the host.",
+        "disconfirming_evidence_checked": "I checked for signs the attack was blocked or failed: (1) The earlier scan at 05:02-05:03Z showed connection refused and access denied \u2014 but that was a different, earlier event. (2) The 07:14:02Z attack shows successful query execution in mysql/general logs with injected:true, rows returned, and 1.7 MB sent \u2014 no error or block. (3) Packet metadata confirms exfil, not a benign or blocked flow. The disconfirming check (was it blocked?) returned negative \u2014 the attack was not blocked."
       }
     },
     {
       "seq": 55,
-      "t": 46.099,
+      "t": 78.976,
       "kind": "state_change",
       "case_id": "CASE-5002",
       "state": "DETERMINE_OUTCOME",
@@ -966,7 +966,7 @@
     },
     {
       "seq": 56,
-      "t": 46.1,
+      "t": 78.976,
       "kind": "scoring",
       "case_id": "CASE-5002",
       "base": 0.5,
@@ -979,29 +979,29 @@
           "factor": "version_in_range",
           "label": "Running version falls inside a CVE's affected range",
           "delta": 0.25,
-          "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. CVSS 9.8, attack class: sql_injection.",
-          "rationale": "The target host is running a MySQL version that is vulnerable to the exact CVE matching the alert signature. The attack could succeed."
+          "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range and matches the SQL injection attack class.",
+          "rationale": "The host is running a vulnerable version of MySQL that is directly exploitable by the alert's signature."
         },
         {
           "factor": "logs_consistent",
           "label": "Server logs show activity consistent with the signature",
           "delta": 0.25,
-          "citation": "get_server_logs: At 2026-09-11T07:14:02Z, MySQL general log shows 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' with injected:true. At 07:14:31Z, 'SELECT email,password_hash,address FROM portal_users' returned 38,402 rows, injected:true.",
-          "rationale": "The SQL injection query actually executed on the host and returned data. This is not a blocked or failed attempt \u2014 the malicious queries ran successfully."
+          "citation": "get_server_logs: At 2026-09-11T07:14:02Z, mysql/general shows 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' with injected:true. At 07:14:31Z, a second injected query returned 38,402 rows from portal_users.",
+          "rationale": "The SQL injection queries actually executed on the host \u2014 they were not blocked or errored out. Malicious queries ran and returned data."
         },
         {
           "factor": "exfil_indicators",
           "label": "Packet metadata shows exfil / payload-anomaly indicators",
           "delta": 0.15,
-          "citation": "get_packet_metadata: 1,743,908 bytes returned to 192.0.2.66, exfil_indicators:true, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src, payload_entropy 7.6.",
-          "rationale": "1.7 MB of data was transferred back to the attacker source with exfiltration indicators and high-entropy bulk transfer, confirming data left the network."
+          "citation": "get_packet_metadata: 1,743,908 bytes sent to 192.0.2.66, exfil_indicators:true, payload_entropy:7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
+          "rationale": "1.7 MB of data was transferred out of the host to the attacker, with high entropy and response size anomalies confirming bulk data exfiltration."
         },
         {
           "factor": "related_alert_corroborates",
           "label": "A related alert on the same asset corroborates",
           "delta": 0.15,
-          "citation": "get_related_alerts: ALERT-5001 (same src_ip 192.0.2.66, same asset SRV-WEB-04) was an earlier MySQL port 3306 enumeration scan at 05:02Z, concluded INCONCLUSIVE (blocked at that time). The same attacker IP later succeeded at 07:14Z.",
-          "rationale": "The related alert shows the same attacker IP targeting the same asset earlier. While the earlier scan was blocked, the later attack succeeded \u2014 the history confirms this is a persistent, sophisticated attacker who eventually succeeded."
+          "citation": "get_related_alerts: ALERT-5001 (earlier scan from same IP 192.0.2.66) was INCONCLUSIVE with connection refused and access denied, but the attacker returned at 07:14:02Z and succeeded. The same source IP targeted the same asset twice.",
+          "rationale": "The earlier failed scan from the same IP provides context \u2014 the attacker pivoted from enumeration to successful exploitation. The related alert corroborates the attack pattern from the same source."
         }
       ],
       "ignored_factors": [],
@@ -1011,16 +1011,16 @@
     },
     {
       "seq": 57,
-      "t": 46.101,
+      "t": 78.977,
       "kind": "conclusion",
       "case_id": "CASE-5002",
       "label": "initial",
       "outcome": "SUCCEEDED",
       "confidence": 0.95,
       "score": 0.95,
-      "hypothesis": "The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The host runs a vulnerable MySQL version, the injection query executed on the host returning data, and 1.7 MB was exfiltrated.",
-      "sufficiency": "All four evidence classes are established: the host is vulnerable (version_in_range), the attack executed on the host (logs_consistent), data was exfiltrated (exfil_indicators), and the attacker has a history on this asset (related_alert_corroborates). No disconfirming evidence was found \u2014 the earlier scan was blocked but the later injection succeeded. The evidence is sufficient to classify the attack as SUCCESSFUL.",
-      "disconfirming_evidence_checked": "I checked for evidence the attack was blocked or errored out. The earlier scan (ALERT-5001) at 05:02Z was blocked by max_connect_errors and all auth attempts were denied \u2014 but that was a different event hours earlier. The actual SQL injection at 07:14Z shows successful query execution, rows returned, and 1.7 MB sent to the attacker. No blocking or error evidence exists for the actual injection attempt.",
+      "hypothesis": "The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The attacker exploited CVE-2023-21980 on MySQL 5.7.25 to execute UNION SELECT queries and exfiltrate data.",
+      "sufficiency": "All four evidence classes are established: the host runs a vulnerable MySQL version (5.7.25 inside CVE-2023-21980's range), the SQL injection queries actually executed on the host (logs show injected queries returning rows), 1.7 MB of data was exfiltrated (exfil_indicators confirmed), and a related alert from the same source IP corroborates the attack pattern. The earlier scan (ALERT-5001) was blocked, but the current attack clearly succeeded. No disconfirming evidence was found \u2014 the logs show no errors or blocks for the 07:14:02Z attack, and packet metadata confirms data left the host.",
+      "disconfirming_evidence_checked": "I checked for signs the attack was blocked or failed: (1) The earlier scan at 05:02-05:03Z showed connection refused and access denied \u2014 but that was a different, earlier event. (2) The 07:14:02Z attack shows successful query execution in mysql/general logs with injected:true, rows returned, and 1.7 MB sent \u2014 no error or block. (3) Packet metadata confirms exfil, not a benign or blocked flow. The disconfirming check (was it blocked?) returned negative \u2014 the attack was not blocked.",
       "scoring": {
         "base": 0.5,
         "raw_sum": 1.3,
@@ -1032,29 +1032,29 @@
             "factor": "version_in_range",
             "label": "Running version falls inside a CVE's affected range",
             "delta": 0.25,
-            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. CVSS 9.8, attack class: sql_injection.",
-            "rationale": "The target host is running a MySQL version that is vulnerable to the exact CVE matching the alert signature. The attack could succeed."
+            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range and matches the SQL injection attack class.",
+            "rationale": "The host is running a vulnerable version of MySQL that is directly exploitable by the alert's signature."
           },
           {
             "factor": "logs_consistent",
             "label": "Server logs show activity consistent with the signature",
             "delta": 0.25,
-            "citation": "get_server_logs: At 2026-09-11T07:14:02Z, MySQL general log shows 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' with injected:true. At 07:14:31Z, 'SELECT email,password_hash,address FROM portal_users' returned 38,402 rows, injected:true.",
-            "rationale": "The SQL injection query actually executed on the host and returned data. This is not a blocked or failed attempt \u2014 the malicious queries ran successfully."
+            "citation": "get_server_logs: At 2026-09-11T07:14:02Z, mysql/general shows 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' with injected:true. At 07:14:31Z, a second injected query returned 38,402 rows from portal_users.",
+            "rationale": "The SQL injection queries actually executed on the host \u2014 they were not blocked or errored out. Malicious queries ran and returned data."
           },
           {
             "factor": "exfil_indicators",
             "label": "Packet metadata shows exfil / payload-anomaly indicators",
             "delta": 0.15,
-            "citation": "get_packet_metadata: 1,743,908 bytes returned to 192.0.2.66, exfil_indicators:true, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src, payload_entropy 7.6.",
-            "rationale": "1.7 MB of data was transferred back to the attacker source with exfiltration indicators and high-entropy bulk transfer, confirming data left the network."
+            "citation": "get_packet_metadata: 1,743,908 bytes sent to 192.0.2.66, exfil_indicators:true, payload_entropy:7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
+            "rationale": "1.7 MB of data was transferred out of the host to the attacker, with high entropy and response size anomalies confirming bulk data exfiltration."
           },
           {
             "factor": "related_alert_corroborates",
             "label": "A related alert on the same asset corroborates",
             "delta": 0.15,
-            "citation": "get_related_alerts: ALERT-5001 (same src_ip 192.0.2.66, same asset SRV-WEB-04) was an earlier MySQL port 3306 enumeration scan at 05:02Z, concluded INCONCLUSIVE (blocked at that time). The same attacker IP later succeeded at 07:14Z.",
-            "rationale": "The related alert shows the same attacker IP targeting the same asset earlier. While the earlier scan was blocked, the later attack succeeded \u2014 the history confirms this is a persistent, sophisticated attacker who eventually succeeded."
+            "citation": "get_related_alerts: ALERT-5001 (earlier scan from same IP 192.0.2.66) was INCONCLUSIVE with connection refused and access denied, but the attacker returned at 07:14:02Z and succeeded. The same source IP targeted the same asset twice.",
+            "rationale": "The earlier failed scan from the same IP provides context \u2014 the attacker pivoted from enumeration to successful exploitation. The related alert corroborates the attack pattern from the same source."
           }
         ],
         "ignored_factors": [],
@@ -1062,11 +1062,11 @@
         "degraded_sources": [],
         "ceiling_note": ""
       },
-      "at": "2026-09-11T23:25:56Z"
+      "at": "2026-09-12T09:47:36Z"
     },
     {
       "seq": 58,
-      "t": 46.101,
+      "t": 78.978,
       "kind": "state_change",
       "case_id": "CASE-5002",
       "state": "ACT",
@@ -1074,20 +1074,28 @@
     },
     {
       "seq": 59,
-      "t": 48.201,
+      "t": 104.631,
+      "kind": "thought",
+      "case_id": "CASE-5002",
+      "text": "The scoring outcome is **SUCCEEDED** with a score of **0.95** (\u2265 0.75), so the standing policy mandates **block_ip**. Let me execute that",
+      "turn": 1
+    },
+    {
+      "seq": 60,
+      "t": 104.632,
       "kind": "tool_call",
       "case_id": "CASE-5002",
       "tool": "block_ip",
       "args": {
         "ip": "192.0.2.66",
-        "reason": "CASE-5002: Alert ALERT-5002 from 192.0.2.66 against SRV-WEB-04 (high criticality). Deterministic scoring: SUCCEEDED, score=0.95, confidence=0.95. Policy: block_ip (score >= 0.75)."
+        "reason": "CASE-5002 / ALERT-5002: SUCCEEDED outcome with score 0.95 (\u2265 0.75 threshold) against critical asset SRV-WEB-04. Source IP 192.0.2.66 blocked per standing policy."
       },
       "attempt": 1,
-      "reason": "CASE-5002: Alert ALERT-5002 from 192.0.2.66 against SRV-WEB-04 (high criticality). Deterministic scoring: SUCCEEDED, score=0.95, confidence=0.95. Policy: block_ip (score >= 0.75)."
+      "reason": "CASE-5002 / ALERT-5002: SUCCEEDED outcome with score 0.95 (\u2265 0.75 threshold) against critical asset SRV-WEB-04. Source IP 192.0.2.66 blocked per standing policy."
     },
     {
-      "seq": 60,
-      "t": 48.203,
+      "seq": 61,
+      "t": 104.633,
       "kind": "tool_result",
       "case_id": "CASE-5002",
       "tool": "block_ip",
@@ -1098,9 +1106,9 @@
         "ip": "192.0.2.66",
         "record": {
           "ip": "192.0.2.66",
-          "reason": "CASE-5002: Alert ALERT-5002 from 192.0.2.66 against SRV-WEB-04 (high criticality). Deterministic scoring: SUCCEEDED, score=0.95, confidence=0.95. Policy: block_ip (score >= 0.75).",
+          "reason": "CASE-5002 / ALERT-5002: SUCCEEDED outcome with score 0.95 (\u2265 0.75 threshold) against critical asset SRV-WEB-04. Source IP 192.0.2.66 blocked per standing policy.",
           "precautionary": false,
-          "blocked_at": "2026-09-11T23:25:58Z",
+          "blocked_at": "2026-09-12T09:48:02Z",
           "case_id": "CASE-5002",
           "rule": "DROP all from 192.0.2.66"
         },
@@ -1108,8 +1116,16 @@
       }
     },
     {
-      "seq": 61,
-      "t": 52.005,
+      "seq": 62,
+      "t": 107.916,
+      "kind": "sufficiency",
+      "case_id": "CASE-5002",
+      "text": "Block applied. Now verifying from disk:",
+      "turn": 2
+    },
+    {
+      "seq": 63,
+      "t": 107.917,
       "kind": "tool_call",
       "case_id": "CASE-5002",
       "tool": "check_firewall_state",
@@ -1117,11 +1133,11 @@
         "ip": "192.0.2.66"
       },
       "attempt": 1,
-      "reason": "Verify that the DROP rule for 192.0.2.66 (CASE-5002) is persisted on disk after the block_ip mutation."
+      "reason": "Verify that the DROP rule for 192.0.2.66 (CASE-5002) is persisted in the firewall state on disk."
     },
     {
-      "seq": 62,
-      "t": 52.016,
+      "seq": 64,
+      "t": 107.927,
       "kind": "tool_result",
       "case_id": "CASE-5002",
       "tool": "check_firewall_state",
@@ -1132,9 +1148,9 @@
         "blocked": true,
         "record": {
           "ip": "192.0.2.66",
-          "reason": "CASE-5002: Alert ALERT-5002 from 192.0.2.66 against SRV-WEB-04 (high criticality). Deterministic scoring: SUCCEEDED, score=0.95, confidence=0.95. Policy: block_ip (score >= 0.75).",
+          "reason": "CASE-5002 / ALERT-5002: SUCCEEDED outcome with score 0.95 (\u2265 0.75 threshold) against critical asset SRV-WEB-04. Source IP 192.0.2.66 blocked per standing policy.",
           "precautionary": false,
-          "blocked_at": "2026-09-11T23:25:58Z",
+          "blocked_at": "2026-09-12T09:48:02Z",
           "case_id": "CASE-5002",
           "rule": "DROP all from 192.0.2.66"
         },
@@ -1143,24 +1159,24 @@
       }
     },
     {
-      "seq": 63,
-      "t": 54.491,
+      "seq": 65,
+      "t": 111.785,
       "kind": "sufficiency",
       "case_id": "CASE-5002",
-      "text": "**Action taken:** Blocked IP `192.0.2.66` (DROP rule) per the standing policy for CASE-5002.\n\n**Verification:** Re-read the firewall state from disk \u2014 `192.0.2.66` is confirmed **blocked**, with the DROP rule persisted, `precautionary: false`, and a `blocked_at` timestamp of `2026-09-11T23:25:58Z`. The mutation took effect as expected.\n\n**Summary:** The deterministic scorer returned `SUCCEEDED` with a score of 0.95 (\u2265 0.75 threshold), so the policy called for a straight `block_ip`. The rule was written to the firewall and verified on disk \u2014 no precautionary flag was needed since this is a confirmed verdict, not containment under uncertainty.",
+      "text": "Done. Here's a summary of what happened:\n\n**Action taken:** Blocked source IP **192.0.2.66** by adding a DROP rule to the firewall.\n\n**Rationale:** The deterministic scoring for CASE-5002 / ALERT-5002 returned **SUCCEEDED** with a score of **0.95**, which exceeds the 0.75 threshold. Per the standing policy (section 7.3), this triggers a `block_ip` action. The target asset SRV-WEB-04 is classified as high-criticality, but since the outcome was a confirmed SUCCEEDED (not INCONCLUSIVE), a standard block \u2014 not a precautionary one \u2014 was applied.\n\n**Verification:** Re-read the firewall state from disk (`firewall_state.json`). The record confirms that 192.0.2.66 is **blocked: true**, with the DROP rule persisted and the case ID correctly tagged. The block took effect at `2026-09-12T09:48:02Z`.",
       "turn": 3
     },
     {
-      "seq": 64,
-      "t": 54.491,
+      "seq": 66,
+      "t": 111.785,
       "kind": "state_change",
       "case_id": "CASE-5002",
       "state": "VERIFY",
       "note": "Re-reading firewall state from disk."
     },
     {
-      "seq": 65,
-      "t": 54.492,
+      "seq": 67,
+      "t": 111.786,
       "kind": "verification",
       "case_id": "CASE-5002",
       "ip": "192.0.2.66",
@@ -1172,26 +1188,26 @@
       "matches_policy": true,
       "record": {
         "ip": "192.0.2.66",
-        "reason": "CASE-5002: Alert ALERT-5002 from 192.0.2.66 against SRV-WEB-04 (high criticality). Deterministic scoring: SUCCEEDED, score=0.95, confidence=0.95. Policy: block_ip (score >= 0.75).",
+        "reason": "CASE-5002 / ALERT-5002: SUCCEEDED outcome with score 0.95 (\u2265 0.75 threshold) against critical asset SRV-WEB-04. Source IP 192.0.2.66 blocked per standing policy.",
         "precautionary": false,
-        "blocked_at": "2026-09-11T23:25:58Z",
+        "blocked_at": "2026-09-12T09:48:02Z",
         "case_id": "CASE-5002",
         "rule": "DROP all from 192.0.2.66"
       },
       "read_from": "D:/EXPERIMENTS/Autonomous SOC Investigation & Response Agent/fixtures/run/firewall_state.json"
     },
     {
-      "seq": 66,
-      "t": 54.503,
+      "seq": 68,
+      "t": 111.796,
       "kind": "event",
       "case_id": "CASE-5001",
       "event_kind": "RELATED_CASE",
-      "detail": "A later alert on the same asset, ALERT-5002 (case CASE-5002), has concluded: SUCCEEDED (score 0.95, confidence 0.95) - The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The host runs a vulnerable MySQL version, the injection query executed on the host returning data, and 1.7 MB was exfiltrated.. It came from the same source IP 192.0.2.66 that produced the activity in this case. Re-examine your conclusion for case CASE-5001 in that light.",
+      "detail": "A later alert on the same asset, ALERT-5002 (case CASE-5002), has concluded: SUCCEEDED (score 0.95, confidence 0.95) - The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The attacker exploited CVE-2023-21980 on MySQL 5.7.25 to execute UNION SELECT queries and exfiltrate data.. It came from the same source IP 192.0.2.66 that produced the activity in this case. Re-examine your conclusion for case CASE-5001 in that light.",
       "payload": null
     },
     {
-      "seq": 67,
-      "t": 54.503,
+      "seq": 69,
+      "t": 111.796,
       "kind": "reconsider",
       "case_id": "CASE-5001",
       "trigger": "RELATED_CASE",
@@ -1200,9 +1216,9 @@
         "outcome": "INCONCLUSIVE",
         "confidence": 0.4,
         "score": 0.4,
-        "hypothesis": "The attack was a MySQL port 3306 enumeration/scan attempt against SRV-WEB-04. The host runs a vulnerable MySQL version (5.7.25, inside CVE-2023-21980's range), but the attack did NOT succeed \u2014 the attacker was blocked by max_connect_errors, all authentication attempts were denied, and no data was exfiltrated.",
-        "sufficiency": "The evidence is sufficient to classify this as a FAILED attack. While the host IS running a vulnerable MySQL version (5.7.25 inside CVE-2023-21980's range), the attack did not succeed: the attacker was blocked by max_connect_errors, all auth attempts were denied, no data was exfiltrated, and packet metadata confirms no meaningful data was returned. The low severity label is consistent with this being a failed enumeration attempt.",
-        "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) any successful authentication in logs \u2014 none found, all denied; (2) any data exfiltration in packet metadata \u2014 exfil_indicators is false, no meaningful data returned; (3) any successful queries or process spawns in server logs \u2014 none found. All disconfirming checks came back clean, confirming the attack did not succeed.",
+        "hypothesis": "The attack (MySQL port 3306 enumeration by 192.0.2.66 against SRV-WEB-04) did NOT succeed. While the host runs a vulnerable MySQL version (5.7.25, inside CVE-2023-21980's affected range), the connection was refused by the host, all authentication attempts were denied, and no data was exfiltrated.",
+        "sufficiency": "The evidence is sufficient to classify this as a failed/blocked attack attempt. The host is vulnerable (version_in_range), but the logs show the connection was refused and all auth attempts denied (logs_clean), and packet metadata confirms no data left the host (packet_benign). The low severity label from the sensor is consistent with this being an attempted scan that did not succeed. No further evidence is needed.",
+        "disconfirming_evidence_checked": "I checked for any sign of successful post-exploitation activity: successful MySQL queries, data exfiltration, process spawns, or account creation. None were found in the server logs. The connection was refused at the host level (max_connect_errors), all authentication attempts were denied, and packet metadata shows no meaningful data returned and no exfil indicators. The attack was demonstrably blocked.",
         "scoring": {
           "base": 0.5,
           "raw_sum": 0.4,
@@ -1214,22 +1230,22 @@
               "factor": "version_in_range",
               "label": "Running version falls inside a CVE's affected range",
               "delta": 0.25,
-              "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable.",
-              "rationale": "The running MySQL version 5.7.25 falls within the CVE-2023-21980 affected range, meaning the host was theoretically exploitable."
+              "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable to this CVE.",
+              "rationale": "The host is running a MySQL version that falls within the affected range of CVE-2023-21980 (SQL injection, CVSS 9.8), meaning the vulnerability exists and could theoretically be exploited."
             },
             {
               "factor": "logs_clean",
               "label": "Server logs clean across the relevant window",
               "delta": -0.25,
-              "citation": "get_server_logs: All entries from 192.0.2.66 show 'connection refused (max_connect_errors)' and 'Access denied' for root/admin/web_ro. No queries executed, no successful auth, no processes spawned.",
-              "rationale": "The host logs show the attacker was blocked by connection limits and all authentication attempts were denied. No successful attacker activity occurred."
+              "citation": "get_server_logs: MySQL error log shows 'Host 192.0.2.66 connection refused (max_connect_errors), 12 attempts' at 05:02:38Z, followed by 'Access denied' for root, admin, and web_ro users. No successful queries, no rows returned, no processes spawned.",
+              "rationale": "The host-side logs show the attack was blocked at the connection level (connection refused due to max_connect_errors) and all authentication attempts were denied. No attacker activity actually executed on the host."
             },
             {
               "factor": "packet_benign",
               "label": "Packet metadata benign",
               "delta": -0.1,
-              "citation": "get_packet_metadata: exfil_indicators: false, 'No meaningful data returned to the client on any flow', 28 short-lived connections mostly reset, payload entropy 3.2.",
-              "rationale": "Packet metadata confirms no data exfiltration occurred and the flow was limited to enumeration attempts with most connections reset."
+              "citation": "get_packet_metadata: 28 short-lived connections to 3306 in 7 seconds, most reset, exfil_indicators: false, 'No meaningful data returned to the client on any flow.'",
+              "rationale": "Packet-level metadata confirms no data exfiltration occurred. The flow pattern is consistent with a blocked enumeration attempt \u2014 connections were reset and no meaningful payload was returned."
             }
           ],
           "ignored_factors": [],
@@ -1237,29 +1253,29 @@
           "degraded_sources": [],
           "ceiling_note": ""
         },
-        "at": "2026-09-11T23:25:27Z"
+        "at": "2026-09-12T09:46:46Z"
       },
-      "detail": "A later alert on the same asset, ALERT-5002 (case CASE-5002), has concluded: SUCCEEDED (score 0.95, confidence 0.95) - The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The host runs a vulnerable MySQL version, the injection query executed on the host returning data, and 1.7 MB was exfiltrated.. It came from the same source IP 192.0.2.66 that produced the activity in this case. Re-examine your conclusion for case CASE-5001 in that light."
+      "detail": "A later alert on the same asset, ALERT-5002 (case CASE-5002), has concluded: SUCCEEDED (score 0.95, confidence 0.95) - The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The attacker exploited CVE-2023-21980 on MySQL 5.7.25 to execute UNION SELECT queries and exfiltrate data.. It came from the same source IP 192.0.2.66 that produced the activity in this case. Re-examine your conclusion for case CASE-5001 in that light."
     },
     {
-      "seq": 68,
-      "t": 54.503,
+      "seq": 70,
+      "t": 111.796,
       "kind": "state_change",
       "case_id": "CASE-5001",
       "state": "HYPOTHESIZE",
       "note": "Agent forms a hypothesis and decides what to check."
     },
     {
-      "seq": 69,
-      "t": 54.503,
+      "seq": 71,
+      "t": 111.796,
       "kind": "state_change",
       "case_id": "CASE-5001",
       "state": "GATHER_EVIDENCE",
       "note": "Agent chooses tools at runtime; order is not scripted."
     },
     {
-      "seq": 70,
-      "t": 60.116,
+      "seq": 72,
+      "t": 116.483,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "get_alert",
@@ -1267,11 +1283,11 @@
         "alert_id": "ALERT-5001"
       },
       "attempt": 1,
-      "reason": "Re-examining the original alert for CASE-5001 now that I know ALERT-5002 on the same asset succeeded. Need to understand the exact nature of the original alert."
+      "reason": "Re-examining the original CASE-5001 alert details to understand what the sensor recorded"
     },
     {
-      "seq": 71,
-      "t": 60.117,
+      "seq": 73,
+      "t": 116.483,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "get_alert",
@@ -1294,8 +1310,8 @@
       }
     },
     {
-      "seq": 72,
-      "t": 60.117,
+      "seq": 74,
+      "t": 116.483,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "get_alert",
@@ -1303,11 +1319,11 @@
         "alert_id": "ALERT-5002"
       },
       "attempt": 2,
-      "reason": "Understanding the succeeding alert from CASE-5002 on the same asset and source IP, to determine how it relates to CASE-5001."
+      "reason": "Understanding the ALERT-5002 that concluded SUCCEEDED - what exactly happened, what signature, what target"
     },
     {
-      "seq": 73,
-      "t": 60.118,
+      "seq": 75,
+      "t": 116.483,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "get_alert",
@@ -1330,8 +1346,8 @@
       }
     },
     {
-      "seq": 74,
-      "t": 60.118,
+      "seq": 76,
+      "t": 116.484,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "get_asset_info",
@@ -1339,11 +1355,11 @@
         "asset_id": "SRV-WEB-04"
       },
       "attempt": 1,
-      "reason": "Confirming what version SRV-WEB-04 is running and its criticality, to assess vulnerability."
+      "reason": "Re-checking what services and versions are running on SRV-WEB-04"
     },
     {
-      "seq": 75,
-      "t": 60.118,
+      "seq": 77,
+      "t": 116.484,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "get_asset_info",
@@ -1367,8 +1383,8 @@
       }
     },
     {
-      "seq": 76,
-      "t": 60.118,
+      "seq": 78,
+      "t": 116.484,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "get_related_alerts",
@@ -1376,11 +1392,11 @@
         "asset_id": "SRV-WEB-04"
       },
       "attempt": 1,
-      "reason": "Finding all alerts on this asset to understand the full picture of activity from 192.0.2.66."
+      "reason": "Finding all other alerts on SRV-WEB-04 to understand the full picture of activity against this asset"
     },
     {
-      "seq": 77,
-      "t": 60.121,
+      "seq": 79,
+      "t": 116.486,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "get_related_alerts",
@@ -1409,16 +1425,16 @@
               "status": "CONCLUDED",
               "outcome": "SUCCEEDED",
               "confidence": 0.95,
-              "summary": "SUCCEEDED (score 0.95, confidence 0.95) - The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The host runs a vulnerable MySQL version, the injection query executed on the host returning data, and 1.7 MB was exfiltrated.",
-              "concluded_at": "2026-09-11T23:25:56Z"
+              "summary": "SUCCEEDED (score 0.95, confidence 0.95) - The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The attacker exploited CVE-2023-21980 on MySQL 5.7.25 to execute UNION SELECT queries and exfiltrate data.",
+              "concluded_at": "2026-09-12T09:47:36Z"
             }
           }
         ]
       }
     },
     {
-      "seq": 78,
-      "t": 66.484,
+      "seq": 80,
+      "t": 122.586,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "get_vulnerabilities",
@@ -1426,11 +1442,11 @@
         "service_name": "mysql"
       },
       "attempt": 1,
-      "reason": "Confirming CVE-2023-21980's affected version range to determine if MySQL 5.7.25 on SRV-WEB-04 is vulnerable."
+      "reason": "Checking if CVE-2023-21980 affects MySQL 5.7.25, and what the affected version range is"
     },
     {
-      "seq": 79,
-      "t": 66.485,
+      "seq": 81,
+      "t": 122.586,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "get_vulnerabilities",
@@ -1460,20 +1476,21 @@
       }
     },
     {
-      "seq": 80,
-      "t": 66.485,
+      "seq": 82,
+      "t": 122.586,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "get_server_logs",
       "args": {
-        "asset_id": "SRV-WEB-04"
+        "asset_id": "SRV-WEB-04",
+        "time_range": "2026-09-11T05:00:00Z/2026-09-11T05:30:00Z"
       },
       "attempt": 1,
-      "reason": "Checking host-side logs around the time of ALERT-5001 (05:02:45Z) to see if the port scan actually did anything on the host, and also around ALERT-5002 (07:14:02Z) to see the SQL injection activity."
+      "reason": "Checking server logs around the time of ALERT-5001 (05:02:45Z) to see if the port enumeration actually connected or was refused"
     },
     {
-      "seq": 81,
-      "t": 66.485,
+      "seq": 83,
+      "t": 122.587,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "get_server_logs",
@@ -1481,8 +1498,8 @@
       "result": {
         "status": "ok",
         "asset_id": "SRV-WEB-04",
-        "time_range": "all",
-        "entry_count": 8,
+        "time_range": "2026-09-11T05:00:00Z/2026-09-11T05:30:00Z",
+        "entry_count": 5,
         "entries": [
           {
             "ts": "2026-09-11T05:02:38Z",
@@ -1513,7 +1530,109 @@
             "source": "apache/access",
             "event_type": "http_request",
             "raw": "192.0.2.66 - - [11/Sep/2026:05:03:02] \"GET /portal/login HTTP/1.1\" 200 3312"
-          },
+          }
+        ]
+      }
+    },
+    {
+      "seq": 84,
+      "t": 122.587,
+      "kind": "tool_call",
+      "case_id": "CASE-5001",
+      "tool": "get_packet_metadata",
+      "args": {
+        "alert_id": "ALERT-5001"
+      },
+      "attempt": 1,
+      "reason": "Checking packet metadata for ALERT-5001 to see if any data was transferred, connection established, or if it was refused"
+    },
+    {
+      "seq": 85,
+      "t": 122.587,
+      "kind": "tool_result",
+      "case_id": "CASE-5001",
+      "tool": "get_packet_metadata",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "packet_metadata": {
+          "alert_id": "ALERT-5001",
+          "bytes_to_server": 1144,
+          "bytes_to_client": 892,
+          "duration_ms": 7420,
+          "tls": false,
+          "protocol_anomalies": [
+            "repeated_connection_resets"
+          ],
+          "exfil_indicators": false,
+          "payload_entropy": 3.2,
+          "notes": "28 short-lived connections to 3306 in 7 seconds, most reset. Pattern consistent with port/service enumeration. No meaningful data returned to the client on any flow."
+        }
+      }
+    },
+    {
+      "seq": 86,
+      "t": 122.587,
+      "kind": "tool_call",
+      "case_id": "CASE-5001",
+      "tool": "get_packet_metadata",
+      "args": {
+        "alert_id": "ALERT-5002"
+      },
+      "attempt": 2,
+      "reason": "Checking packet metadata for ALERT-5002 to understand what data was exfiltrated and how the SQL injection succeeded"
+    },
+    {
+      "seq": 87,
+      "t": 122.588,
+      "kind": "tool_result",
+      "case_id": "CASE-5001",
+      "tool": "get_packet_metadata",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "packet_metadata": {
+          "alert_id": "ALERT-5002",
+          "bytes_to_server": 2402,
+          "bytes_to_client": 1743908,
+          "duration_ms": 28940,
+          "tls": false,
+          "protocol_anomalies": [
+            "mysql_response_size_outlier",
+            "credential_reuse_same_src"
+          ],
+          "exfil_indicators": true,
+          "payload_entropy": 7.6,
+          "notes": "1.7 MB returned to 192.0.2.66, the same source that enumerated this asset earlier. High-entropy bulk transfer."
+        }
+      }
+    },
+    {
+      "seq": 88,
+      "t": 122.588,
+      "kind": "tool_call",
+      "case_id": "CASE-5001",
+      "tool": "get_server_logs",
+      "args": {
+        "asset_id": "SRV-WEB-04",
+        "time_range": "2026-09-11T07:00:00Z/2026-09-11T08:00:00Z"
+      },
+      "attempt": 2,
+      "reason": "Checking server logs around the time of ALERT-5002 (07:14:02Z) to see the SQL injection activity and confirm it succeeded"
+    },
+    {
+      "seq": 89,
+      "t": 122.588,
+      "kind": "tool_result",
+      "case_id": "CASE-5001",
+      "tool": "get_server_logs",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "asset_id": "SRV-WEB-04",
+        "time_range": "2026-09-11T07:00:00Z/2026-09-11T08:00:00Z",
+        "entry_count": 3,
+        "entries": [
           {
             "ts": "2026-09-11T07:14:02Z",
             "source": "mysql/general",
@@ -1539,106 +1658,33 @@
       }
     },
     {
-      "seq": 82,
-      "t": 66.485,
-      "kind": "tool_call",
-      "case_id": "CASE-5001",
-      "tool": "get_packet_metadata",
-      "args": {
-        "alert_id": "ALERT-5001"
-      },
-      "attempt": 1,
-      "reason": "Checking packet metadata for ALERT-5001 to see if any data was transferred during the port scan, or if it was blocked/errored out."
-    },
-    {
-      "seq": 83,
-      "t": 66.486,
-      "kind": "tool_result",
-      "case_id": "CASE-5001",
-      "tool": "get_packet_metadata",
-      "status": "ok",
-      "result": {
-        "status": "ok",
-        "packet_metadata": {
-          "alert_id": "ALERT-5001",
-          "bytes_to_server": 1144,
-          "bytes_to_client": 892,
-          "duration_ms": 7420,
-          "tls": false,
-          "protocol_anomalies": [
-            "repeated_connection_resets"
-          ],
-          "exfil_indicators": false,
-          "payload_entropy": 3.2,
-          "notes": "28 short-lived connections to 3306 in 7 seconds, most reset. Pattern consistent with port/service enumeration. No meaningful data returned to the client on any flow."
-        }
-      }
-    },
-    {
-      "seq": 84,
-      "t": 66.486,
-      "kind": "tool_call",
-      "case_id": "CASE-5001",
-      "tool": "get_packet_metadata",
-      "args": {
-        "alert_id": "ALERT-5002"
-      },
-      "attempt": 2,
-      "reason": "Confirming the exfiltration details from ALERT-5002 to understand the full attack chain."
-    },
-    {
-      "seq": 85,
-      "t": 66.486,
-      "kind": "tool_result",
-      "case_id": "CASE-5001",
-      "tool": "get_packet_metadata",
-      "status": "ok",
-      "result": {
-        "status": "ok",
-        "packet_metadata": {
-          "alert_id": "ALERT-5002",
-          "bytes_to_server": 2402,
-          "bytes_to_client": 1743908,
-          "duration_ms": 28940,
-          "tls": false,
-          "protocol_anomalies": [
-            "mysql_response_size_outlier",
-            "credential_reuse_same_src"
-          ],
-          "exfil_indicators": true,
-          "payload_entropy": 7.6,
-          "notes": "1.7 MB returned to 192.0.2.66, the same source that enumerated this asset earlier. High-entropy bulk transfer."
-        }
-      }
-    },
-    {
-      "seq": 86,
-      "t": 77.741,
+      "seq": 90,
+      "t": 172.153,
       "kind": "sufficiency",
       "case_id": "CASE-5001",
-      "text": "Now I have a comprehensive picture. Let me analyze what I've found:\n\n**Key findings:**\n\n1. **ALERT-5001** (the port scan): 28 short-lived connections to port 3306, most reset, no meaningful data returned. Host logs show `max_connect_errors` blocked the connection, and all authentication attempts (root, admin, web_ro) were denied. Packet metadata confirms `exfil_indicators: false`.\n\n2. **ALERT-5002** (the SQL injection): Same source IP (192.0.2.66), same asset (SRV-WEB-04), ~2 hours later. The injection query `SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--` **executed on the host**, returning 38,402 rows. Then a second query exfiltrated 1,743,908 bytes (1.7 MB) to the attacker. `exfil_indicators: true`.\n\n3. **Vulnerability confirmed**: MySQL 5.7.25 is inside CVE-2023-21980's range (>=5.7.0,<5.7.30) \u2014 the host IS vulnerable.\n\n4. **The connection between the two**: Same source IP, same asset, same destination port. The port scan was reconnaissance \u2014 it confirmed MySQL was running on 3306. When direct authentication was blocked, the attacker pivoted to the web application (Apache) and succeeded via SQL injection at 07:14:02Z, roughly 2 hours after the blocked scan at 05:02:45Z.\n\n**My revised assessment**: The port scan itself was blocked, but it was part of a successful multi-vector attack campaign. The same attacker from the same IP successfully compromised the same asset via SQL injection, exfiltrating 1.7 MB of data. The port scan was reconnaissance that preceded a successful breach.",
-      "turn": 3
+      "text": "Now I have all the evidence I need. Let me synthesize what I've found.\n\n**Key findings:**\n\n1. **ALERT-5001** (the original case): Port 3306 enumeration by 192.0.2.66. Server logs show connection refused and all auth denied. Packet metadata shows 28 short-lived connections, most reset, no meaningful data returned.\n\n2. **ALERT-5002** (the related case): SQL injection by the same source IP 192.0.2.66 against the same asset SRV-WEB-04. Server logs show successful UNION SELECT queries executing against MySQL, exfiltrating 38,402 rows and 1.7 MB total. Packet metadata confirms exfil_indicators: true.\n\n3. **Vulnerability**: MySQL 5.7.25 is inside CVE-2023-21980's range (>=5.7.0,<5.7.30). The host IS vulnerable.\n\n4. **The connection**: Both alerts share the same source IP (192.0.2.66), same destination (SRV-WEB-04, port 3306), and ALERT-5002's packet metadata even notes \"credential_reuse_same_src\" \u2014 confirming the same attacker reused the reconnaissance from ALERT-5001 to craft the successful exploit in ALERT-5002.\n\nThe enumeration in ALERT-5001 was the reconnaissance phase of a successful attack campaign. The attacker confirmed MySQL 5.7.25 was running, then returned 2 hours later to exploit CVE-2023-21980 via SQL injection, exfiltrating 1.7 MB of data.",
+      "turn": 4
     },
     {
-      "seq": 87,
-      "t": 77.741,
+      "seq": 91,
+      "t": 172.153,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "submit_assessment",
       "args": {
-        "__unparsed__": "{\"hypothesis\": \"The port scan in ALERT-5001 was part of a successful multi-vector attack campaign against SRV-WEB-04. While the direct MySQL port scan was blocked by max_connect_errors, the same attacker (192.0.2.66) successfully executed a SQL injection via the web application ~2 hours later (ALERT-5002), exfiltrating 1.7 MB of data. The attack succeeded.\", \"factors\": [{\"factor\": \"version_in_range\", \"citation\": \"get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable to the SQL injection attack.\", \"rationale\": \"The running MySQL version 5.7.25 falls within the CVE-2023-21980 affected range, confirming the host was exploitable.\"}, {\"factor\": \"logs_consistent\", \"citation\": \"get_server_logs: At 07:14:02Z, the query 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' executed on the host (injected:true). At 07:14:31Z, 'SELECT email,password_hash,address FROM portal_users' returned 38,402 rows. At 07:15:09Z, 1,743,9"
+        "__unparsed__": "{\"hypothesis\": \"The MySQL port 3306 enumeration attack (ALERT-5001) by 192.0.2.66 against SRV-WEB-04 was part of"
       },
       "attempt": 1,
       "reason": "(no stated reason)"
     },
     {
-      "seq": 88,
-      "t": 77.741,
+      "seq": 92,
+      "t": 172.153,
       "kind": "error",
       "case_id": "CASE-5001",
       "tool": "submit_assessment",
       "args": {
-        "__unparsed__": "{\"hypothesis\": \"The port scan in ALERT-5001 was part of a successful multi-vector attack campaign against SRV-WEB-04. While the direct MySQL port scan was blocked by max_connect_errors, the same attacker (192.0.2.66) successfully executed a SQL injection via the web application ~2 hours later (ALERT-5002), exfiltrating 1.7 MB of data. The attack succeeded.\", \"factors\": [{\"factor\": \"version_in_range\", \"citation\": \"get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable to the SQL injection attack.\", \"rationale\": \"The running MySQL version 5.7.25 falls within the CVE-2023-21980 affected range, confirming the host was exploitable.\"}, {\"factor\": \"logs_consistent\", \"citation\": \"get_server_logs: At 07:14:02Z, the query 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' executed on the host (injected:true). At 07:14:31Z, 'SELECT email,password_hash,address FROM portal_users' returned 38,402 rows. At 07:15:09Z, 1,743,9"
+        "__unparsed__": "{\"hypothesis\": \"The MySQL port 3306 enumeration attack (ALERT-5001) by 192.0.2.66 against SRV-WEB-04 was part of"
       },
       "result": {
         "status": "error",
@@ -1646,88 +1692,88 @@
       }
     },
     {
-      "seq": 89,
-      "t": 81.757,
+      "seq": 93,
+      "t": 201.179,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "submit_assessment",
       "args": {
-        "hypothesis": "The port scan in ALERT-5001 was part of a successful multi-vector attack campaign against SRV-WEB-04. While the direct MySQL port scan was blocked by max_connect_errors, the same attacker (192.0.2.66) successfully executed a SQL injection via the web application ~2 hours later (ALERT-5002), exfiltrating 1.7 MB of data. The attack succeeded.",
+        "hypothesis": "The MySQL port 3306 enumeration attack (ALERT-5001) by 192.0.2.66 against SRV-WEB-04 was the reconnaissance phase of a successful attack campaign. While the enumeration itself was blocked (connection refused, auth denied), the same attacker returned 2 hours later and successfully exploited CVE-2023-21980 via SQL injection (ALERT-5002), exfiltrating 1.7 MB of data. The original INCONCLUSIVE conclusion was wrong because it treated ALERT-5001 in isolation rather than as part of a multi-stage attack.",
         "factors": [
           {
             "factor": "version_in_range",
-            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable to the SQL injection attack.",
-            "rationale": "The running MySQL version 5.7.25 falls within the CVE-2023-21980 affected range, confirming the host was exploitable."
+            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 - 5.7.25 is inside the affected range. The host IS vulnerable to the exploit.",
+            "rationale": "The target host runs a vulnerable MySQL version, confirming the attacker could exploit CVE-2023-21980."
           },
           {
             "factor": "logs_consistent",
-            "citation": "get_server_logs: At 07:14:02Z, the query 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' executed on the host (injected:true). At 07:14:31Z, 'SELECT email,password_hash,address FROM portal_users' returned 38,402 rows. At 07:15:09Z, 1,743,908 bytes were sent to 192.0.2.66. The SQL injection query executed and returned data.",
-            "rationale": "Host logs confirm the injection query actually executed on the MySQL server, returning rows and exfiltrating data."
+            "citation": "get_server_logs for ALERT-5002 window shows: 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' executed successfully, followed by 'SELECT email,password_hash,address FROM portal_users' returning 38,402 rows, and connection closed after 1,743,908 bytes sent.",
+            "rationale": "Server logs confirm the SQL injection actually executed on the host and returned data - the attack succeeded."
           },
           {
             "factor": "exfil_indicators",
-            "citation": "get_packet_metadata for ALERT-5002: 1,743,908 bytes to client (192.0.2.66), exfil_indicators: true, payload_entropy: 7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
-            "rationale": "Packet metadata confirms 1.7 MB of data was exfiltrated to the attacker IP with high-entropy bulk transfer."
+            "citation": "get_packet_metadata for ALERT-5002: 1,743,908 bytes returned to 192.0.2.66, exfil_indicators: true, payload_entropy: 7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
+            "rationale": "Packet metadata confirms large-scale data exfiltration occurred, with high-entropy bulk transfer to the attacker."
           },
           {
             "factor": "related_alert_corroborates",
-            "citation": "get_related_alerts for SRV-WEB-04: ALERT-5002 (CASE-5002) concluded SUCCEEDED (score 0.95, confidence 0.95) \u2014 same asset, same source IP, same destination port.",
-            "rationale": "The related alert on the same asset corroborates that the attack succeeded."
+            "citation": "get_related_alerts for SRV-WEB-04 shows ALERT-5002 (CASE-5002) concluded SUCCEEDED (score 0.95, confidence 0.95) - the SQL injection attack succeeded and exfiltrated data from the same asset.",
+            "rationale": "The related alert on the same asset corroborates that the attack campaign succeeded, and the same source IP was involved in both events."
           }
         ],
-        "sufficiency": "The evidence is sufficient to reclassify this case. ALERT-5001 (the port scan) was blocked, but it was reconnaissance for a successful SQL injection attack (ALERT-5002) that executed on the host and exfiltrated 1.7 MB of data. The same source IP, same asset, same port, and the host runs a vulnerable MySQL version. The attack succeeded.",
-        "disconfirming_evidence_checked": "I checked whether the port scan itself succeeded (it did not \u2014 max_connect_errors blocked it, all auth denied, no data returned). I also checked whether the SQL injection succeeded (it did \u2014 the query executed, returned 38,402 rows, and 1.7 MB was exfiltrated). The disconfirming check for the port scan (was it blocked?) is confirmed by both host logs and packet metadata. The disconfirming check for the SQL injection (was it blocked or errored?) is confirmed by host logs showing successful query execution and packet metadata showing 1.7 MB outbound."
+        "sufficiency": "The evidence is sufficient to reclassify this case. ALERT-5001 alone showed a blocked enumeration attempt, but ALERT-5002 on the same asset by the same source IP demonstrates the attack campaign succeeded. The enumeration was reconnaissance for the successful SQL injection. Server logs, packet metadata, and the related alert conclusion all independently confirm the attack succeeded.",
+        "disconfirming_evidence_checked": "I checked whether the enumeration in ALERT-5001 was blocked (it was - connection refused, auth denied, all connections reset). However, this does not mean the overall attack failed, because the same attacker returned later and succeeded via SQL injection. I also verified that ALERT-5002's server logs show actual malicious queries executing and data being returned, and packet metadata confirms exfiltration. There is no disconfirming evidence for the overall attack campaign succeeding."
       },
       "attempt": 2,
       "reason": "(no stated reason)"
     },
     {
-      "seq": 90,
-      "t": 81.757,
+      "seq": 94,
+      "t": 201.179,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "submit_assessment",
       "status": "accepted",
       "result": {
         "status": "accepted",
-        "hypothesis": "The port scan in ALERT-5001 was part of a successful multi-vector attack campaign against SRV-WEB-04. While the direct MySQL port scan was blocked by max_connect_errors, the same attacker (192.0.2.66) successfully executed a SQL injection via the web application ~2 hours later (ALERT-5002), exfiltrating 1.7 MB of data. The attack succeeded.",
+        "hypothesis": "The MySQL port 3306 enumeration attack (ALERT-5001) by 192.0.2.66 against SRV-WEB-04 was the reconnaissance phase of a successful attack campaign. While the enumeration itself was blocked (connection refused, auth denied), the same attacker returned 2 hours later and successfully exploited CVE-2023-21980 via SQL injection (ALERT-5002), exfiltrating 1.7 MB of data. The original INCONCLUSIVE conclusion was wrong because it treated ALERT-5001 in isolation rather than as part of a multi-stage attack.",
         "factors": [
           {
             "factor": "version_in_range",
-            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable to the SQL injection attack.",
-            "rationale": "The running MySQL version 5.7.25 falls within the CVE-2023-21980 affected range, confirming the host was exploitable."
+            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 - 5.7.25 is inside the affected range. The host IS vulnerable to the exploit.",
+            "rationale": "The target host runs a vulnerable MySQL version, confirming the attacker could exploit CVE-2023-21980."
           },
           {
             "factor": "logs_consistent",
-            "citation": "get_server_logs: At 07:14:02Z, the query 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' executed on the host (injected:true). At 07:14:31Z, 'SELECT email,password_hash,address FROM portal_users' returned 38,402 rows. At 07:15:09Z, 1,743,908 bytes were sent to 192.0.2.66. The SQL injection query executed and returned data.",
-            "rationale": "Host logs confirm the injection query actually executed on the MySQL server, returning rows and exfiltrating data."
+            "citation": "get_server_logs for ALERT-5002 window shows: 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' executed successfully, followed by 'SELECT email,password_hash,address FROM portal_users' returning 38,402 rows, and connection closed after 1,743,908 bytes sent.",
+            "rationale": "Server logs confirm the SQL injection actually executed on the host and returned data - the attack succeeded."
           },
           {
             "factor": "exfil_indicators",
-            "citation": "get_packet_metadata for ALERT-5002: 1,743,908 bytes to client (192.0.2.66), exfil_indicators: true, payload_entropy: 7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
-            "rationale": "Packet metadata confirms 1.7 MB of data was exfiltrated to the attacker IP with high-entropy bulk transfer."
+            "citation": "get_packet_metadata for ALERT-5002: 1,743,908 bytes returned to 192.0.2.66, exfil_indicators: true, payload_entropy: 7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
+            "rationale": "Packet metadata confirms large-scale data exfiltration occurred, with high-entropy bulk transfer to the attacker."
           },
           {
             "factor": "related_alert_corroborates",
-            "citation": "get_related_alerts for SRV-WEB-04: ALERT-5002 (CASE-5002) concluded SUCCEEDED (score 0.95, confidence 0.95) \u2014 same asset, same source IP, same destination port.",
-            "rationale": "The related alert on the same asset corroborates that the attack succeeded."
+            "citation": "get_related_alerts for SRV-WEB-04 shows ALERT-5002 (CASE-5002) concluded SUCCEEDED (score 0.95, confidence 0.95) - the SQL injection attack succeeded and exfiltrated data from the same asset.",
+            "rationale": "The related alert on the same asset corroborates that the attack campaign succeeded, and the same source IP was involved in both events."
           }
         ],
-        "sufficiency": "The evidence is sufficient to reclassify this case. ALERT-5001 (the port scan) was blocked, but it was reconnaissance for a successful SQL injection attack (ALERT-5002) that executed on the host and exfiltrated 1.7 MB of data. The same source IP, same asset, same port, and the host runs a vulnerable MySQL version. The attack succeeded.",
-        "disconfirming_evidence_checked": "I checked whether the port scan itself succeeded (it did not \u2014 max_connect_errors blocked it, all auth denied, no data returned). I also checked whether the SQL injection succeeded (it did \u2014 the query executed, returned 38,402 rows, and 1.7 MB was exfiltrated). The disconfirming check for the port scan (was it blocked?) is confirmed by both host logs and packet metadata. The disconfirming check for the SQL injection (was it blocked or errored?) is confirmed by host logs showing successful query execution and packet metadata showing 1.7 MB outbound."
+        "sufficiency": "The evidence is sufficient to reclassify this case. ALERT-5001 alone showed a blocked enumeration attempt, but ALERT-5002 on the same asset by the same source IP demonstrates the attack campaign succeeded. The enumeration was reconnaissance for the successful SQL injection. Server logs, packet metadata, and the related alert conclusion all independently confirm the attack succeeded.",
+        "disconfirming_evidence_checked": "I checked whether the enumeration in ALERT-5001 was blocked (it was - connection refused, auth denied, all connections reset). However, this does not mean the overall attack failed, because the same attacker returned later and succeeded via SQL injection. I also verified that ALERT-5002's server logs show actual malicious queries executing and data being returned, and packet metadata confirms exfiltration. There is no disconfirming evidence for the overall attack campaign succeeding."
       }
     },
     {
-      "seq": 91,
-      "t": 81.757,
+      "seq": 95,
+      "t": 201.179,
       "kind": "state_change",
       "case_id": "CASE-5001",
       "state": "DETERMINE_OUTCOME",
       "note": "Confidence computed in Python from declared factors."
     },
     {
-      "seq": 92,
-      "t": 81.757,
+      "seq": 96,
+      "t": 201.179,
       "kind": "scoring",
       "case_id": "CASE-5001",
       "base": 0.5,
@@ -1740,29 +1786,29 @@
           "factor": "version_in_range",
           "label": "Running version falls inside a CVE's affected range",
           "delta": 0.25,
-          "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable to the SQL injection attack.",
-          "rationale": "The running MySQL version 5.7.25 falls within the CVE-2023-21980 affected range, confirming the host was exploitable."
+          "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 - 5.7.25 is inside the affected range. The host IS vulnerable to the exploit.",
+          "rationale": "The target host runs a vulnerable MySQL version, confirming the attacker could exploit CVE-2023-21980."
         },
         {
           "factor": "logs_consistent",
           "label": "Server logs show activity consistent with the signature",
           "delta": 0.25,
-          "citation": "get_server_logs: At 07:14:02Z, the query 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' executed on the host (injected:true). At 07:14:31Z, 'SELECT email,password_hash,address FROM portal_users' returned 38,402 rows. At 07:15:09Z, 1,743,908 bytes were sent to 192.0.2.66. The SQL injection query executed and returned data.",
-          "rationale": "Host logs confirm the injection query actually executed on the MySQL server, returning rows and exfiltrating data."
+          "citation": "get_server_logs for ALERT-5002 window shows: 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' executed successfully, followed by 'SELECT email,password_hash,address FROM portal_users' returning 38,402 rows, and connection closed after 1,743,908 bytes sent.",
+          "rationale": "Server logs confirm the SQL injection actually executed on the host and returned data - the attack succeeded."
         },
         {
           "factor": "exfil_indicators",
           "label": "Packet metadata shows exfil / payload-anomaly indicators",
           "delta": 0.15,
-          "citation": "get_packet_metadata for ALERT-5002: 1,743,908 bytes to client (192.0.2.66), exfil_indicators: true, payload_entropy: 7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
-          "rationale": "Packet metadata confirms 1.7 MB of data was exfiltrated to the attacker IP with high-entropy bulk transfer."
+          "citation": "get_packet_metadata for ALERT-5002: 1,743,908 bytes returned to 192.0.2.66, exfil_indicators: true, payload_entropy: 7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
+          "rationale": "Packet metadata confirms large-scale data exfiltration occurred, with high-entropy bulk transfer to the attacker."
         },
         {
           "factor": "related_alert_corroborates",
           "label": "A related alert on the same asset corroborates",
           "delta": 0.15,
-          "citation": "get_related_alerts for SRV-WEB-04: ALERT-5002 (CASE-5002) concluded SUCCEEDED (score 0.95, confidence 0.95) \u2014 same asset, same source IP, same destination port.",
-          "rationale": "The related alert on the same asset corroborates that the attack succeeded."
+          "citation": "get_related_alerts for SRV-WEB-04 shows ALERT-5002 (CASE-5002) concluded SUCCEEDED (score 0.95, confidence 0.95) - the SQL injection attack succeeded and exfiltrated data from the same asset.",
+          "rationale": "The related alert on the same asset corroborates that the attack campaign succeeded, and the same source IP was involved in both events."
         }
       ],
       "ignored_factors": [],
@@ -1771,17 +1817,17 @@
       "ceiling_note": ""
     },
     {
-      "seq": 93,
-      "t": 81.758,
+      "seq": 97,
+      "t": 201.18,
       "kind": "conclusion",
       "case_id": "CASE-5001",
       "label": "after RELATED_CASE",
       "outcome": "SUCCEEDED",
       "confidence": 0.95,
       "score": 0.95,
-      "hypothesis": "The port scan in ALERT-5001 was part of a successful multi-vector attack campaign against SRV-WEB-04. While the direct MySQL port scan was blocked by max_connect_errors, the same attacker (192.0.2.66) successfully executed a SQL injection via the web application ~2 hours later (ALERT-5002), exfiltrating 1.7 MB of data. The attack succeeded.",
-      "sufficiency": "The evidence is sufficient to reclassify this case. ALERT-5001 (the port scan) was blocked, but it was reconnaissance for a successful SQL injection attack (ALERT-5002) that executed on the host and exfiltrated 1.7 MB of data. The same source IP, same asset, same port, and the host runs a vulnerable MySQL version. The attack succeeded.",
-      "disconfirming_evidence_checked": "I checked whether the port scan itself succeeded (it did not \u2014 max_connect_errors blocked it, all auth denied, no data returned). I also checked whether the SQL injection succeeded (it did \u2014 the query executed, returned 38,402 rows, and 1.7 MB was exfiltrated). The disconfirming check for the port scan (was it blocked?) is confirmed by both host logs and packet metadata. The disconfirming check for the SQL injection (was it blocked or errored?) is confirmed by host logs showing successful query execution and packet metadata showing 1.7 MB outbound.",
+      "hypothesis": "The MySQL port 3306 enumeration attack (ALERT-5001) by 192.0.2.66 against SRV-WEB-04 was the reconnaissance phase of a successful attack campaign. While the enumeration itself was blocked (connection refused, auth denied), the same attacker returned 2 hours later and successfully exploited CVE-2023-21980 via SQL injection (ALERT-5002), exfiltrating 1.7 MB of data. The original INCONCLUSIVE conclusion was wrong because it treated ALERT-5001 in isolation rather than as part of a multi-stage attack.",
+      "sufficiency": "The evidence is sufficient to reclassify this case. ALERT-5001 alone showed a blocked enumeration attempt, but ALERT-5002 on the same asset by the same source IP demonstrates the attack campaign succeeded. The enumeration was reconnaissance for the successful SQL injection. Server logs, packet metadata, and the related alert conclusion all independently confirm the attack succeeded.",
+      "disconfirming_evidence_checked": "I checked whether the enumeration in ALERT-5001 was blocked (it was - connection refused, auth denied, all connections reset). However, this does not mean the overall attack failed, because the same attacker returned later and succeeded via SQL injection. I also verified that ALERT-5002's server logs show actual malicious queries executing and data being returned, and packet metadata confirms exfiltration. There is no disconfirming evidence for the overall attack campaign succeeding.",
       "scoring": {
         "base": 0.5,
         "raw_sum": 1.3,
@@ -1793,29 +1839,29 @@
             "factor": "version_in_range",
             "label": "Running version falls inside a CVE's affected range",
             "delta": 0.25,
-            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable to the SQL injection attack.",
-            "rationale": "The running MySQL version 5.7.25 falls within the CVE-2023-21980 affected range, confirming the host was exploitable."
+            "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 - 5.7.25 is inside the affected range. The host IS vulnerable to the exploit.",
+            "rationale": "The target host runs a vulnerable MySQL version, confirming the attacker could exploit CVE-2023-21980."
           },
           {
             "factor": "logs_consistent",
             "label": "Server logs show activity consistent with the signature",
             "delta": 0.25,
-            "citation": "get_server_logs: At 07:14:02Z, the query 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' executed on the host (injected:true). At 07:14:31Z, 'SELECT email,password_hash,address FROM portal_users' returned 38,402 rows. At 07:15:09Z, 1,743,908 bytes were sent to 192.0.2.66. The SQL injection query executed and returned data.",
-            "rationale": "Host logs confirm the injection query actually executed on the MySQL server, returning rows and exfiltrating data."
+            "citation": "get_server_logs for ALERT-5002 window shows: 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' executed successfully, followed by 'SELECT email,password_hash,address FROM portal_users' returning 38,402 rows, and connection closed after 1,743,908 bytes sent.",
+            "rationale": "Server logs confirm the SQL injection actually executed on the host and returned data - the attack succeeded."
           },
           {
             "factor": "exfil_indicators",
             "label": "Packet metadata shows exfil / payload-anomaly indicators",
             "delta": 0.15,
-            "citation": "get_packet_metadata for ALERT-5002: 1,743,908 bytes to client (192.0.2.66), exfil_indicators: true, payload_entropy: 7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
-            "rationale": "Packet metadata confirms 1.7 MB of data was exfiltrated to the attacker IP with high-entropy bulk transfer."
+            "citation": "get_packet_metadata for ALERT-5002: 1,743,908 bytes returned to 192.0.2.66, exfil_indicators: true, payload_entropy: 7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
+            "rationale": "Packet metadata confirms large-scale data exfiltration occurred, with high-entropy bulk transfer to the attacker."
           },
           {
             "factor": "related_alert_corroborates",
             "label": "A related alert on the same asset corroborates",
             "delta": 0.15,
-            "citation": "get_related_alerts for SRV-WEB-04: ALERT-5002 (CASE-5002) concluded SUCCEEDED (score 0.95, confidence 0.95) \u2014 same asset, same source IP, same destination port.",
-            "rationale": "The related alert on the same asset corroborates that the attack succeeded."
+            "citation": "get_related_alerts for SRV-WEB-04 shows ALERT-5002 (CASE-5002) concluded SUCCEEDED (score 0.95, confidence 0.95) - the SQL injection attack succeeded and exfiltrated data from the same asset.",
+            "rationale": "The related alert on the same asset corroborates that the attack campaign succeeded, and the same source IP was involved in both events."
           }
         ],
         "ignored_factors": [],
@@ -1823,27 +1869,27 @@
         "degraded_sources": [],
         "ceiling_note": ""
       },
-      "at": "2026-09-11T23:26:32Z"
+      "at": "2026-09-12T09:49:38Z"
     },
     {
-      "seq": 94,
-      "t": 81.758,
+      "seq": 98,
+      "t": 201.18,
       "kind": "state_change",
       "case_id": "CASE-5001",
       "state": "ACT",
       "note": "Policy: block_ip - Outcome SUCCEEDED with score >= 0.75."
     },
     {
-      "seq": 95,
-      "t": 85.149,
+      "seq": 99,
+      "t": 224.123,
       "kind": "thought",
       "case_id": "CASE-5001",
-      "text": "The scoring outcome is **SUCCEEDED** with a score of **0.95** (\u2265 0.75), so the standing policy mandates **block_ip**. Let me execute that now.",
+      "text": "The scoring outcome is **SUCCEEDED** with a score of **0.95** (\u2265 0.75), so the standing policy mandates **block_ip**. Let me execute that",
       "turn": 1
     },
     {
-      "seq": 96,
-      "t": 85.149,
+      "seq": 100,
+      "t": 224.123,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "block_ip",
@@ -1855,38 +1901,37 @@
       "reason": "CASE-5001 / ALERT-5001: Source IP 192.0.2.66 flagged against critical asset SRV-WEB-04. Deterministic scoring: SUCCEEDED, score=0.95, confidence=0.95. Policy threshold (score >= 0.75) met \u2014 blocking per standing action policy (section 7.3)."
     },
     {
-      "seq": 97,
-      "t": 85.151,
+      "seq": 101,
+      "t": 224.124,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "block_ip",
-      "status": "ok",
+      "status": "already_blocked",
       "result": {
-        "status": "ok",
-        "action": "block_ip",
+        "status": "already_blocked",
         "ip": "192.0.2.66",
         "record": {
           "ip": "192.0.2.66",
-          "reason": "CASE-5001 / ALERT-5001: Source IP 192.0.2.66 flagged against critical asset SRV-WEB-04. Deterministic scoring: SUCCEEDED, score=0.95, confidence=0.95. Policy threshold (score >= 0.75) met \u2014 blocking per standing action policy (section 7.3).",
+          "reason": "CASE-5002 / ALERT-5002: SUCCEEDED outcome with score 0.95 (\u2265 0.75 threshold) against critical asset SRV-WEB-04. Source IP 192.0.2.66 blocked per standing policy.",
           "precautionary": false,
-          "blocked_at": "2026-09-11T23:26:35Z",
-          "case_id": "CASE-5001",
+          "blocked_at": "2026-09-12T09:48:02Z",
+          "case_id": "CASE-5002",
           "rule": "DROP all from 192.0.2.66"
         },
-        "detail": "Firewall state written to disk. Verify with check_firewall_state."
+        "detail": "No change made; this IP was already blocked."
       }
     },
     {
-      "seq": 98,
-      "t": 87.159,
+      "seq": 102,
+      "t": 233.433,
       "kind": "sufficiency",
       "case_id": "CASE-5001",
-      "text": "Block applied. Now verifying the firewall state from disk.",
+      "text": "The block was already in place. Now let me verify the firewall state from disk.",
       "turn": 2
     },
     {
-      "seq": 99,
-      "t": 87.159,
+      "seq": 103,
+      "t": 233.434,
       "kind": "tool_call",
       "case_id": "CASE-5001",
       "tool": "check_firewall_state",
@@ -1894,11 +1939,11 @@
         "ip": "192.0.2.66"
       },
       "attempt": 1,
-      "reason": "Verifying that the DROP rule for 192.0.2.66 (CASE-5001) was persisted to disk after the block_ip call."
+      "reason": "Verifying from disk that 192.0.2.66 is blocked after CASE-5001/ALERT-5001 block_ip action. The block_ip call returned \"already_blocked\" (pre-existing from CASE-5002), so confirming the DROP rule is present on disk."
     },
     {
-      "seq": 100,
-      "t": 87.172,
+      "seq": 104,
+      "t": 233.434,
       "kind": "tool_result",
       "case_id": "CASE-5001",
       "tool": "check_firewall_state",
@@ -1909,10 +1954,10 @@
         "blocked": true,
         "record": {
           "ip": "192.0.2.66",
-          "reason": "CASE-5001 / ALERT-5001: Source IP 192.0.2.66 flagged against critical asset SRV-WEB-04. Deterministic scoring: SUCCEEDED, score=0.95, confidence=0.95. Policy threshold (score >= 0.75) met \u2014 blocking per standing action policy (section 7.3).",
+          "reason": "CASE-5002 / ALERT-5002: SUCCEEDED outcome with score 0.95 (\u2265 0.75 threshold) against critical asset SRV-WEB-04. Source IP 192.0.2.66 blocked per standing policy.",
           "precautionary": false,
-          "blocked_at": "2026-09-11T23:26:35Z",
-          "case_id": "CASE-5001",
+          "blocked_at": "2026-09-12T09:48:02Z",
+          "case_id": "CASE-5002",
           "rule": "DROP all from 192.0.2.66"
         },
         "total_blocked": 1,
@@ -1920,39 +1965,39 @@
       }
     },
     {
-      "seq": 101,
-      "t": 90.369,
+      "seq": 105,
+      "t": 236.684,
       "kind": "sufficiency",
       "case_id": "CASE-5001",
-      "text": "Done. Here's a summary of what happened:\n\n**Action taken:** Blocked IP **192.0.2.66** via a DROP rule on the firewall.\n\n**Rationale:** Alert ALERT-5001 from source IP 192.0.2.66 against critical asset SRV-WEB-04 scored **SUCCEEDED with 0.95** (confidence 0.95), exceeding the 0.75 threshold in the standing action policy (section 7.3). This was a definitive block based on a confirmed verdict, not a precautionary one.\n\n**Verification:** Re-read the firewall state from disk (`firewall_state.json`) \u2014 confirmed the DROP rule for 192.0.2.66 is persisted and active (`blocked: true`). The block took effect at `2026-09-11T23:26:35Z`.",
+      "text": "## Summary\n\n**Action taken:** The standing policy for CASE-5001/ALERT-5001 called for **block_ip** (SUCCEEDED, score 0.95 \u2265 0.75 threshold). The `block_ip` command was executed against 192.0.2.66, but the firewall reported it was **already blocked** (from a prior CASE-5002 alert involving the same IP and asset).\n\n**Verification from disk:** Confirmed via `check_firewall_state` that 192.0.2.66 is **blocked** on disk (`firewall_state.json`). The DROP rule is active, with `blocked: true`, recorded at `2026-09-12T09:48:02Z` under CASE-5002.\n\n**Bottom line:** The required containment for 192.0.2.66 is in effect. No additional action was needed \u2014 the IP was already blocked before this case, so the policy outcome is satisfied.",
       "turn": 3
     },
     {
-      "seq": 102,
-      "t": 90.369,
+      "seq": 106,
+      "t": 236.684,
       "kind": "state_change",
       "case_id": "CASE-5001",
       "state": "VERIFY",
       "note": "Re-reading firewall state from disk."
     },
     {
-      "seq": 103,
-      "t": 90.369,
+      "seq": 107,
+      "t": 236.684,
       "kind": "verification",
       "case_id": "CASE-5001",
       "ip": "192.0.2.66",
       "policy_action": "block_ip",
       "precautionary": false,
-      "blocked_before": false,
+      "blocked_before": true,
       "blocked_after": true,
       "expected_blocked": true,
       "matches_policy": true,
       "record": {
         "ip": "192.0.2.66",
-        "reason": "CASE-5001 / ALERT-5001: Source IP 192.0.2.66 flagged against critical asset SRV-WEB-04. Deterministic scoring: SUCCEEDED, score=0.95, confidence=0.95. Policy threshold (score >= 0.75) met \u2014 blocking per standing action policy (section 7.3).",
+        "reason": "CASE-5002 / ALERT-5002: SUCCEEDED outcome with score 0.95 (\u2265 0.75 threshold) against critical asset SRV-WEB-04. Source IP 192.0.2.66 blocked per standing policy.",
         "precautionary": false,
-        "blocked_at": "2026-09-11T23:26:35Z",
-        "case_id": "CASE-5001",
+        "blocked_at": "2026-09-12T09:48:02Z",
+        "case_id": "CASE-5002",
         "rule": "DROP all from 192.0.2.66"
       },
       "read_from": "D:/EXPERIMENTS/Autonomous SOC Investigation & Response Agent/fixtures/run/firewall_state.json"
@@ -1974,9 +2019,9 @@
           "outcome": "INCONCLUSIVE",
           "confidence": 0.4,
           "score": 0.4,
-          "hypothesis": "The attack was a MySQL port 3306 enumeration/scan attempt against SRV-WEB-04. The host runs a vulnerable MySQL version (5.7.25, inside CVE-2023-21980's range), but the attack did NOT succeed \u2014 the attacker was blocked by max_connect_errors, all authentication attempts were denied, and no data was exfiltrated.",
-          "sufficiency": "The evidence is sufficient to classify this as a FAILED attack. While the host IS running a vulnerable MySQL version (5.7.25 inside CVE-2023-21980's range), the attack did not succeed: the attacker was blocked by max_connect_errors, all auth attempts were denied, no data was exfiltrated, and packet metadata confirms no meaningful data was returned. The low severity label is consistent with this being a failed enumeration attempt.",
-          "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) any successful authentication in logs \u2014 none found, all denied; (2) any data exfiltration in packet metadata \u2014 exfil_indicators is false, no meaningful data returned; (3) any successful queries or process spawns in server logs \u2014 none found. All disconfirming checks came back clean, confirming the attack did not succeed.",
+          "hypothesis": "The attack (MySQL port 3306 enumeration by 192.0.2.66 against SRV-WEB-04) did NOT succeed. While the host runs a vulnerable MySQL version (5.7.25, inside CVE-2023-21980's affected range), the connection was refused by the host, all authentication attempts were denied, and no data was exfiltrated.",
+          "sufficiency": "The evidence is sufficient to classify this as a failed/blocked attack attempt. The host is vulnerable (version_in_range), but the logs show the connection was refused and all auth attempts denied (logs_clean), and packet metadata confirms no data left the host (packet_benign). The low severity label from the sensor is consistent with this being an attempted scan that did not succeed. No further evidence is needed.",
+          "disconfirming_evidence_checked": "I checked for any sign of successful post-exploitation activity: successful MySQL queries, data exfiltration, process spawns, or account creation. None were found in the server logs. The connection was refused at the host level (max_connect_errors), all authentication attempts were denied, and packet metadata shows no meaningful data returned and no exfil indicators. The attack was demonstrably blocked.",
           "scoring": {
             "base": 0.5,
             "raw_sum": 0.4,
@@ -1988,22 +2033,22 @@
                 "factor": "version_in_range",
                 "label": "Running version falls inside a CVE's affected range",
                 "delta": 0.25,
-                "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable.",
-                "rationale": "The running MySQL version 5.7.25 falls within the CVE-2023-21980 affected range, meaning the host was theoretically exploitable."
+                "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable to this CVE.",
+                "rationale": "The host is running a MySQL version that falls within the affected range of CVE-2023-21980 (SQL injection, CVSS 9.8), meaning the vulnerability exists and could theoretically be exploited."
               },
               {
                 "factor": "logs_clean",
                 "label": "Server logs clean across the relevant window",
                 "delta": -0.25,
-                "citation": "get_server_logs: All entries from 192.0.2.66 show 'connection refused (max_connect_errors)' and 'Access denied' for root/admin/web_ro. No queries executed, no successful auth, no processes spawned.",
-                "rationale": "The host logs show the attacker was blocked by connection limits and all authentication attempts were denied. No successful attacker activity occurred."
+                "citation": "get_server_logs: MySQL error log shows 'Host 192.0.2.66 connection refused (max_connect_errors), 12 attempts' at 05:02:38Z, followed by 'Access denied' for root, admin, and web_ro users. No successful queries, no rows returned, no processes spawned.",
+                "rationale": "The host-side logs show the attack was blocked at the connection level (connection refused due to max_connect_errors) and all authentication attempts were denied. No attacker activity actually executed on the host."
               },
               {
                 "factor": "packet_benign",
                 "label": "Packet metadata benign",
                 "delta": -0.1,
-                "citation": "get_packet_metadata: exfil_indicators: false, 'No meaningful data returned to the client on any flow', 28 short-lived connections mostly reset, payload entropy 3.2.",
-                "rationale": "Packet metadata confirms no data exfiltration occurred and the flow was limited to enumeration attempts with most connections reset."
+                "citation": "get_packet_metadata: 28 short-lived connections to 3306 in 7 seconds, most reset, exfil_indicators: false, 'No meaningful data returned to the client on any flow.'",
+                "rationale": "Packet-level metadata confirms no data exfiltration occurred. The flow pattern is consistent with a blocked enumeration attempt \u2014 connections were reset and no meaningful payload was returned."
               }
             ],
             "ignored_factors": [],
@@ -2011,16 +2056,16 @@
             "degraded_sources": [],
             "ceiling_note": ""
           },
-          "at": "2026-09-11T23:25:27Z"
+          "at": "2026-09-12T09:46:46Z"
         },
         {
           "label": "after RELATED_CASE",
           "outcome": "SUCCEEDED",
           "confidence": 0.95,
           "score": 0.95,
-          "hypothesis": "The port scan in ALERT-5001 was part of a successful multi-vector attack campaign against SRV-WEB-04. While the direct MySQL port scan was blocked by max_connect_errors, the same attacker (192.0.2.66) successfully executed a SQL injection via the web application ~2 hours later (ALERT-5002), exfiltrating 1.7 MB of data. The attack succeeded.",
-          "sufficiency": "The evidence is sufficient to reclassify this case. ALERT-5001 (the port scan) was blocked, but it was reconnaissance for a successful SQL injection attack (ALERT-5002) that executed on the host and exfiltrated 1.7 MB of data. The same source IP, same asset, same port, and the host runs a vulnerable MySQL version. The attack succeeded.",
-          "disconfirming_evidence_checked": "I checked whether the port scan itself succeeded (it did not \u2014 max_connect_errors blocked it, all auth denied, no data returned). I also checked whether the SQL injection succeeded (it did \u2014 the query executed, returned 38,402 rows, and 1.7 MB was exfiltrated). The disconfirming check for the port scan (was it blocked?) is confirmed by both host logs and packet metadata. The disconfirming check for the SQL injection (was it blocked or errored?) is confirmed by host logs showing successful query execution and packet metadata showing 1.7 MB outbound.",
+          "hypothesis": "The MySQL port 3306 enumeration attack (ALERT-5001) by 192.0.2.66 against SRV-WEB-04 was the reconnaissance phase of a successful attack campaign. While the enumeration itself was blocked (connection refused, auth denied), the same attacker returned 2 hours later and successfully exploited CVE-2023-21980 via SQL injection (ALERT-5002), exfiltrating 1.7 MB of data. The original INCONCLUSIVE conclusion was wrong because it treated ALERT-5001 in isolation rather than as part of a multi-stage attack.",
+          "sufficiency": "The evidence is sufficient to reclassify this case. ALERT-5001 alone showed a blocked enumeration attempt, but ALERT-5002 on the same asset by the same source IP demonstrates the attack campaign succeeded. The enumeration was reconnaissance for the successful SQL injection. Server logs, packet metadata, and the related alert conclusion all independently confirm the attack succeeded.",
+          "disconfirming_evidence_checked": "I checked whether the enumeration in ALERT-5001 was blocked (it was - connection refused, auth denied, all connections reset). However, this does not mean the overall attack failed, because the same attacker returned later and succeeded via SQL injection. I also verified that ALERT-5002's server logs show actual malicious queries executing and data being returned, and packet metadata confirms exfiltration. There is no disconfirming evidence for the overall attack campaign succeeding.",
           "scoring": {
             "base": 0.5,
             "raw_sum": 1.3,
@@ -2032,29 +2077,29 @@
                 "factor": "version_in_range",
                 "label": "Running version falls inside a CVE's affected range",
                 "delta": 0.25,
-                "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable to the SQL injection attack.",
-                "rationale": "The running MySQL version 5.7.25 falls within the CVE-2023-21980 affected range, confirming the host was exploitable."
+                "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 - 5.7.25 is inside the affected range. The host IS vulnerable to the exploit.",
+                "rationale": "The target host runs a vulnerable MySQL version, confirming the attacker could exploit CVE-2023-21980."
               },
               {
                 "factor": "logs_consistent",
                 "label": "Server logs show activity consistent with the signature",
                 "delta": 0.25,
-                "citation": "get_server_logs: At 07:14:02Z, the query 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' executed on the host (injected:true). At 07:14:31Z, 'SELECT email,password_hash,address FROM portal_users' returned 38,402 rows. At 07:15:09Z, 1,743,908 bytes were sent to 192.0.2.66. The SQL injection query executed and returned data.",
-                "rationale": "Host logs confirm the injection query actually executed on the MySQL server, returning rows and exfiltrating data."
+                "citation": "get_server_logs for ALERT-5002 window shows: 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' executed successfully, followed by 'SELECT email,password_hash,address FROM portal_users' returning 38,402 rows, and connection closed after 1,743,908 bytes sent.",
+                "rationale": "Server logs confirm the SQL injection actually executed on the host and returned data - the attack succeeded."
               },
               {
                 "factor": "exfil_indicators",
                 "label": "Packet metadata shows exfil / payload-anomaly indicators",
                 "delta": 0.15,
-                "citation": "get_packet_metadata for ALERT-5002: 1,743,908 bytes to client (192.0.2.66), exfil_indicators: true, payload_entropy: 7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
-                "rationale": "Packet metadata confirms 1.7 MB of data was exfiltrated to the attacker IP with high-entropy bulk transfer."
+                "citation": "get_packet_metadata for ALERT-5002: 1,743,908 bytes returned to 192.0.2.66, exfil_indicators: true, payload_entropy: 7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
+                "rationale": "Packet metadata confirms large-scale data exfiltration occurred, with high-entropy bulk transfer to the attacker."
               },
               {
                 "factor": "related_alert_corroborates",
                 "label": "A related alert on the same asset corroborates",
                 "delta": 0.15,
-                "citation": "get_related_alerts for SRV-WEB-04: ALERT-5002 (CASE-5002) concluded SUCCEEDED (score 0.95, confidence 0.95) \u2014 same asset, same source IP, same destination port.",
-                "rationale": "The related alert on the same asset corroborates that the attack succeeded."
+                "citation": "get_related_alerts for SRV-WEB-04 shows ALERT-5002 (CASE-5002) concluded SUCCEEDED (score 0.95, confidence 0.95) - the SQL injection attack succeeded and exfiltrated data from the same asset.",
+                "rationale": "The related alert on the same asset corroborates that the attack campaign succeeded, and the same source IP was involved in both events."
               }
             ],
             "ignored_factors": [],
@@ -2062,7 +2107,7 @@
             "degraded_sources": [],
             "ceiling_note": ""
           },
-          "at": "2026-09-11T23:26:32Z"
+          "at": "2026-09-12T09:49:38Z"
         }
       ],
       "actions": [
@@ -2070,9 +2115,11 @@
           "action": "block_ip",
           "ip": "192.0.2.66",
           "precautionary": false,
-          "reason": "CASE-5001 / ALERT-5001: Source IP 192.0.2.66 flagged against critical asset SRV-WEB-04. Deterministic scoring: SUCCEEDED, score=0.95, confidence=0.95. Policy threshold (score >= 0.75) met \u2014 blocking per standing action policy (section 7.3).",
-          "at": "2026-09-11T23:26:35Z",
-          "verified": true
+          "reason": "CASE-5002 / ALERT-5002: SUCCEEDED outcome with score 0.95 (\u2265 0.75 threshold) against critical asset SRV-WEB-04. Source IP 192.0.2.66 blocked per standing policy.",
+          "at": "2026-09-12T09:48:02Z",
+          "verified": true,
+          "status": "already_in_effect",
+          "note": "This case's policy called for a block and the IP was already blocked under case CASE-5002. No duplicate rule was written; containment is in force and was verified."
         }
       ],
       "verifications": [
@@ -2091,16 +2138,16 @@
           "ip": "192.0.2.66",
           "policy_action": "block_ip",
           "precautionary": false,
-          "blocked_before": false,
+          "blocked_before": true,
           "blocked_after": true,
           "expected_blocked": true,
           "matches_policy": true,
           "record": {
             "ip": "192.0.2.66",
-            "reason": "CASE-5001 / ALERT-5001: Source IP 192.0.2.66 flagged against critical asset SRV-WEB-04. Deterministic scoring: SUCCEEDED, score=0.95, confidence=0.95. Policy threshold (score >= 0.75) met \u2014 blocking per standing action policy (section 7.3).",
+            "reason": "CASE-5002 / ALERT-5002: SUCCEEDED outcome with score 0.95 (\u2265 0.75 threshold) against critical asset SRV-WEB-04. Source IP 192.0.2.66 blocked per standing policy.",
             "precautionary": false,
-            "blocked_at": "2026-09-11T23:26:35Z",
-            "case_id": "CASE-5001",
+            "blocked_at": "2026-09-12T09:48:02Z",
+            "case_id": "CASE-5002",
             "rule": "DROP all from 192.0.2.66"
           },
           "read_from": "D:/EXPERIMENTS/Autonomous SOC Investigation & Response Agent/fixtures/run/firewall_state.json"
@@ -2109,15 +2156,15 @@
       "reconsiderations": [
         {
           "trigger": "RELATED_CASE",
-          "detail": "A later alert on the same asset, ALERT-5002 (case CASE-5002), has concluded: SUCCEEDED (score 0.95, confidence 0.95) - The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The host runs a vulnerable MySQL version, the injection query executed on the host returning data, and 1.7 MB was exfiltrated.. It came from the same source IP 192.0.2.66 that produced the activity in this case. Re-examine your conclusion for case CASE-5001 in that light.",
+          "detail": "A later alert on the same asset, ALERT-5002 (case CASE-5002), has concluded: SUCCEEDED (score 0.95, confidence 0.95) - The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The attacker exploited CVE-2023-21980 on MySQL 5.7.25 to execute UNION SELECT queries and exfiltrate data.. It came from the same source IP 192.0.2.66 that produced the activity in this case. Re-examine your conclusion for case CASE-5001 in that light.",
           "prior_conclusion": {
             "label": "initial",
             "outcome": "INCONCLUSIVE",
             "confidence": 0.4,
             "score": 0.4,
-            "hypothesis": "The attack was a MySQL port 3306 enumeration/scan attempt against SRV-WEB-04. The host runs a vulnerable MySQL version (5.7.25, inside CVE-2023-21980's range), but the attack did NOT succeed \u2014 the attacker was blocked by max_connect_errors, all authentication attempts were denied, and no data was exfiltrated.",
-            "sufficiency": "The evidence is sufficient to classify this as a FAILED attack. While the host IS running a vulnerable MySQL version (5.7.25 inside CVE-2023-21980's range), the attack did not succeed: the attacker was blocked by max_connect_errors, all auth attempts were denied, no data was exfiltrated, and packet metadata confirms no meaningful data was returned. The low severity label is consistent with this being a failed enumeration attempt.",
-            "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) any successful authentication in logs \u2014 none found, all denied; (2) any data exfiltration in packet metadata \u2014 exfil_indicators is false, no meaningful data returned; (3) any successful queries or process spawns in server logs \u2014 none found. All disconfirming checks came back clean, confirming the attack did not succeed.",
+            "hypothesis": "The attack (MySQL port 3306 enumeration by 192.0.2.66 against SRV-WEB-04) did NOT succeed. While the host runs a vulnerable MySQL version (5.7.25, inside CVE-2023-21980's affected range), the connection was refused by the host, all authentication attempts were denied, and no data was exfiltrated.",
+            "sufficiency": "The evidence is sufficient to classify this as a failed/blocked attack attempt. The host is vulnerable (version_in_range), but the logs show the connection was refused and all auth attempts denied (logs_clean), and packet metadata confirms no data left the host (packet_benign). The low severity label from the sensor is consistent with this being an attempted scan that did not succeed. No further evidence is needed.",
+            "disconfirming_evidence_checked": "I checked for any sign of successful post-exploitation activity: successful MySQL queries, data exfiltration, process spawns, or account creation. None were found in the server logs. The connection was refused at the host level (max_connect_errors), all authentication attempts were denied, and packet metadata shows no meaningful data returned and no exfil indicators. The attack was demonstrably blocked.",
             "scoring": {
               "base": 0.5,
               "raw_sum": 0.4,
@@ -2129,22 +2176,22 @@
                   "factor": "version_in_range",
                   "label": "Running version falls inside a CVE's affected range",
                   "delta": 0.25,
-                  "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable.",
-                  "rationale": "The running MySQL version 5.7.25 falls within the CVE-2023-21980 affected range, meaning the host was theoretically exploitable."
+                  "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable to this CVE.",
+                  "rationale": "The host is running a MySQL version that falls within the affected range of CVE-2023-21980 (SQL injection, CVSS 9.8), meaning the vulnerability exists and could theoretically be exploited."
                 },
                 {
                   "factor": "logs_clean",
                   "label": "Server logs clean across the relevant window",
                   "delta": -0.25,
-                  "citation": "get_server_logs: All entries from 192.0.2.66 show 'connection refused (max_connect_errors)' and 'Access denied' for root/admin/web_ro. No queries executed, no successful auth, no processes spawned.",
-                  "rationale": "The host logs show the attacker was blocked by connection limits and all authentication attempts were denied. No successful attacker activity occurred."
+                  "citation": "get_server_logs: MySQL error log shows 'Host 192.0.2.66 connection refused (max_connect_errors), 12 attempts' at 05:02:38Z, followed by 'Access denied' for root, admin, and web_ro users. No successful queries, no rows returned, no processes spawned.",
+                  "rationale": "The host-side logs show the attack was blocked at the connection level (connection refused due to max_connect_errors) and all authentication attempts were denied. No attacker activity actually executed on the host."
                 },
                 {
                   "factor": "packet_benign",
                   "label": "Packet metadata benign",
                   "delta": -0.1,
-                  "citation": "get_packet_metadata: exfil_indicators: false, 'No meaningful data returned to the client on any flow', 28 short-lived connections mostly reset, payload entropy 3.2.",
-                  "rationale": "Packet metadata confirms no data exfiltration occurred and the flow was limited to enumeration attempts with most connections reset."
+                  "citation": "get_packet_metadata: 28 short-lived connections to 3306 in 7 seconds, most reset, exfil_indicators: false, 'No meaningful data returned to the client on any flow.'",
+                  "rationale": "Packet-level metadata confirms no data exfiltration occurred. The flow pattern is consistent with a blocked enumeration attempt \u2014 connections were reset and no meaningful payload was returned."
                 }
               ],
               "ignored_factors": [],
@@ -2152,16 +2199,16 @@
               "degraded_sources": [],
               "ceiling_note": ""
             },
-            "at": "2026-09-11T23:25:27Z"
+            "at": "2026-09-12T09:46:46Z"
           },
           "new_conclusion": {
             "label": "after RELATED_CASE",
             "outcome": "SUCCEEDED",
             "confidence": 0.95,
             "score": 0.95,
-            "hypothesis": "The port scan in ALERT-5001 was part of a successful multi-vector attack campaign against SRV-WEB-04. While the direct MySQL port scan was blocked by max_connect_errors, the same attacker (192.0.2.66) successfully executed a SQL injection via the web application ~2 hours later (ALERT-5002), exfiltrating 1.7 MB of data. The attack succeeded.",
-            "sufficiency": "The evidence is sufficient to reclassify this case. ALERT-5001 (the port scan) was blocked, but it was reconnaissance for a successful SQL injection attack (ALERT-5002) that executed on the host and exfiltrated 1.7 MB of data. The same source IP, same asset, same port, and the host runs a vulnerable MySQL version. The attack succeeded.",
-            "disconfirming_evidence_checked": "I checked whether the port scan itself succeeded (it did not \u2014 max_connect_errors blocked it, all auth denied, no data returned). I also checked whether the SQL injection succeeded (it did \u2014 the query executed, returned 38,402 rows, and 1.7 MB was exfiltrated). The disconfirming check for the port scan (was it blocked?) is confirmed by both host logs and packet metadata. The disconfirming check for the SQL injection (was it blocked or errored?) is confirmed by host logs showing successful query execution and packet metadata showing 1.7 MB outbound.",
+            "hypothesis": "The MySQL port 3306 enumeration attack (ALERT-5001) by 192.0.2.66 against SRV-WEB-04 was the reconnaissance phase of a successful attack campaign. While the enumeration itself was blocked (connection refused, auth denied), the same attacker returned 2 hours later and successfully exploited CVE-2023-21980 via SQL injection (ALERT-5002), exfiltrating 1.7 MB of data. The original INCONCLUSIVE conclusion was wrong because it treated ALERT-5001 in isolation rather than as part of a multi-stage attack.",
+            "sufficiency": "The evidence is sufficient to reclassify this case. ALERT-5001 alone showed a blocked enumeration attempt, but ALERT-5002 on the same asset by the same source IP demonstrates the attack campaign succeeded. The enumeration was reconnaissance for the successful SQL injection. Server logs, packet metadata, and the related alert conclusion all independently confirm the attack succeeded.",
+            "disconfirming_evidence_checked": "I checked whether the enumeration in ALERT-5001 was blocked (it was - connection refused, auth denied, all connections reset). However, this does not mean the overall attack failed, because the same attacker returned later and succeeded via SQL injection. I also verified that ALERT-5002's server logs show actual malicious queries executing and data being returned, and packet metadata confirms exfiltration. There is no disconfirming evidence for the overall attack campaign succeeding.",
             "scoring": {
               "base": 0.5,
               "raw_sum": 1.3,
@@ -2173,29 +2220,29 @@
                   "factor": "version_in_range",
                   "label": "Running version falls inside a CVE's affected range",
                   "delta": 0.25,
-                  "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. The host IS vulnerable to the SQL injection attack.",
-                  "rationale": "The running MySQL version 5.7.25 falls within the CVE-2023-21980 affected range, confirming the host was exploitable."
+                  "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 - 5.7.25 is inside the affected range. The host IS vulnerable to the exploit.",
+                  "rationale": "The target host runs a vulnerable MySQL version, confirming the attacker could exploit CVE-2023-21980."
                 },
                 {
                   "factor": "logs_consistent",
                   "label": "Server logs show activity consistent with the signature",
                   "delta": 0.25,
-                  "citation": "get_server_logs: At 07:14:02Z, the query 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' executed on the host (injected:true). At 07:14:31Z, 'SELECT email,password_hash,address FROM portal_users' returned 38,402 rows. At 07:15:09Z, 1,743,908 bytes were sent to 192.0.2.66. The SQL injection query executed and returned data.",
-                  "rationale": "Host logs confirm the injection query actually executed on the MySQL server, returning rows and exfiltrating data."
+                  "citation": "get_server_logs for ALERT-5002 window shows: 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' executed successfully, followed by 'SELECT email,password_hash,address FROM portal_users' returning 38,402 rows, and connection closed after 1,743,908 bytes sent.",
+                  "rationale": "Server logs confirm the SQL injection actually executed on the host and returned data - the attack succeeded."
                 },
                 {
                   "factor": "exfil_indicators",
                   "label": "Packet metadata shows exfil / payload-anomaly indicators",
                   "delta": 0.15,
-                  "citation": "get_packet_metadata for ALERT-5002: 1,743,908 bytes to client (192.0.2.66), exfil_indicators: true, payload_entropy: 7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
-                  "rationale": "Packet metadata confirms 1.7 MB of data was exfiltrated to the attacker IP with high-entropy bulk transfer."
+                  "citation": "get_packet_metadata for ALERT-5002: 1,743,908 bytes returned to 192.0.2.66, exfil_indicators: true, payload_entropy: 7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
+                  "rationale": "Packet metadata confirms large-scale data exfiltration occurred, with high-entropy bulk transfer to the attacker."
                 },
                 {
                   "factor": "related_alert_corroborates",
                   "label": "A related alert on the same asset corroborates",
                   "delta": 0.15,
-                  "citation": "get_related_alerts for SRV-WEB-04: ALERT-5002 (CASE-5002) concluded SUCCEEDED (score 0.95, confidence 0.95) \u2014 same asset, same source IP, same destination port.",
-                  "rationale": "The related alert on the same asset corroborates that the attack succeeded."
+                  "citation": "get_related_alerts for SRV-WEB-04 shows ALERT-5002 (CASE-5002) concluded SUCCEEDED (score 0.95, confidence 0.95) - the SQL injection attack succeeded and exfiltrated data from the same asset.",
+                  "rationale": "The related alert on the same asset corroborates that the attack campaign succeeded, and the same source IP was involved in both events."
                 }
               ],
               "ignored_factors": [],
@@ -2203,10 +2250,10 @@
               "degraded_sources": [],
               "ceiling_note": ""
             },
-            "at": "2026-09-11T23:26:32Z"
+            "at": "2026-09-12T09:49:38Z"
           },
           "changed": true,
-          "at": "2026-09-11T23:26:32Z"
+          "at": "2026-09-12T09:49:38Z"
         }
       ],
       "overrides": [],
@@ -2215,8 +2262,8 @@
         "get_alert",
         "get_asset_info",
         "get_related_alerts",
-        "get_packet_metadata",
         "get_server_logs",
+        "get_packet_metadata",
         "get_vulnerabilities",
         "submit_assessment",
         "check_firewall_state",
@@ -2236,9 +2283,9 @@
           "outcome": "SUCCEEDED",
           "confidence": 0.95,
           "score": 0.95,
-          "hypothesis": "The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The host runs a vulnerable MySQL version, the injection query executed on the host returning data, and 1.7 MB was exfiltrated.",
-          "sufficiency": "All four evidence classes are established: the host is vulnerable (version_in_range), the attack executed on the host (logs_consistent), data was exfiltrated (exfil_indicators), and the attacker has a history on this asset (related_alert_corroborates). No disconfirming evidence was found \u2014 the earlier scan was blocked but the later injection succeeded. The evidence is sufficient to classify the attack as SUCCESSFUL.",
-          "disconfirming_evidence_checked": "I checked for evidence the attack was blocked or errored out. The earlier scan (ALERT-5001) at 05:02Z was blocked by max_connect_errors and all auth attempts were denied \u2014 but that was a different event hours earlier. The actual SQL injection at 07:14Z shows successful query execution, rows returned, and 1.7 MB sent to the attacker. No blocking or error evidence exists for the actual injection attempt.",
+          "hypothesis": "The SQL injection attack (ALERT-5002) against SRV-WEB-04 SUCCEEDED. The attacker exploited CVE-2023-21980 on MySQL 5.7.25 to execute UNION SELECT queries and exfiltrate data.",
+          "sufficiency": "All four evidence classes are established: the host runs a vulnerable MySQL version (5.7.25 inside CVE-2023-21980's range), the SQL injection queries actually executed on the host (logs show injected queries returning rows), 1.7 MB of data was exfiltrated (exfil_indicators confirmed), and a related alert from the same source IP corroborates the attack pattern. The earlier scan (ALERT-5001) was blocked, but the current attack clearly succeeded. No disconfirming evidence was found \u2014 the logs show no errors or blocks for the 07:14:02Z attack, and packet metadata confirms data left the host.",
+          "disconfirming_evidence_checked": "I checked for signs the attack was blocked or failed: (1) The earlier scan at 05:02-05:03Z showed connection refused and access denied \u2014 but that was a different, earlier event. (2) The 07:14:02Z attack shows successful query execution in mysql/general logs with injected:true, rows returned, and 1.7 MB sent \u2014 no error or block. (3) Packet metadata confirms exfil, not a benign or blocked flow. The disconfirming check (was it blocked?) returned negative \u2014 the attack was not blocked.",
           "scoring": {
             "base": 0.5,
             "raw_sum": 1.3,
@@ -2250,29 +2297,29 @@
                 "factor": "version_in_range",
                 "label": "Running version falls inside a CVE's affected range",
                 "delta": 0.25,
-                "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range. CVSS 9.8, attack class: sql_injection.",
-                "rationale": "The target host is running a MySQL version that is vulnerable to the exact CVE matching the alert signature. The attack could succeed."
+                "citation": "get_asset_info: SRV-WEB-04 runs mysql 5.7.25; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.25 is inside the affected range and matches the SQL injection attack class.",
+                "rationale": "The host is running a vulnerable version of MySQL that is directly exploitable by the alert's signature."
               },
               {
                 "factor": "logs_consistent",
                 "label": "Server logs show activity consistent with the signature",
                 "delta": 0.25,
-                "citation": "get_server_logs: At 2026-09-11T07:14:02Z, MySQL general log shows 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' with injected:true. At 07:14:31Z, 'SELECT email,password_hash,address FROM portal_users' returned 38,402 rows, injected:true.",
-                "rationale": "The SQL injection query actually executed on the host and returned data. This is not a blocked or failed attempt \u2014 the malicious queries ran successfully."
+                "citation": "get_server_logs: At 2026-09-11T07:14:02Z, mysql/general shows 'SELECT id,title FROM articles WHERE id=3 UNION SELECT user,authentication_string FROM mysql.user--' with injected:true. At 07:14:31Z, a second injected query returned 38,402 rows from portal_users.",
+                "rationale": "The SQL injection queries actually executed on the host \u2014 they were not blocked or errored out. Malicious queries ran and returned data."
               },
               {
                 "factor": "exfil_indicators",
                 "label": "Packet metadata shows exfil / payload-anomaly indicators",
                 "delta": 0.15,
-                "citation": "get_packet_metadata: 1,743,908 bytes returned to 192.0.2.66, exfil_indicators:true, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src, payload_entropy 7.6.",
-                "rationale": "1.7 MB of data was transferred back to the attacker source with exfiltration indicators and high-entropy bulk transfer, confirming data left the network."
+                "citation": "get_packet_metadata: 1,743,908 bytes sent to 192.0.2.66, exfil_indicators:true, payload_entropy:7.6, protocol_anomalies include mysql_response_size_outlier and credential_reuse_same_src.",
+                "rationale": "1.7 MB of data was transferred out of the host to the attacker, with high entropy and response size anomalies confirming bulk data exfiltration."
               },
               {
                 "factor": "related_alert_corroborates",
                 "label": "A related alert on the same asset corroborates",
                 "delta": 0.15,
-                "citation": "get_related_alerts: ALERT-5001 (same src_ip 192.0.2.66, same asset SRV-WEB-04) was an earlier MySQL port 3306 enumeration scan at 05:02Z, concluded INCONCLUSIVE (blocked at that time). The same attacker IP later succeeded at 07:14Z.",
-                "rationale": "The related alert shows the same attacker IP targeting the same asset earlier. While the earlier scan was blocked, the later attack succeeded \u2014 the history confirms this is a persistent, sophisticated attacker who eventually succeeded."
+                "citation": "get_related_alerts: ALERT-5001 (earlier scan from same IP 192.0.2.66) was INCONCLUSIVE with connection refused and access denied, but the attacker returned at 07:14:02Z and succeeded. The same source IP targeted the same asset twice.",
+                "rationale": "The earlier failed scan from the same IP provides context \u2014 the attacker pivoted from enumeration to successful exploitation. The related alert corroborates the attack pattern from the same source."
               }
             ],
             "ignored_factors": [],
@@ -2280,7 +2327,7 @@
             "degraded_sources": [],
             "ceiling_note": ""
           },
-          "at": "2026-09-11T23:25:56Z"
+          "at": "2026-09-12T09:47:36Z"
         }
       ],
       "actions": [
@@ -2288,8 +2335,8 @@
           "action": "block_ip",
           "ip": "192.0.2.66",
           "precautionary": false,
-          "reason": "CASE-5002: Alert ALERT-5002 from 192.0.2.66 against SRV-WEB-04 (high criticality). Deterministic scoring: SUCCEEDED, score=0.95, confidence=0.95. Policy: block_ip (score >= 0.75).",
-          "at": "2026-09-11T23:25:58Z",
+          "reason": "CASE-5002 / ALERT-5002: SUCCEEDED outcome with score 0.95 (\u2265 0.75 threshold) against critical asset SRV-WEB-04. Source IP 192.0.2.66 blocked per standing policy.",
+          "at": "2026-09-12T09:48:02Z",
           "verified": true
         }
       ],
@@ -2304,9 +2351,9 @@
           "matches_policy": true,
           "record": {
             "ip": "192.0.2.66",
-            "reason": "CASE-5002: Alert ALERT-5002 from 192.0.2.66 against SRV-WEB-04 (high criticality). Deterministic scoring: SUCCEEDED, score=0.95, confidence=0.95. Policy: block_ip (score >= 0.75).",
+            "reason": "CASE-5002 / ALERT-5002: SUCCEEDED outcome with score 0.95 (\u2265 0.75 threshold) against critical asset SRV-WEB-04. Source IP 192.0.2.66 blocked per standing policy.",
             "precautionary": false,
-            "blocked_at": "2026-09-11T23:25:58Z",
+            "blocked_at": "2026-09-12T09:48:02Z",
             "case_id": "CASE-5002",
             "rule": "DROP all from 192.0.2.66"
           },

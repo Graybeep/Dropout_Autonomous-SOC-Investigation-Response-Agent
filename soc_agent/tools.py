@@ -237,7 +237,16 @@ def submit_assessment(
     """Validated here; the actual scoring is done by the orchestrator."""
     from . import confidence
 
-    problems = confidence.validate([f.get("factor", "") for f in factors])
+    problems: list[str] = []
+    if not factors:
+        problems.append(
+            "factors is empty. An assessment must declare at least one evidence "
+            "class you established, with a citation. If you genuinely established "
+            "nothing, you have not gathered enough evidence to conclude - go back "
+            "and call more tools. Valid factors: "
+            + ", ".join(confidence.FACTORS)
+        )
+    problems += confidence.validate([f.get("factor", "") for f in factors])
     for item in factors:
         if not item.get("citation"):
             problems.append(

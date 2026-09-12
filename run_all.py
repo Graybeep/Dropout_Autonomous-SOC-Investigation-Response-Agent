@@ -20,7 +20,7 @@ import sys
 import traceback
 from pathlib import Path
 
-from soc_agent import config, control, llm, report, trace as trace_mod
+from soc_agent import config, control, llm, report, sandbox, trace as trace_mod
 from scenarios.definitions import SCENARIOS
 
 
@@ -66,6 +66,10 @@ def _check(scenario, result) -> list[tuple[bool, str]]:
 def run_one(key: str) -> dict:
     scenario = SCENARIOS[key]
     control.reset_sandbox()
+    # Claim fixtures/run for the duration of this scenario, so a concurrent
+    # selfcheck.py (which also resets the sandbox) cannot delete the state this
+    # run is about to verify.
+    sandbox.acquire(f"run_all.py scenario {key}")
 
     tr = trace_mod.Trace(case_id=f"CASE-{key}", scenario=key)
     tr.add("scenario_meta", title=scenario.title, summary=scenario.summary,
@@ -142,6 +146,7 @@ def main(argv: list[str]) -> int:
     print(f"\nTraces  -> {config.TRACE_DIR}")
     print(f"Reports -> {config.REPORT_DIR}")
     print(f"Viewer  -> open viewer.html and pick a scenario")
+    sandbox.release()
     return 0 if all_ok else 1
 
 

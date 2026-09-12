@@ -76,6 +76,20 @@ class ToolBus:
                                status="rejected", result=result)
                 return result
 
+        # The model occasionally emits tool arguments that are not valid JSON;
+        # llm.py preserves the raw text under __unparsed__ rather than guessing.
+        if "__unparsed__" in args:
+            result = {
+                "status": "error",
+                "detail": (
+                    f"The arguments you sent for '{name}' were not valid JSON and "
+                    "could not be read."
+                ),
+                "hint": "Re-send this tool call with well-formed JSON arguments.",
+            }
+            self.trace.add(trace_mod.ERROR, tool=name, args=args, result=result)
+            return result
+
         impl = tools.IMPLEMENTATIONS.get(name)
         if impl is None:
             result = {
@@ -109,9 +123,20 @@ class ToolBus:
         try:
             result = impl(self.ctx, **args)
         except TypeError as exc:
+            # Tell the model the parameter names it may use. Without this it
+            # tends to DELETE a misspelled field rather than correct it.
+            accepted = [p for p in inspect.signature(impl).parameters
+                        if p != "ctx"]
             result = {
                 "status": "error",
                 "detail": f"Bad arguments for '{name}': {exc}",
+                "accepted_parameters": accepted,
+                "you_sent": sorted(args),
+                "hint": (
+                    f"Re-send the call using exactly these parameter names: "
+                    f"{', '.join(accepted)}. Correct any misspelling rather than "
+                    f"dropping the field."
+                ),
             }
             self.trace.add(trace_mod.ERROR, tool=name, args=args, result=result)
             return result

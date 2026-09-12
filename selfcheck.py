@@ -212,6 +212,27 @@ def offline_selfcheck() -> int:
     check("corroboration cannot be claimed from an empty lookup",
           rej2["status"] == "rejected")
 
+
+    # -- malformed tool calls must be recoverable, not dead ends ----------
+    section("tool-call error recovery")
+    bus_e = ToolBus(tr_p, ctx)
+    empty = bus_e.invoke("submit_assessment",
+                         {"hypothesis": "h", "factors": [], "sufficiency": "s"})
+    check("assessment declaring zero factors is rejected",
+          empty["status"] == "rejected")
+    check("rejection names the valid factors",
+          "version_in_range" in " ".join(empty.get("problems", [])))
+    unparsed = bus_e.invoke("submit_assessment", {"__unparsed__": "{bad json"})
+    check("unparseable tool arguments produce a readable error",
+          unparsed["status"] == "error" and "hint" in unparsed)
+    typo = bus_e.invoke("submit_assessment",
+                        {"hypothesis": "h", "factors": [], "sufficiency": "s",
+                         "disconfirming_evidence_check": "typo"})
+    check("misspelled parameter error lists the accepted names",
+          "disconfirming_evidence_checked" in typo.get("accepted_parameters", []))
+    check("misspelled parameter error says to correct, not drop",
+          "rather than" in typo.get("hint", ""))
+
     # -- action policy ---------------------------------------------------
     section("action policy (section 7.3)")
     check("SUCCEEDED -> block",

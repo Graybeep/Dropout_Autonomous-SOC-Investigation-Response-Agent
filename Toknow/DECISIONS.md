@@ -518,3 +518,83 @@ the scoring table with coloured deltas and citations, the amber degraded-evidenc
 ceiling note, the purple reconsideration fork with prior/new side by side, and
 the precautionary block with its disk verification. The renderer was also run
 over **all 335 trace steps** across all six traces with zero failures.
+
+---
+
+## Part 5 — What a full live run exposed
+
+A complete six-scenario live run (13 minutes wall clock) came back **4/6**.
+Scenarios 3, 4, 5 and 6 passed every check. Scenarios 1 and 2 failed — for two
+completely different reasons, only one of which was the agent's.
+
+### P-013 — Malformed tool calls were a dead end, not a recoverable error
+**Severity:** produced a wrong verdict on Scenario 1
+**This is the agent-side failure, and it was real**
+
+Scenario 1 returned `INCONCLUSIVE` instead of `FAILED`. The conclusion declared
+**zero factors**, so the score never moved off the 0.50 base. The trace shows why
+— four consecutive `submit_assessment` attempts:
+
+| attempt | what was sent | what came back |
+|---|---|---|
+| 1 | arguments that were not valid JSON | `TypeError`, wrapped as `__unparsed__` |
+| 2 | `disconfirming_evidence_check` (missing `ed`) | `TypeError: unexpected keyword argument` |
+| 3 | same misspelling again | same error |
+| 4 | misspelling dropped, `factors: []` | **accepted** |
+
+Three defects, all mine:
+
+1. **`__unparsed__` reached the implementation.** `llm.py` deliberately preserves
+   unparseable tool arguments rather than guessing, but the bus passed that
+   straight through as a keyword argument. The model got a Python `TypeError`
+   instead of "your JSON was malformed, resend".
+2. **The error named the problem but not the fix.** `unexpected keyword argument
+   'disconfirming_evidence_check'` told the model the field was wrong, so it
+   **deleted** the field rather than correcting the spelling. The error now
+   returns `accepted_parameters`, `you_sent`, and an explicit instruction to
+   correct rather than drop.
+3. **An assessment declaring no evidence was accepted.** This is the one that
+   actually changed the verdict. `submit_assessment` now rejects an empty
+   `factors` list and tells the agent that establishing nothing means it has not
+   gathered enough to conclude.
+
+Five regression checks added (70/70 offline). The deeper lesson: the
+"adaptation & failure recovery" criterion is not only about *evidence* sources
+failing — it is about whether the agent's own malformed output is recoverable.
+Scenario 6 tests the first. Nothing tested the second until a live run found it.
+
+### P-014 — Scenario 2's failure was contamination, not the agent
+**Severity:** false failure; cost real diagnosis time
+**Cause: me**
+
+Scenario 2 reported `action_fired False` and a firewall verification mismatch.
+The trace flatly contradicted that:
+
+```
+t=60.1  block_ip           -> ok
+t=62.5  check_firewall_state (agent)  -> blocked=True, total_blocked=1
+t=66.2  check_firewall_state (orchestrator) -> blocked=False   MISMATCH
+```
+
+The agent blocked the IP and verified it. 3.7 seconds later the same file read
+back empty. Nothing in Scenario 2 touches firewall state in between.
+
+**What actually happened:** while the run was in flight, `selfcheck.py` was
+executed in another process to verify the P-013 regression checks. `selfcheck`
+calls `reset_sandbox()`, which does `rm -rf fixtures/run` — deleting the exact
+state the running scenario was about to verify.
+
+`fixtures/run/` is a single shared directory with no guard, so any concurrent
+process could silently corrupt a live run, and the resulting failure looks
+exactly like an agent error.
+
+**Fix — a sandbox lock.** `run_all.py` claims `fixtures/run` per scenario;
+`reset_sandbox()` refuses with `SandboxBusy` if a *different, still-running*
+process holds it. Stale locks from crashed runs are detected by pid liveness and
+cleared automatically; `force=True` overrides deliberately. Verified
+cross-process: a second process attempting a reset is now blocked.
+
+**Worth stating plainly:** guardrail 4 is what caught this. Because verification
+independently re-reads the same file `block_ip` writes, the contradiction was
+visible in the trace rather than being silently absorbed. A verification step
+that merely trusted the agent's own report would have shown a clean pass.
