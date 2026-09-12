@@ -193,6 +193,37 @@ def main() -> int:
                f"(logs_clean is the only honest reading)",
                "; ".join(bad))
 
+    # Scenario 5 is the ONLY scenario that exercises the correlated-case
+    # logs_clean guard, because it is the only asset with sibling alerts. That
+    # guard is only meaningful if the sibling is far enough from case A's own
+    # alert that an own-alert-only window would miss it. If someone retimed
+    # ALERT-5002 to sit next to ALERT-5001, the union would collapse onto the
+    # single-alert window and the guard would silently stop testing anything.
+    from scenarios.definitions import ALERT_5002 as _A5002
+    own = json.loads((ROOT / "fixtures/seed/alerts.json").read_text(encoding="utf-8"))
+    a_ts = own["ALERT-5001"]["timestamp"]
+    b_ts = _A5002["timestamp"]
+    same_asset = own["ALERT-5001"]["asset_id"] == _A5002["asset_id"]
+    record(same_asset, "4: S5's two alerts target the same asset (union applies)",
+           f"{own['ALERT-5001']['asset_id']} vs {_A5002['asset_id']}")
+    # "Far enough" = more than an hour, which no plausible single-alert window
+    # spans by default.
+    from datetime import datetime
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    gap = abs((datetime.strptime(b_ts, fmt) - datetime.strptime(a_ts, fmt))
+              .total_seconds())
+    record(gap >= 3600,
+           "4: S5's sibling alert is >=1h from case A's, so union coverage is "
+           "actually exercised",
+           f"gap is {gap/60:.0f} min ({a_ts} -> {b_ts})")
+    # And the injected exploitation rows must sit in the sibling's window, not
+    # case A's, or there is nothing for the union to reach.
+    from scenarios.definitions import EXPLOIT_ENTRIES as _EE
+    late = [e["ts"] for e in _EE if e["ts"] > a_ts]
+    record(len(late) == len(_EE),
+           "4: S5's injected exploitation rows all post-date case A's alert",
+           f"{len(late)}/{len(_EE)} after {a_ts}")
+
     # Section 4 - exactly six scenarios, no seventh.
     record(len(SCENARIOS) == 6, "4: exactly six scenarios",
            f"found {len(SCENARIOS)}")

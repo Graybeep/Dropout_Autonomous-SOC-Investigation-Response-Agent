@@ -1448,3 +1448,50 @@ consecutive green full runs specified in the review; neither has been obtained.
 reconsideration now refuses a `logs_clean` that previously passed, that is the
 guard working as designed — but it changes what case A declares, and the factor
 set must be re-read before the demo, not during.
+
+### J-5 — The RELATED_CASE prompt instruction is now a backstop, not the mechanism
+
+When Scenario 5 case A first flaked (P-015), the fix was prompt-side: a
+`RELATED_CASE`-scoped paragraph telling the agent to judge whether THIS asset was
+compromised by THIS source, and not to carry forward a stale "logs clean"
+reading. That was a stopgap and is now demoted.
+
+**Mechanism:** `check_negative_scope` refuses `logs_clean` when the queried
+window misses a known sibling alert, or when a sibling case has already concluded
+`SUCCEEDED` on the same asset inside the window read. The agent cannot declare it
+regardless of what the prompt says.
+
+**Backstop:** the prompt paragraph stays, because it shapes the agent toward the
+right *reasoning* — judge the campaign, not the packet — where the guard only
+refuses the *claim*. A guard that refuses without the agent understanding why
+produces a resubmission that drops the factor rather than one that reconsiders
+the evidence. Both are wanted; only one is load-bearing.
+
+### J-6 — Lineage: this is the same defect shape, four times
+
+Every one of these was an unguarded **universal** claim — a factor asserting
+"I looked and found nothing" without a defined scope. Each was found the same
+way: reading a trace, never the pass/fail table.
+
+| # | Factor | The universal that was unguarded | Guard |
+|---|---|---|---|
+| **P-006** | `related_alert_corroborates` | claimed from a lookup that returned `no_data` | `check_preconditions` |
+| **P-016** | `version_patched` | "outside ALL ranges" from 1 of 3 services | `check_version_patched_coverage` |
+| **R-2** | `logs_clean` / `packet_benign` | clean "across the window" from a window excluding the alert; benign flow borrowed from another alert | `check_negative_scope` |
+| **J-2** | `logs_clean` | clean "for this asset" while a sibling alert and its `SUCCEEDED` verdict sat inside the window read | `check_negative_scope` (extended) |
+
+The rule that generalises: **§7.2's three positive factors are existential and
+need one witness; its three negative factors are universal and need a stated
+scope.** Every defect above is the same sentence with a different noun.
+
+What keeps all four on the right side of D-001 is that none inspects evidence
+*content*. They compare a declared factor against what was read (a tool result's
+status, a service list, a timestamp, a stored outcome) — never against what the
+evidence *means*. A rule like "SQLi alerts must check SQL services" would cross
+that line; "you cannot say *all* after checking *some*" does not.
+
+**Prediction worth recording:** if a fifth instance appears, it will be
+`version_patched` or `packet_benign` gaining a new scope dimension the same way
+`logs_clean` just did — not a new factor. The review's instruction not to hunt a
+fifth guard is right; the place to look, if one surfaces in a trace, is the
+scope of an existing negative.
