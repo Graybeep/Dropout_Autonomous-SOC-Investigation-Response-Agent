@@ -1527,3 +1527,42 @@ stale bytecode to every later process in the session. `find . -name __pycache__
 
 No fix to product code was required. The lesson is about the test harness and
 about reading output, not about the guard.
+
+### J-8 — Point 3 partially discharged: 3 of 6 re-verified live, 3 blocked
+
+`run_all.py` resets the sandbox per scenario, so running scenarios individually
+is functionally identical to a full run — same isolation, same assertions, same
+traces, only the summary table differs. That made incremental progress possible
+under memory pressure.
+
+**Re-verified live against the new guard (this round):**
+
+| # | Checks | Notes |
+|---|---|---|
+| 1 | **8/8** | includes `get_vulnerabilities(mysql)` before concluding |
+| 2 | **7/7** | |
+| 3 | **11/11** | includes `gathered NEW evidence after reconsidering (17 tool calls)` and `initial outcome INCONCLUSIVE` |
+
+**Not re-verified:** 4, 5, 6.
+
+- Scenario 4 failed once on the transient `HTTP 400 "Could not read the request
+  body."` — and the retry *was* wired and *did* classify it as transient, so it
+  exhausted all six attempts across ~8 minutes of backoff. Subsequent attempts
+  were killed by the OS before completing.
+- Scenarios 5 and 6 never got a chance to run.
+
+Six run attempts in total were killed for low memory (97-98% load, 0.16-0.32 GB
+free of 15.3 GB, consumed by unrelated desktop applications).
+
+**Artefact state, deliberately:** scenario 4's trace from the errored run — which
+contained an `error` key and **zero cases** — was restored from git rather than
+left in place. Scenarios 5 and 6 remain on their previously verified traces. The
+committed set is therefore coherent and demo-safe: every trace in `traces/`
+represents a real, complete, passing run, and none represents a crash.
+
+**Still outstanding:** live re-verification of scenarios 4, 5 and 6 against the
+correlated-case guard. Scenario 5 is the one that matters — it is the only
+scenario whose behaviour the guard can change, and the expectation is that case
+A's reconsideration now either declares `logs_consistent` or drops the log factor
+rather than declaring `logs_clean`. Either path reaches `SUCCEEDED`; the factor
+set must be read before the demo rather than during it.
