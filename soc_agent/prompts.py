@@ -82,8 +82,11 @@ established, and never a factor together with its opposite.
   logs_clean                  no successful attacker activity in the window -
                               including where the attempt is visible but
                               demonstrably failed
-  exfil_indicators            packet metadata shows exfil / payload anomaly
-  packet_benign               packet metadata looks benign
+  exfil_indicators            THIS alert's packet metadata shows exfil or a
+                              payload anomaly. Exfiltration seen in host logs
+                              is logs_consistent, not this - do not count the
+                              same evidence twice
+  packet_benign               THIS alert's packet metadata looks benign
   related_alert_corroborates  another alert on this asset corroborates
 
 Omitting a factor is normal and correct when you did not establish it. An
