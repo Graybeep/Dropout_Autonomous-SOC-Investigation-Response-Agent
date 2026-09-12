@@ -31,7 +31,7 @@ Then show the guardrails are checkable, not just claimed:
 
 ```bash
 python compliance.py     # 12 structural checks
-python selfcheck.py      # 65 behavioural checks
+python selfcheck.py      # 84 behavioural checks
 ```
 
 > "No outcome branches on scenario identity. No code branches on the alert's
@@ -225,3 +225,18 @@ existential and deliberately exempt.
 `reports/CASE-3001.md` has a precondition refusal (`related_alert_corroborates`
 claimed from a lookup that returned no data) with the same shape, if Scenario 1
 is not the one on screen.
+
+### Follow-up only — "how do you know the evals themselves are sound?"
+
+Do not volunteer this; it belongs after the set piece, if asked.
+
+> Each guard is ablated — monkeypatched to a no-op — and the suite has to fail.
+> Preconditions breaks 4 checks, the coverage guard 2, the negative-scope guard
+> 3; restore and it's back to 0. Worth saying: my first ablation method patched
+> the source with a regex and mis-attributed failures across two guards. It
+> looked entirely plausible. Runtime patching was precise, and the
+> worse-looking-but-correct numbers are the ones on record.
+
+Same shape for the fixtures: injecting a row that implies successful attacker
+activity into a scenario required to start `INCONCLUSIVE` makes `compliance.py`
+fail. Verified for both Scenario 3 and Scenario 5 case A.

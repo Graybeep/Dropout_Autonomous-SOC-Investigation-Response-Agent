@@ -1224,3 +1224,79 @@ verdict?", two follow-ups, and a backup artefact in `CASE-3001.md`. Nothing to
 find live.
 
 Offline after this round: **84/84** behavioural, **17/17** guardrail.
+
+---
+
+## Part 13 — Final pass (291b44a). Verified, then stopped.
+
+Four checks and one doc addition. **No new guards.** The suite passes; further
+structural work is unbudgeted risk against it.
+
+### G-1 — The S3 annotation strengthened T1 rather than weakening it (verified)
+
+The concern was that annotating T0's `svc_app` login as baseline might leave the
+T1 flip reading as *"known account, more activity"*. It does not. Six nameable
+differences, none of them volume:
+
+| | T0 baseline | T1 lateral movement |
+|---|---|---|
+| direction | inbound auth | outbound `ssh` |
+| peer | 10.20.0.9 (mgmt) | 10.20.2.99 (SRV-DB-09) |
+| auth | publickey | credential **reuse** |
+| host-key check | — | `StrictHostKeyChecking=no` |
+| baseline | "matches 30-day baseline" | "outside its normal access pattern" |
+| time | 01:12 | 03:14 |
+
+The annotation in fact *created* the baseline that T1 visibly violates. The
+contrast is now stated in the log text itself, so the agent can name it rather
+than infer it.
+
+### G-2 — Ablation finding recorded as a follow-up, not a headline (added)
+
+`DEMO.md` carries it under "how do you know the evals themselves are sound?",
+explicitly marked *do not volunteer*. The first ablation method regex-patched the
+source and mis-attributed failures across two guards; it looked entirely
+plausible. Runtime monkeypatching was precise, and the worse-looking-but-correct
+numbers are the ones on record.
+
+### G-3 — The set piece renders in the order it is narrated (verified)
+
+Read `reports/CASE-1001.md` section 2 top-to-bottom as a judge would:
+
+```
+ 4. get_vulnerabilities   ok        <- mysql
+ 5. get_vulnerabilities   ok        <- apache
+ 7. get_related_alerts    no_data
+ 8. submit_assessment     rejected  <- REFUSAL names openssh
+ 9. get_vulnerabilities   ok        <- openssh, in response
+10. submit_assessment     accepted
+```
+
+The refusal is at step 8 and the openssh lookup at step 9. The narration
+"it claimed patched having checked two of three, was refused, went and checked
+the third, resubmitted" matches the page exactly — and steps 4/5 make "two of
+three" concrete rather than rhetorical.
+
+### G-4 — Both T0 invariants adversarially proven (verified)
+
+The S5 case A invariant existed but had only been confirmed by reading. All three
+adversarial edits are now caught:
+
+| injected row | result |
+|---|---|
+| S5A: `Rows_sent: 8800 SELECT * FROM portal_users` | CAUGHT |
+| S5A: unannotated `auth_success` for web_ro | CAUGHT |
+| S3: reintroduced ambiguous `svc_app` password auth | CAUGHT |
+
+Fixtures restored; 17/17 and 84/84 after.
+
+### G-5 — Stop
+
+Final state: **84/84** behavioural, **17/17** guardrail, six scenarios green on
+48 live assertions across two consecutive runs, three guard families proven
+load-bearing by ablation, a negative control on the reconsideration check, both
+T0 fixture invariants adversarially tested, and a pinned demo artefact with two
+backups.
+
+README and DEMO.md brought current. Remaining effort belongs in rehearsal, not
+in code.
