@@ -1961,3 +1961,24 @@ them and reasonably concluded the claim was evasive. Rewrote it to name both
 hits and why neither is a guard. Also disambiguated the two pass counts in
 circulation: 51 is the live harness, 105 is offline `selfcheck.py`; they are not
 additive.
+
+**N-7. scoring/ pulled back out of the repo (user instruction).** The audit pack
+was pushed in e3f0554 and the user then asked for it not to be in the repo.
+`git rm -r --cached scoring` + `scoring/` in .gitignore: untracked, every file
+left on disk. The pack still exists locally and still runs; it is simply not
+published.
+
+**P-021. Removing it would have broken a clean clone.** The five copy-drift
+checks added in P-020 point at `scoring/`. Once the folder is gitignored, a
+fresh clone does not have it, so those checks would have failed for anyone
+cloning - a suite that only goes green on the author's machine. The block is now
+guarded by `if (ROOT / "scoring" / "src").is_dir()` and SKIPS when absent.
+Verified both ways rather than reasoned about: folder moved aside -> 99/99,
+moved back -> 105/105. So the honest count is 99 published / 105 local.
+
+**N-8. History was not rewritten.** e3f0554 still contains the folder, so it
+remains retrievable from the remote's history; only the current tree is clean.
+Scrubbing it entirely needs a force-push over shared history, which is
+destructive and is the user's call, not mine. Flagged, not done. Nothing secret
+was in the pack - it was copies of already-published source plus traces - so the
+exposure is redundancy, not disclosure.
