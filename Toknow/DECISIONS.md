@@ -1693,3 +1693,86 @@ exists to prevent.
 
 Final: **99/99** behavioural, **22/22** guardrail, six scenarios green on 51
 assertions across two consecutive runs.
+
+---
+
+## Part 17 - Viewer restyle: which template, which animations, and why
+
+Two references were supplied: `uupm.cc` (UI/UX Pro Max) and `motion.dev`.
+
+### L-1 - The style choice contradicts the demo gallery, deliberately
+
+`uupm.cc` is the site for the UI/UX Pro Max skill, which is installed locally, so
+the style was resolved from its database rather than eyeballed from the gallery.
+Query: security operations dashboard, dark, timeline, with dials
+`--variance 3 --motion 4 --density 9`.
+
+Result: **Minimalism & Swiss Style** - *"Best for: Enterprise apps, dashboards,
+documentation sites, SaaS platforms, professional tools"*, performance cost
+**low**, accessibility risk **low**.
+
+That is **not** what the gallery showcases. Its dark demos are Glassmorphism and
+Liquid Glass. Those were rejected on purpose: backdrop blur behind dense
+monospace costs legibility on a projector, adds paint cost on a page that
+renders 383 nodes, and buys nothing for a trace viewer whose whole job is
+reading small text accurately.
+
+Palette adopted: the "vault dark blue + secure green" security profile -
+`#0F172A` ground, `#192134` cards, `rgba(255,255,255,.08)` borders, `#94A3B8`
+muted text. Typeface Inter, with a full system fallback stack so an offline
+demo degrades rather than breaks.
+
+### L-2 - Motion is vendored, not CDN-loaded
+
+`motion.dev` supports a plain `<script>` tag, so it clears CLAUDE.md section 10
+(no framework, no build step). But the CDN form was rejected: the demo runs from
+a local `http.server` and a venue without internet would leave `Motion`
+undefined mid-demo. `vendor/motion.js` is pinned at 12.23.12 (81 KB) and
+committed. The viewer now has **zero external references** - verified.
+
+### L-3 - The animation budget is two elements, from the database
+
+The same database returns *"Animate 1-2 key elements per view maximum"* and
+*"Respect prefers-reduced-motion"*, both **High** severity. So exactly two things
+move: the card being revealed, and - when one appears - a reconsideration fork or
+a guard refusal. `prefers-reduced-motion` skips all of it.
+
+Timing matches the database's Stagger List preset (300-450ms). Staggering applies
+only to *Show all*; during playback a single card animates immediately so it
+stays in step with the existing 400ms cadence rather than fighting it.
+
+### L-4 - A bug I introduced and caught by measuring, not by looking
+
+The first implementation had `enter()` animate `opacity: [0, 1]` through Motion.
+That is wrong, and the headless screenshot proved it: page content collapsed from
+**8980px to 770px** - most of the trace invisible.
+
+Cause: `.step.on` already fades the card in via CSS. Driving opacity from 0 a
+second time through Motion means that if the animation does not run or complete -
+a stalled rAF, a missing vendor file, a headless renderer - the card sits at
+opacity 0 with the class correctly set. **It failed closed, hiding evidence.**
+
+`enter()` now animates movement only (`x` / `y`). CSS owns visibility. Remove
+Motion entirely and the viewer still reveals every card. That is the right shape
+for an enhancement layer, and it is the second time in this project that
+measuring output rather than trusting it caught something a glance would not.
+
+### L-5 - Rail markers now carry shape, not just hue
+
+The database flags *"Don't convey information by colour alone"* as **High**
+severity. Card labels always named the kind in words, so the cards complied - but
+the timeline rail markers were hue-only. They now encode shape as well:
+
+| marker | kind |
+|---|---|
+| bar | phase change |
+| square | failure / error |
+| diamond | scoring, conclusion, refusal |
+| hollow ring | reconsideration fork |
+| dot | everything else |
+
+So the rail survives greyscale, projector colour shift, and colour-blind
+viewers. The marker reinforces the label; it is never the only signal.
+
+Verified after every change: **383 trace steps render, 0 failures**, 99/99
+behavioural, 22/22 guardrail.

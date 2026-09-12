@@ -5,18 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SOC Agent - Trace Replay</title>
 <style>
+  /* Minimalism & Swiss Style - what the design database returns for
+     enterprise dashboards and professional tools. Deliberately NOT
+     glassmorphism: blur behind dense monospace text costs legibility on a
+     projector and buys nothing here. Palette is the "vault dark blue +
+     secure green" security profile. */
   :root{
-    --bg:#0f1216; --panel:#161b22; --panel2:#1c2129; --line:#2a313b;
-    --ink:#e6edf3; --dim:#8b98a5; --dim2:#6b7784;
-    --accent:#4493f8; --ok:#3fb950; --warn:#d29922; --bad:#f85149;
-    --purple:#bc8cff; --cyan:#39c5cf;
+    --bg:#0F172A; --panel:#192134; --panel2:#10192E; --line:rgba(255,255,255,.08);
+    --ink:#FFFFFF; --dim:#94A3B8; --dim2:#64748B;
+    --accent:#38BDF8; --ok:#059669; --warn:#D97706; --bad:#DC2626;
+    --purple:#A78BFA; --cyan:#22D3EE;
+    --ok-bg:#062A1E; --bad-bg:#2A0E0E; --warn-bg:#2A1C06; --dim-bg:#1E293B;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font:14px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+    font:14px/1.55 Inter,ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased}
   code,pre,.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
 
-  header{position:sticky;top:0;z-index:20;background:rgba(15,18,22,.96);
+  header{position:sticky;top:0;z-index:20;background:rgba(15,23,42,.96);
     backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:14px 22px}
   .bar{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
   h1{font-size:15px;margin:0;font-weight:650;letter-spacing:.2px}
@@ -26,7 +33,7 @@
   select{min-width:290px}
   button:hover:not(:disabled){border-color:var(--accent)}
   button:disabled{opacity:.4;cursor:default}
-  button.primary{background:var(--accent);border-color:var(--accent);color:#04121f;font-weight:600}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#06202E;font-weight:650}
   .grow{flex:1}
 
   .meta{max-width:1080px;margin:22px auto 0;padding:0 22px}
@@ -47,8 +54,6 @@
   .step{position:relative;margin:0 0 11px;opacity:0;transform:translateY(5px);
     transition:opacity .3s,transform .3s}
   .step.on{opacity:1;transform:none}
-  .step::before{content:"";position:absolute;left:-26px;top:15px;width:10px;height:10px;
-    border-radius:50%;background:var(--dim2);border:2px solid var(--bg)}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:11px 14px}
   .lbl{font-size:10.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2);
     display:flex;gap:9px;align-items:center;margin-bottom:5px}
@@ -71,28 +76,43 @@
   .reason b{color:var(--dim2);font-weight:600}
 
   .k-tool_result::before{background:var(--ok)}
-  .k-tool_result .card{border-left:3px solid #26402c;background:var(--panel2)}
+  .step[data-refused="1"]::before{background:var(--bad);border-radius:2px}
+  .step[data-refused="1"] .card{border-left:3px solid var(--bad);background:var(--bad-bg)}
+  .k-tool_result .card{border-left:3px solid #14532D;background:var(--panel2)}
   .k-tool_failure::before{background:var(--bad)}
-  .k-tool_failure .card{border-left:3px solid var(--bad);background:#2a1618}
+  .k-tool_failure .card{border-left:3px solid var(--bad);background:var(--bad-bg)}
   .k-error::before{background:var(--bad)}
-  .k-error .card{border-left:3px solid var(--bad);background:#2a1618}
+  .k-error .card{border-left:3px solid var(--bad);background:var(--bad-bg)}
 
   .k-scoring::before{background:var(--warn)}
   .k-scoring .card{border-left:3px solid var(--warn)}
   .k-conclusion::before{background:var(--ok);width:13px;height:13px;left:-27px}
-  .k-conclusion .card{border-left:3px solid var(--ok);background:#13251a}
+  .k-conclusion .card{border-left:3px solid var(--ok);background:var(--ok-bg)}
   .k-action::before{background:var(--warn)}
-  .k-action .card{border-left:3px solid var(--warn);background:#251f13}
+  .k-action .card{border-left:3px solid var(--warn);background:var(--warn-bg)}
   .k-verification::before{background:var(--ok)}
   .k-verification .card{border-left:3px solid var(--ok)}
 
   /* reconsideration fork */
   .k-reconsider::before,.k-event::before{background:var(--purple);width:13px;height:13px;left:-27px}
-  .k-reconsider .card,.k-event .card{border:1px dashed var(--purple);background:#1d1726}
+  .k-reconsider .card,.k-event .card{border:1px dashed var(--purple);background:#1E1B3A}
   .fork{display:flex;align-items:center;gap:9px;color:var(--purple);font-weight:700;
     font-size:11.5px;letter-spacing:1.3px;text-transform:uppercase}
   .fork::before{content:"";flex:0 0 26px;height:2px;background:var(--purple);
     box-shadow:0 -6px 0 var(--purple)}
+
+  /* Rail markers carry SHAPE as well as hue, so the kind survives greyscale,
+     projector colour shift and colour-blind viewers. Declared AFTER the kind
+     rules above so it wins on equal specificity. The card label repeats the
+     kind in words - the marker is reinforcement, never the only signal. */
+  .k-tool_failure::before,.k-error::before{border-radius:2px}
+  .k-conclusion::before,.k-scoring::before{border-radius:2px;transform:rotate(45deg)}
+  .k-reconsider::before,.k-event::before{background:var(--bg);border-radius:50%;
+    box-shadow:inset 0 0 0 3px var(--purple)}
+  .k-state::before{width:5px;height:18px;left:-23.5px;border-radius:2px;
+    background:var(--purple)}
+  .step[data-refused="1"]::before{background:var(--bad);border-radius:2px;
+    transform:rotate(45deg)}
 
   table{border-collapse:collapse;width:100%;margin-top:8px;font-size:12.5px}
   th,td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}
@@ -102,8 +122,8 @@
 
   .pill{display:inline-block;padding:1.5px 8px;border-radius:99px;font-size:11px;
     font-weight:650;letter-spacing:.4px}
-  .p-ok{background:#12351c;color:var(--ok)} .p-bad{background:#3d1d1d;color:var(--bad)}
-  .p-warn{background:#3a2e10;color:var(--warn)} .p-dim{background:#232a33;color:var(--dim)}
+  .p-ok{background:var(--ok-bg);color:#34D399} .p-bad{background:var(--bad-bg);color:#F87171}
+  .p-warn{background:var(--warn-bg);color:#FBBF24} .p-dim{background:var(--dim-bg);color:var(--dim)}
 
   .side{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:9px}
   .side>div{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:9px 11px}
@@ -112,9 +132,9 @@
   details{margin-top:7px}
   summary{cursor:pointer;color:var(--dim2);font-size:12px;user-select:none}
   summary:hover{color:var(--accent)}
-  pre{background:#0c0f13;border:1px solid var(--line);border-radius:6px;padding:9px;
+  pre{background:#0B1220;border:1px solid var(--line);border-radius:6px;padding:9px;
     overflow-x:auto;font-size:11.5px;color:var(--dim);margin:6px 0 0;max-height:300px}
-  .txt code,.reason code{background:#0c0f13;border:1px solid var(--line);
+  .txt code,.reason code{background:#0B1220;border:1px solid var(--line);
     border-radius:4px;padding:0 4px;font-size:12px;color:var(--cyan)}
   .txt strong,.reason strong{color:var(--ink);font-weight:650}
   .mdh{display:block;color:var(--ink);font-weight:650;margin-top:4px}
@@ -142,6 +162,10 @@
 </div>
 <main><div id="tl" class="tl"></div></main>
 
+<!-- Motion, vendored rather than pulled from a CDN. The demo runs from a local
+     http.server and may have no internet; a CDN miss would leave `Motion`
+     undefined mid-demo. Every use below is feature-detected anyway. -->
+<script src="vendor/motion.js"></script>
 <script>
 const SCENARIOS = [
   ["1","Scenario 1 - False alarm, patched host"],
@@ -166,6 +190,37 @@ const md = s => esc(s)
   .replace(/`([^`\n]+)`/g, "<code>$1</code>");
 
 let steps = [], timer = null, shown = 0;
+
+// Motion is optional: if the vendored file is missing the CSS transition still
+// reveals every card, so the viewer degrades instead of breaking.
+const M = window.Motion || null;
+const STILL = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const canAnimate = () => !!(M && M.animate) && !STILL;
+
+// "Animate 1-2 key elements per view maximum" - so exactly two things move:
+// the card being revealed, and a reconsideration fork or guard refusal when
+// one appears. Nothing else.
+function enter(el, i = 0) {
+  if (!canAnimate()) return;
+  // Deliberately does NOT animate opacity. The `.on` class already fades the
+  // card in via CSS; if Motion also drove opacity from 0 and failed to run or
+  // complete - a stalled rAF, a missing vendor file, a headless renderer - the
+  // card would sit invisible with the class set. Motion only adds MOVEMENT on
+  // top of a reveal that already works without it.
+  const fork = el.classList.contains("k-reconsider") || el.classList.contains("k-event");
+  const refused = el.dataset.refused === "1";
+  M.animate(el,
+    fork ? { x: [-18, 0] } : { y: [10, 0] },
+    { duration: fork ? 0.42 : 0.34, delay: i * 0.045,
+      ease: fork ? [0.34, 1.4, 0.64, 1] : [0.22, 1, 0.36, 1] });
+  const card = el.querySelector(".card");
+  if (!card) return;
+  if (fork) M.animate(card,
+    { borderColor: ["var(--purple)", "rgba(167,139,250,.35)"] }, { duration: .9 });
+  if (refused) M.animate(card,
+    { boxShadow: ["0 0 0 0 rgba(220,38,38,0)", "0 0 0 3px rgba(220,38,38,.38)",
+                  "0 0 0 0 rgba(220,38,38,0)"] }, { duration: 1.1 });
+}
 
 const pick = $("pick");
 SCENARIOS.forEach(([k, label]) => pick.add(new Option(label, k)));
@@ -320,6 +375,9 @@ function paint(){
     if (html === null) return;
     const d = document.createElement("div");
     d.className = `step k-${s.kind}`;
+    // The guard refusal is the demo's set piece - flag it so it gets the one
+    // extra animation the motion budget allows.
+    if (s.kind === "tool_result" && s.status === "rejected") d.dataset.refused = "1";
     d.innerHTML = `<div class="card">${html}</div>`;
     tl.appendChild(d);
   });
@@ -327,7 +385,16 @@ function paint(){
 
 function reveal(n){
   const els = document.querySelectorAll(".step");
-  els.forEach((e, i) => e.classList.toggle("on", i < n));
+  const fresh = [];
+  els.forEach((e, i) => {
+    const was = e.classList.contains("on");
+    const now = i < n;
+    e.classList.toggle("on", now);
+    if (now && !was) fresh.push(e);
+  });
+  // Stagger only when several appear at once (Show all); a single step during
+  // playback animates immediately so it stays in step with the 400ms cadence.
+  fresh.forEach((e, i) => enter(e, fresh.length > 1 ? Math.min(i, 12) : 0));
   shown = n;
   $("count").textContent = `${Math.min(n, els.length)} / ${els.length} steps`;
   if (n && n <= els.length && els[n-1]) {
