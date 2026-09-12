@@ -55,6 +55,30 @@ python selfcheck.py      # 84 behavioural checks
 
 ---
 
+## Ordering: open on autonomy, arrive at verification
+
+The strongest single frame in the project is Scenario 6's degraded-evidence
+ceiling. **Do not open on it.** It proves verification and robustness — a 10%
+criterion you have already maxed. Autonomy is 25%, and it is proved by a
+different frame entirely:
+
+> a tool the agent chose → **the reason it gave** → the result → the decision
+> about what to look at next.
+
+That is the shape of `docs/viewer.png`, and it is the first thing to put on
+screen. Open Scenario 1, press Play, and narrate *that loop* for thirty seconds
+before saying anything about scoring or guards. Let a judge watch the agent
+decide.
+
+The ceiling frame is the **payoff**, not the opening. By the time you reach
+Scenario 6, they have already seen the agent reason; the clamp then lands as
+"and it refuses to overclaim when a source is missing" rather than as a lone
+party trick.
+
+Order: **1 → 2 → 3 → 6**, with 4 and 5 if time allows.
+
+---
+
 ## 1. The core thesis — Scenario 1 vs Scenario 2 (2 min)
 
 Open **Scenario 1** in the viewer. Press **Play**.
@@ -268,7 +292,26 @@ existential and deliberately exempt.
 claimed from a lookup that returned no data) with the same shape, if Scenario 1
 is not the one on screen.
 
-### Follow-up only — "how do you know the evals themselves are sound?"
+### Follow-up — "how do you know the evals themselves are sound?"
+
+Lead with this. It is a stronger answer than any pass count, because it is about
+the failure mode that actually threatens a verification suite.
+
+> Four separate times a verification tool produced a **plausible wrong answer**,
+> and each time the number looked fine. A regex-based guard ablation
+> mis-attributed failures across two guards. An invariant I had "verified" by
+> reading turned out never to have been asserted. A sandbox lock deleted itself,
+> because it lived in the directory it was protecting. And a coherence check
+> printed "single coherent run" from a hard-coded string while the underlying
+> span was wrong.
+>
+> None of those were caught by a suite going red. All four were caught by
+> re-reading the output instead of the summary. That is why the guards are now
+> ablated at runtime rather than by patching source, why fixture invariants are
+> adversarially tested, and why every count in this project was re-derived
+> rather than quoted.
+
+### Second follow-up — the ablation numbers
 
 Do not volunteer this; it belongs after the set piece, if asked.
 
@@ -355,3 +398,53 @@ alert's flow, which it did; it does not require the *citation* to be that flow.
 No outcome impact (1.30 and 1.15 both clamp to 0.95). Recorded rather than
 patched, because a fifth guard at this stage is unbudgeted risk against a
 passing suite.
+
+---
+
+## Completeness pass — the things that get asked
+
+### The model
+> It runs on `ling-3.0-flash-fin-free` through a multi-model gateway. The
+> architecture is Claude-native tool use and the provider is one config line;
+> the account is on a free plan with zero credits, so every Claude model returns
+> "insufficient credits" — verified by probing each one. The guards are
+> structural, so they hold regardless of which model is behind them.
+
+Say it once, in that form. It is a fact about the account, not an apology.
+
+### The three scopes no trace demonstrates
+
+| scope | if asked |
+|---|---|
+| related-alert window | "Structurally verified, not exercised in this run. `selfcheck.py` asserts it refuses a `logs_clean` declared from a window that misses a known sibling alert — ablating that guard fails 7 checks." |
+| sibling verdict | "Same: verified offline. It refuses `logs_clean` when a sibling case already concluded SUCCEEDED on the same asset. Ablating it fails 2 checks, distinct from the others." |
+| packet provenance | "Verified offline. And a known limitation: it requires the case to have *read* its own alert's flow, not that the citation *be* that flow. No outcome impact — both paths clamp to 0.95." |
+
+Never imply a trace shows one of these. The three that **are** in the traces are
+service coverage, log window, and precondition.
+
+### Starting the viewer
+
+```bash
+python -m http.server 8000
+# open http://localhost:8000/viewer.html
+```
+
+- Press **Play** for the timed reveal; **Show all** to jump to the end.
+- `viewer.html#3` deep-links straight to a scenario.
+- **If it shows "trace not found":** you opened it as a `file://` URL. Browsers
+  block `fetch` on local files. Serve it over HTTP — that is the only cause.
+- **If nothing animates:** `vendor/motion.js` did not load, or the machine has
+  reduced-motion enabled. The viewer still reveals every card; motion is
+  enhancement only and its absence breaks nothing.
+
+### Fallback order if the live leg fails
+
+1. **Saved trace in the viewer** — every scenario already has a passing trace
+   committed. Nothing about the demo depends on the live run succeeding.
+2. **`reports/CASE-1001.md`** — the set piece reads just as well on the page as
+   on screen; section 2, steps 8-10.
+3. **`python selfcheck.py` and `python compliance.py`** — 99 and 22 checks, no
+   API key, no network. These cannot fail for environmental reasons.
+
+Decide which of these you are on *before* standing up, not during.

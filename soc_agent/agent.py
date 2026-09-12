@@ -160,8 +160,13 @@ class Investigation:
                 raise
 
             if resp.text.strip():
+                # stop_reason is recorded so a truncated-looking narration can be
+                # diagnosed from the trace instead of inferred. "length" means the
+                # token cap cut it; "tool_calls" means the model simply stopped
+                # narrating to make a call, which reads similar but is not a bug.
                 self.trace.add(trace_mod.SUFFICIENCY if turn else trace_mod.THOUGHT,
-                               text=resp.text.strip(), turn=turn + 1)
+                               text=resp.text.strip(), turn=turn + 1,
+                               stop_reason=resp.stop_reason)
 
             if not resp.wants_tools:
                 if stop_on_assessment and self.bus.assessment is None and not nudged:

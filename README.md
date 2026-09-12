@@ -14,6 +14,32 @@ new evidence, a tool failure, or a human override arrives.
 > that then shipped 2 MB outbound is a **breach**. The severity label does not
 > decide; the correlated evidence does.
 
+## Start here
+
+![The agent choosing its next evidence source, with the reason it gave](docs/viewer.png)
+
+That is the whole idea in one frame: a tool call, **the reason the agent gave for
+making it**, the result, and the next decision that follows from it. The agent
+receives ten tool schemas and picks its own calls and ordering at runtime —
+nothing about the sequence is scripted.
+
+**The single most informative artefact is
+[`reports/CASE-1001.md`](reports/CASE-1001.md), section 2, steps 8-10.** The agent
+submits its assessment claiming the host is patched; the tool **refuses it**,
+because it checked two of the host's three CVE-covered services; the agent looks
+up the third and resubmits. Both the refusal and the correction are steps in the
+evidence chain.
+
+### The one rule the guards enforce
+
+Every guard refuses the **form** of a claim, never its content. Section 7.2's
+three positive factors are *existential* — one witness settles them — while its
+three negatives are *universal*, and "I looked and found nothing" is meaningless
+without a stated scope. So the bus will not accept "outside **all** affected
+ranges" from someone who checked **some** of them, and it never decides whether
+a given version is actually in range: that comparison is the agent's, and it is
+the entire point.
+
 ---
 
 ## Quick start

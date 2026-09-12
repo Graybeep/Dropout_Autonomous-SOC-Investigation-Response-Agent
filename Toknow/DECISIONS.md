@@ -1776,3 +1776,101 @@ viewers. The marker reinforces the label; it is never the only signal.
 
 Verified after every change: **383 trace steps render, 0 failures**, 99/99
 behavioural, 22/22 guardrail.
+
+---
+
+## Part 18 - Delivery pass
+
+### M-1 - Refusal density measured; the disconfirmation turn is NOT needed
+
+The review gated a §7.4 build on refusal counts: 3+ on correlated cases means
+the timeline reads as a model on a leash. Measured across all six traces:
+
+| case | refusals / tool calls |
+|---|---|
+| CASE-1001 | 1 / 11 |
+| CASE-2001 | 2 / 11 |
+| CASE-3001 | 3 / 34 |
+| CASE-4001 | 2 / 12 |
+| **CASE-5001** (correlated) | **2 / 22** |
+| **CASE-5002** (correlated) | **0 / 10** |
+| CASE-6001 | 1 / 13 |
+
+The correlated cases sit at **2 and 0** - below the threshold. CASE-3001 reaches
+3, but across 34 calls (8.8%), a lower density than CASE-2001 or CASE-4001.
+**Decision: skip the item.**
+
+**The premise was also wrong.** §7.4 is not unbuilt. The system prompt instructs
+falsification, `submit_assessment` carries
+`disconfirming_evidence_checked`, and **8 of 9 conclusions populate it** with
+real content. It was implemented as part of the assessment rather than as a
+separate turn, which is why it did not look like a distinct step. Two independent
+reasons not to build it; recorded so it is not raised a third time.
+
+### M-2 - The "clipped card" is not CSS, and the first two diagnoses were wrong
+
+The review spotted `"and data was exfiltr"` on the Scenario 6 screen and
+attributed it to card clipping. Three hypotheses, checked in order:
+
+1. **CSS clipping** - no. The cut is present in the trace JSON itself, so the
+   viewer renders faithfully. The only `max-height` is on the collapsed payload
+   `<pre>`, and `overflow-x:auto` makes `overflow-y` compute to `auto`, so it
+   scrolls. (Made explicit anyway.)
+2. **`max_tokens`** - no. The truncating turns total 35-1471 tokens against a
+   4096 cap, and several precede 25-character tool calls.
+3. **My own detector** - partly wrong. It flagged 23 of 93 tool-call reasons as
+   truncated on "does not end with punctuation". Reading them showed they are
+   complete sentences without a full stop: *"…and severity"*, *"…affected
+   range"*. Only a couple are genuinely mid-word.
+
+Actual state: **0 of 83 structured fields truncated.** Every hypothesis,
+sufficiency statement, disconfirmation, citation and rationale - everything the
+report renders in section 3 - is complete. A small number of interstitial
+narrations are cut by the model as it switches to a tool call.
+
+`stop_reason` is now recorded on every narration step, so a future occurrence is
+diagnosable from the trace rather than requiring this whole exercise. That it was
+parsed but never logged was the real gap.
+
+### M-3 - README rebuilt as an entry point
+
+Not a build log. Opens with what it does, then a **Start here** section carrying
+the one frame that proves the 25% criterion - tool chosen, reason given, result,
+next decision - a direct pointer to `reports/CASE-1001.md` section 2 steps 8-10,
+and the guard rule in three sentences ending *"will not accept 'outside all
+affected ranges' from someone who checked some of them"*.
+
+### M-4 - Demo reordered to open on autonomy
+
+Scenario 6's ceiling is the strongest single frame, and it proves a **10%**
+criterion already maxed. Autonomy is **25%** and needs a different frame: tool →
+stated reason → result → next decision. The demo now opens there and arrives at
+the ceiling as payoff. Order 1 → 2 → 3 → 6.
+
+### M-5 - Robustness follow-up swapped
+
+Promoted above the ablation counts: four times a verification tool produced a
+**plausible wrong answer** - regex ablation mis-attribution, an invariant
+"verified" by reading that was never asserted, a lock that deleted itself by
+living in the directory it protected, and a coherence check printing a
+hard-coded label over a wrong span. None was caught by a suite going red; all
+four by re-reading output instead of the summary. That answers "how do you know
+your evals are sound" better than any pass count.
+
+### M-6 - Cold start: 7 seconds, and it caught a missing asset
+
+Fresh clone, no cache, no server, **97% memory / 0.38 GB free**:
+
+| step | time |
+|---|---|
+| clone | 1s |
+| `compliance.py` | 2s |
+| `selfcheck.py` | 1s |
+| viewer served (200 on page, trace and motion) | 3s |
+| **total** | **7s** |
+
+The clone passed 99/99 and 22/22, carried all 6 traces and 7 reports, and
+correctly had **no `.env`**. It also revealed `docs/viewer.png` existed locally
+but was uncommitted - the README's lead image would have 404'd for anyone
+cloning. That is exactly the class of failure a cold-start rehearsal exists to
+find, and no amount of local testing would have shown it.
