@@ -42,7 +42,7 @@
     },
     {
       "seq": 5,
-      "t": 5.746,
+      "t": 4.977,
       "kind": "thought",
       "case_id": "CASE-1001",
       "text": "I'll start by retrieving the alert details to understand what we're investigating, then form a hypothesis and gather evidence.",
@@ -50,7 +50,7 @@
     },
     {
       "seq": 6,
-      "t": 5.746,
+      "t": 4.977,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "get_alert",
@@ -62,7 +62,7 @@
     },
     {
       "seq": 7,
-      "t": 5.748,
+      "t": 4.98,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "get_alert",
@@ -86,15 +86,15 @@
     },
     {
       "seq": 8,
-      "t": 30.001,
+      "t": 9.885,
       "kind": "sufficiency",
       "case_id": "CASE-1001",
-      "text": "Now I have the alert details. Let me form my hypothesis and gather evidence.\n\n**Initial Hypothesis:** This is a SQL injection attempt (UNION SELECT) against SRV-WEB-01 on port 443. For the attack to have **succeeded**, the host must have been running a vulnerable service version, the attack must have actually executed on the host, and data may have been exfiltrated.\n\n**What would falsify it:** The host runs a patched version, logs show the attack was blocked/errored, or packet metadata shows no exfiltration.\n\nLet me gather all the evidence I can in parallel:",
+      "text": "Now I have the alert details. Let me form my hypothesis and gather evidence in parallel.\n\n**Initial Hypothesis:** The sensor flagged a SQL injection attempt (UNION SELECT) against SRV-WEB-01. For this attack to have *succeeded*, the host must have been running a vulnerable service version, the attack must have actually executed on the host, and data may have exfiltrated.\n\n**What would falsify this:** The host runs a patched version, logs show the attack was blocked/errored, or packet metadata shows benign traffic.\n\nLet me gather all the evidence I can in parallel:",
       "turn": 2
     },
     {
       "seq": 9,
-      "t": 30.001,
+      "t": 9.885,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "get_asset_info",
@@ -106,7 +106,7 @@
     },
     {
       "seq": 10,
-      "t": 30.003,
+      "t": 9.887,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "get_asset_info",
@@ -131,41 +131,7 @@
     },
     {
       "seq": 11,
-      "t": 30.003,
-      "kind": "tool_call",
-      "case_id": "CASE-1001",
-      "tool": "get_packet_metadata",
-      "args": {
-        "alert_id": "ALERT-1001"
-      },
-      "attempt": 1,
-      "reason": "Check if data was actually exfiltrated or if the flow looks benign - this distinguishes an attempted attack from a successful one."
-    },
-    {
-      "seq": 12,
-      "t": 30.014,
-      "kind": "tool_result",
-      "case_id": "CASE-1001",
-      "tool": "get_packet_metadata",
-      "status": "ok",
-      "result": {
-        "status": "ok",
-        "packet_metadata": {
-          "alert_id": "ALERT-1001",
-          "bytes_to_server": 412,
-          "bytes_to_client": 1840,
-          "duration_ms": 96,
-          "tls": true,
-          "protocol_anomalies": [],
-          "exfil_indicators": false,
-          "payload_entropy": 4.1,
-          "notes": "Single request/response pair. Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob, no anomalous flag combinations."
-        }
-      }
-    },
-    {
-      "seq": 13,
-      "t": 30.014,
+      "t": 9.887,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "get_server_logs",
@@ -173,11 +139,11 @@
         "asset_id": "SRV-WEB-01"
       },
       "attempt": 1,
-      "reason": "Check host-side logs to see if the SQL injection actually executed on the host - queries that ran, rows returned, processes spawned."
+      "reason": "Check host-side logs for any evidence of the SQL injection attack actually executing on the host - successful queries, rows returned, processes spawned."
     },
     {
-      "seq": 14,
-      "t": 30.015,
+      "seq": 12,
+      "t": 9.889,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "get_server_logs",
@@ -240,8 +206,42 @@
       }
     },
     {
+      "seq": 13,
+      "t": 9.889,
+      "kind": "tool_call",
+      "case_id": "CASE-1001",
+      "tool": "get_packet_metadata",
+      "args": {
+        "alert_id": "ALERT-1001"
+      },
+      "attempt": 1,
+      "reason": "Check packet-level metadata for evidence of data exfiltration or payload anomalies - bytes transferred, protocol anomalies, exfil indicators."
+    },
+    {
+      "seq": 14,
+      "t": 9.89,
+      "kind": "tool_result",
+      "case_id": "CASE-1001",
+      "tool": "get_packet_metadata",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "packet_metadata": {
+          "alert_id": "ALERT-1001",
+          "bytes_to_server": 412,
+          "bytes_to_client": 1840,
+          "duration_ms": 96,
+          "tls": true,
+          "protocol_anomalies": [],
+          "exfil_indicators": false,
+          "payload_entropy": 4.1,
+          "notes": "Single request/response pair. Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob, no anomalous flag combinations."
+        }
+      }
+    },
+    {
       "seq": 15,
-      "t": 30.015,
+      "t": 9.891,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "get_related_alerts",
@@ -253,7 +253,7 @@
     },
     {
       "seq": 16,
-      "t": 30.017,
+      "t": 9.892,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "get_related_alerts",
@@ -266,15 +266,15 @@
     },
     {
       "seq": 17,
-      "t": 35.791,
+      "t": 16.373,
       "kind": "sufficiency",
       "case_id": "CASE-1001",
-      "text": "Excellent! I now have substantial evidence. Let me check for relevant CVEs to complete the vulnerability assessment.",
+      "text": "Excellent - I now have substantial evidence. Let me check for relevant CVEs to complete the vulnerability assessment.",
       "turn": 3
     },
     {
       "seq": 18,
-      "t": 35.791,
+      "t": 16.373,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "get_vulnerabilities",
@@ -286,7 +286,7 @@
     },
     {
       "seq": 19,
-      "t": 35.804,
+      "t": 16.375,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "get_vulnerabilities",
@@ -317,7 +317,7 @@
     },
     {
       "seq": 20,
-      "t": 35.804,
+      "t": 16.375,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "get_vulnerabilities",
@@ -329,7 +329,7 @@
     },
     {
       "seq": 21,
-      "t": 35.805,
+      "t": 16.375,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "get_vulnerabilities",
@@ -352,51 +352,51 @@
     },
     {
       "seq": 22,
-      "t": 51.072,
+      "t": 45.759,
       "kind": "sufficiency",
       "case_id": "CASE-1001",
-      "text": "I now have all the evidence needed to make a determination. Let me submit my assessment.",
+      "text": "I now have all the evidence needed to make a determination. Let me submit my assessment",
       "turn": 4
     },
     {
       "seq": 23,
-      "t": 51.072,
+      "t": 45.759,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "submit_assessment",
       "args": {
-        "hypothesis": "The SQL injection attack (UNION SELECT) against SRV-WEB-01 was ATTEMPTED but did NOT SUCCEED. The host was running patched service versions, the WAF blocked the attack, and no data was exfiltrated.",
+        "hypothesis": "The SQL injection attack (UNION SELECT) against SRV-WEB-01 did NOT succeed. The host runs patched service versions, the WAF blocked the attack at the application layer, the database never received the malicious query, and packet metadata shows no exfiltration.",
         "factors": [
           {
             "factor": "version_patched",
-            "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36, apache 2.4.58. CVE-2023-21980 affects >=5.7.0,<5.7.30 (8.0.36 is outside). CVE-2022-21444 affects >=8.0.0,<8.0.30 (8.0.36 > 8.0.30, outside). CVE-2021-41773 affects >=2.4.49,<=2.4.50 (2.4.58 is outside). All running versions are above the affected ranges \u2014 host is NOT vulnerable.",
-            "rationale": "The host runs MySQL 8.0.36 and Apache 2.4.58, both of which are above the affected version ranges for all known SQL injection CVEs in the knowledge base. The host is patched."
+            "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36, apache 2.4.58. CVE-2023-21980 affects >=5.7.0,<5.7.30 (8.0.36 is outside). CVE-2022-21444 affects >=8.0.0,<8.0.30 (8.0.36 > 8.0.30, outside). CVE-2021-41773 affects >=2.4.49,<=2.4.50 (2.4.58 is outside). All running versions are above the affected ranges.",
+            "rationale": "The host runs MySQL 8.0.36 and Apache 2.4.58, both of which are above all known vulnerable version ranges. The host is not affected by any of the relevant CVEs."
           },
           {
             "factor": "logs_clean",
-            "citation": "get_server_logs: ModSecurity WAF blocked the request at 02:14:07Z with event id 942100, returning 403. Apache access log shows the UNION SELECT request returned 403 199. MySQL general log shows only the normal query 'SELECT name,price FROM catalog WHERE id=17' \u2014 no UNION SELECT query was ever executed on the database.",
-            "rationale": "The WAF blocked the SQL injection attempt before it reached the database. The MySQL logs confirm no malicious query executed. The attack was visible but demonstrably failed."
+            "citation": "get_server_logs: ModSecurity WAF blocked the UNION SELECT payload at 02:14:07Z, returning 403 to 203.0.113.45. Apache access log confirms the malicious request 'GET /catalog?id=17 UNION SELECT 1,2,3--' returned 403. MySQL general log shows only the benign query 'SELECT name,price FROM catalog WHERE id=17' \u2014 no UNION SELECT or malicious payload ever reached the database. A second attempt ('OR 1=1--') also returned 403.",
+            "rationale": "The WAF blocked the attack before it reached the database. The MySQL query log confirms only a legitimate query executed. No malicious activity succeeded on the host."
           },
           {
             "factor": "packet_benign",
-            "citation": "get_packet_metadata: exfil_indicators: false, bytes_to_client: 1840 (consistent with a 403 error page), duration: 96ms, no sustained outbound transfer, no encoded blob, no anomalous flag combinations.",
-            "rationale": "The response was a small 403 error page, not a data exfiltration. No evidence of data leaving the host."
+            "citation": "get_packet_metadata: 412 bytes to server, 1840 bytes to client, duration 96ms, exfil_indicators: false, protocol_anomalies: [], payload_entropy: 4.1. Notes: 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob, no anomalous flag combinations.'",
+            "rationale": "Packet metadata confirms the response was a 403 error page with no data exfiltration, no anomalous payload, and no sustained outbound transfer."
           },
           {
             "factor": "related_alert_corroborates",
-            "citation": "get_related_alerts: no_data \u2014 no other alerts recorded against SRV-WEB-01.",
-            "rationale": "No corroborating alerts exist, but this is neutral \u2014 it neither supports nor contradicts the finding."
+            "citation": "get_related_alerts: No other alerts recorded against SRV-WEB-01.",
+            "rationale": "No corroborating or contradicting alerts exist for this asset."
           }
         ],
-        "sufficiency": "Sufficient to classify. All four evidence classes have been established: the host runs patched versions (version_patched), the WAF blocked the attack and no malicious query reached the database (logs_clean), no data was exfiltrated (packet_benign), and no related alerts exist. The attack was attempted but did not succeed.",
-        "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) whether the host was vulnerable \u2014 it was not, running patched versions; (2) whether the attack actually executed on the host \u2014 it did not, the WAF blocked it and MySQL logs show no UNION SELECT; (3) whether data was exfiltrated \u2014 it was not, packet metadata shows no exfil indicators and a 403-sized response. All disconfirming checks confirm the attack did not succeed."
+        "sufficiency": "Sufficient evidence to classify. All four evidence classes were established: (1) version_patched \u2014 the host runs MySQL 8.0.36 and Apache 2.4.58, both outside all known vulnerable ranges; (2) logs_clean \u2014 the WAF blocked the attack, and the database only received a benign query; (3) packet_benign \u2014 no exfiltration, response was a 403 error page; (4) related_alert_corroborates \u2014 no other alerts exist. The attack was attempted but blocked at the WAF layer and never reached the database.",
+        "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) whether the malicious query actually executed on the database \u2014 the MySQL general log shows only a benign query, confirming it did not; (2) whether any data exfiltrated \u2014 packet metadata shows exfil_indicators: false and response size consistent with a 403 page; (3) whether the host was vulnerable \u2014 running versions are all above affected ranges. No disconfirming evidence was found."
       },
       "attempt": 1,
       "reason": "(no stated reason)"
     },
     {
       "seq": 24,
-      "t": 51.072,
+      "t": 45.759,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "submit_assessment",
@@ -411,77 +411,77 @@
     },
     {
       "seq": 25,
-      "t": 55.82,
+      "t": 51.68,
       "kind": "sufficiency",
       "case_id": "CASE-1001",
-      "text": "The system correctly flagged that I cannot cite `related_alert_corroborates` when the lookup returned `no_data`. Let me resubmit without that",
+      "text": "The system correctly flagged that `related_alert_corroborates` cannot be declared when `get_related_alerts` returned `no_data`. Let me resubmit without that",
       "turn": 5
     },
     {
       "seq": 26,
-      "t": 55.82,
+      "t": 51.68,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "submit_assessment",
       "args": {
-        "hypothesis": "The SQL injection attack (UNION SELECT) against SRV-WEB-01 was ATTEMPTED but did NOT SUCCEED. The host was running patched service versions, the WAF blocked the attack, and no data was exfiltrated.",
+        "hypothesis": "The SQL injection attack (UNION SELECT) against SRV-WEB-01 did NOT succeed. The host runs patched service versions, the WAF blocked the attack at the application layer, the database never received the malicious query, and packet metadata shows no exfiltration.",
         "factors": [
           {
             "factor": "version_patched",
-            "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36, apache 2.4.58. CVE-2023-21980 affects >=5.7.0,<5.7.30 (8.0.36 is outside). CVE-2022-21444 affects >=8.0.0,<8.0.30 (8.0.36 > 8.0.30, outside). CVE-2021-41773 affects >=2.4.49,<=2.4.50 (2.4.58 is outside). All running versions are above the affected ranges \u2014 host is NOT vulnerable.",
-            "rationale": "The host runs MySQL 8.0.36 and Apache 2.4.58, both above the affected version ranges for all known SQL injection CVEs. The host is patched."
+            "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36, apache 2.4.58. CVE-2023-21980 affects >=5.7.0,<5.7.30 (8.0.36 is outside). CVE-2022-21444 affects >=8.0.0,<8.0.30 (8.0.36 > 8.0.30, outside). CVE-2021-41773 affects >=2.4.49,<=2.4.50 (2.4.58 is outside). All running versions are above the affected ranges.",
+            "rationale": "The host runs MySQL 8.0.36 and Apache 2.4.58, both of which are above all known vulnerable version ranges. The host is not affected by any of the relevant CVEs."
           },
           {
             "factor": "logs_clean",
-            "citation": "get_server_logs: ModSecurity WAF blocked the request at 02:14:07Z with event id 942100, returning 403. Apache access log shows the UNION SELECT request returned 403 199. MySQL general log shows only the normal query 'SELECT name,price FROM catalog WHERE id=17' \u2014 no UNION SELECT query was ever executed on the database.",
-            "rationale": "The WAF blocked the SQL injection attempt before it reached the database. MySQL logs confirm no malicious query executed. The attack was visible but demonstrably failed."
+            "citation": "get_server_logs: ModSecurity WAF blocked the UNION SELECT payload at 02:14:07Z, returning 403 to 203.0.113.45. Apache access log confirms the malicious request 'GET /catalog?id=17 UNION SELECT 1,2,3--' returned 403. MySQL general log shows only the benign query 'SELECT name,price FROM catalog WHERE id=17' \u2014 no UNION SELECT or malicious payload ever reached the database. A second attempt ('OR 1=1--') also returned 403.",
+            "rationale": "The WAF blocked the attack before it reached the database. The MySQL query log confirms only a legitimate query executed. No malicious activity succeeded on the host."
           },
           {
             "factor": "packet_benign",
-            "citation": "get_packet_metadata: exfil_indicators: false, bytes_to_client: 1840 (consistent with a 403 error page), duration: 96ms, no sustained outbound transfer, no encoded blob, no anomalous flag combinations.",
-            "rationale": "The response was a small 403 error page, not data exfiltration. No evidence of data leaving the host."
+            "citation": "get_packet_metadata: 412 bytes to server, 1840 bytes to client, duration 96ms, exfil_indicators: false, protocol_anomalies: [], payload_entropy: 4.1. Notes: 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob, no anomalous flag combinations.'",
+            "rationale": "Packet metadata confirms the response was a 403 error page with no data exfiltration, no anomalous payload, and no sustained outbound transfer."
           }
         ],
-        "sufficiency": "Sufficient to classify. Three evidence classes established: version_patched (host runs patched versions), logs_clean (WAF blocked attack, no malicious query reached DB), packet_benign (no exfiltration). The attack was attempted but did not succeed.",
-        "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) whether the host was vulnerable \u2014 it was not, running patched versions; (2) whether the attack actually executed on the host \u2014 it did not, the WAF blocked it and MySQL logs show no UNION SELECT; (3) whether data was exfiltrated \u2014 it was not, packet metadata shows no exfil indicators and a 403-sized response. All disconfirming checks confirm the attack did not succeed."
+        "sufficiency": "Sufficient evidence to classify. Three evidence classes were established: (1) version_patched \u2014 the host runs MySQL 8.0.36 and Apache 2.4.58, both outside all known vulnerable ranges; (2) logs_clean \u2014 the WAF blocked the attack, and the database only received a benign query; (3) packet_benign \u2014 no exfiltration, response was a 403 error page. The attack was attempted but blocked at the WAF layer and never reached the database.",
+        "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) whether the malicious query actually executed on the database \u2014 the MySQL general log shows only a benign query, confirming it did not; (2) whether any data exfiltrated \u2014 packet metadata shows exfil_indicators: false and response size consistent with a 403 page; (3) whether the host was vulnerable \u2014 running versions are all above affected ranges. No disconfirming evidence was found."
       },
       "attempt": 2,
       "reason": "(no stated reason)"
     },
     {
       "seq": 27,
-      "t": 55.82,
+      "t": 51.68,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "submit_assessment",
       "status": "accepted",
       "result": {
         "status": "accepted",
-        "hypothesis": "The SQL injection attack (UNION SELECT) against SRV-WEB-01 was ATTEMPTED but did NOT SUCCEED. The host was running patched service versions, the WAF blocked the attack, and no data was exfiltrated.",
+        "hypothesis": "The SQL injection attack (UNION SELECT) against SRV-WEB-01 did NOT succeed. The host runs patched service versions, the WAF blocked the attack at the application layer, the database never received the malicious query, and packet metadata shows no exfiltration.",
         "factors": [
           {
             "factor": "version_patched",
-            "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36, apache 2.4.58. CVE-2023-21980 affects >=5.7.0,<5.7.30 (8.0.36 is outside). CVE-2022-21444 affects >=8.0.0,<8.0.30 (8.0.36 > 8.0.30, outside). CVE-2021-41773 affects >=2.4.49,<=2.4.50 (2.4.58 is outside). All running versions are above the affected ranges \u2014 host is NOT vulnerable.",
-            "rationale": "The host runs MySQL 8.0.36 and Apache 2.4.58, both above the affected version ranges for all known SQL injection CVEs. The host is patched."
+            "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36, apache 2.4.58. CVE-2023-21980 affects >=5.7.0,<5.7.30 (8.0.36 is outside). CVE-2022-21444 affects >=8.0.0,<8.0.30 (8.0.36 > 8.0.30, outside). CVE-2021-41773 affects >=2.4.49,<=2.4.50 (2.4.58 is outside). All running versions are above the affected ranges.",
+            "rationale": "The host runs MySQL 8.0.36 and Apache 2.4.58, both of which are above all known vulnerable version ranges. The host is not affected by any of the relevant CVEs."
           },
           {
             "factor": "logs_clean",
-            "citation": "get_server_logs: ModSecurity WAF blocked the request at 02:14:07Z with event id 942100, returning 403. Apache access log shows the UNION SELECT request returned 403 199. MySQL general log shows only the normal query 'SELECT name,price FROM catalog WHERE id=17' \u2014 no UNION SELECT query was ever executed on the database.",
-            "rationale": "The WAF blocked the SQL injection attempt before it reached the database. MySQL logs confirm no malicious query executed. The attack was visible but demonstrably failed."
+            "citation": "get_server_logs: ModSecurity WAF blocked the UNION SELECT payload at 02:14:07Z, returning 403 to 203.0.113.45. Apache access log confirms the malicious request 'GET /catalog?id=17 UNION SELECT 1,2,3--' returned 403. MySQL general log shows only the benign query 'SELECT name,price FROM catalog WHERE id=17' \u2014 no UNION SELECT or malicious payload ever reached the database. A second attempt ('OR 1=1--') also returned 403.",
+            "rationale": "The WAF blocked the attack before it reached the database. The MySQL query log confirms only a legitimate query executed. No malicious activity succeeded on the host."
           },
           {
             "factor": "packet_benign",
-            "citation": "get_packet_metadata: exfil_indicators: false, bytes_to_client: 1840 (consistent with a 403 error page), duration: 96ms, no sustained outbound transfer, no encoded blob, no anomalous flag combinations.",
-            "rationale": "The response was a small 403 error page, not data exfiltration. No evidence of data leaving the host."
+            "citation": "get_packet_metadata: 412 bytes to server, 1840 bytes to client, duration 96ms, exfil_indicators: false, protocol_anomalies: [], payload_entropy: 4.1. Notes: 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob, no anomalous flag combinations.'",
+            "rationale": "Packet metadata confirms the response was a 403 error page with no data exfiltration, no anomalous payload, and no sustained outbound transfer."
           }
         ],
-        "sufficiency": "Sufficient to classify. Three evidence classes established: version_patched (host runs patched versions), logs_clean (WAF blocked attack, no malicious query reached DB), packet_benign (no exfiltration). The attack was attempted but did not succeed.",
-        "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) whether the host was vulnerable \u2014 it was not, running patched versions; (2) whether the attack actually executed on the host \u2014 it did not, the WAF blocked it and MySQL logs show no UNION SELECT; (3) whether data was exfiltrated \u2014 it was not, packet metadata shows no exfil indicators and a 403-sized response. All disconfirming checks confirm the attack did not succeed."
+        "sufficiency": "Sufficient evidence to classify. Three evidence classes were established: (1) version_patched \u2014 the host runs MySQL 8.0.36 and Apache 2.4.58, both outside all known vulnerable ranges; (2) logs_clean \u2014 the WAF blocked the attack, and the database only received a benign query; (3) packet_benign \u2014 no exfiltration, response was a 403 error page. The attack was attempted but blocked at the WAF layer and never reached the database.",
+        "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) whether the malicious query actually executed on the database \u2014 the MySQL general log shows only a benign query, confirming it did not; (2) whether any data exfiltrated \u2014 packet metadata shows exfil_indicators: false and response size consistent with a 403 page; (3) whether the host was vulnerable \u2014 running versions are all above affected ranges. No disconfirming evidence was found."
       }
     },
     {
       "seq": 28,
-      "t": 55.821,
+      "t": 51.68,
       "kind": "state_change",
       "case_id": "CASE-1001",
       "state": "DETERMINE_OUTCOME",
@@ -489,7 +489,7 @@
     },
     {
       "seq": 29,
-      "t": 55.821,
+      "t": 51.68,
       "kind": "scoring",
       "case_id": "CASE-1001",
       "base": 0.5,
@@ -502,22 +502,22 @@
           "factor": "version_patched",
           "label": "Running version outside all affected ranges (patched)",
           "delta": -0.3,
-          "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36, apache 2.4.58. CVE-2023-21980 affects >=5.7.0,<5.7.30 (8.0.36 is outside). CVE-2022-21444 affects >=8.0.0,<8.0.30 (8.0.36 > 8.0.30, outside). CVE-2021-41773 affects >=2.4.49,<=2.4.50 (2.4.58 is outside). All running versions are above the affected ranges \u2014 host is NOT vulnerable.",
-          "rationale": "The host runs MySQL 8.0.36 and Apache 2.4.58, both above the affected version ranges for all known SQL injection CVEs. The host is patched."
+          "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36, apache 2.4.58. CVE-2023-21980 affects >=5.7.0,<5.7.30 (8.0.36 is outside). CVE-2022-21444 affects >=8.0.0,<8.0.30 (8.0.36 > 8.0.30, outside). CVE-2021-41773 affects >=2.4.49,<=2.4.50 (2.4.58 is outside). All running versions are above the affected ranges.",
+          "rationale": "The host runs MySQL 8.0.36 and Apache 2.4.58, both of which are above all known vulnerable version ranges. The host is not affected by any of the relevant CVEs."
         },
         {
           "factor": "logs_clean",
           "label": "Server logs clean across the relevant window",
           "delta": -0.25,
-          "citation": "get_server_logs: ModSecurity WAF blocked the request at 02:14:07Z with event id 942100, returning 403. Apache access log shows the UNION SELECT request returned 403 199. MySQL general log shows only the normal query 'SELECT name,price FROM catalog WHERE id=17' \u2014 no UNION SELECT query was ever executed on the database.",
-          "rationale": "The WAF blocked the SQL injection attempt before it reached the database. MySQL logs confirm no malicious query executed. The attack was visible but demonstrably failed."
+          "citation": "get_server_logs: ModSecurity WAF blocked the UNION SELECT payload at 02:14:07Z, returning 403 to 203.0.113.45. Apache access log confirms the malicious request 'GET /catalog?id=17 UNION SELECT 1,2,3--' returned 403. MySQL general log shows only the benign query 'SELECT name,price FROM catalog WHERE id=17' \u2014 no UNION SELECT or malicious payload ever reached the database. A second attempt ('OR 1=1--') also returned 403.",
+          "rationale": "The WAF blocked the attack before it reached the database. The MySQL query log confirms only a legitimate query executed. No malicious activity succeeded on the host."
         },
         {
           "factor": "packet_benign",
           "label": "Packet metadata benign",
           "delta": -0.1,
-          "citation": "get_packet_metadata: exfil_indicators: false, bytes_to_client: 1840 (consistent with a 403 error page), duration: 96ms, no sustained outbound transfer, no encoded blob, no anomalous flag combinations.",
-          "rationale": "The response was a small 403 error page, not data exfiltration. No evidence of data leaving the host."
+          "citation": "get_packet_metadata: 412 bytes to server, 1840 bytes to client, duration 96ms, exfil_indicators: false, protocol_anomalies: [], payload_entropy: 4.1. Notes: 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob, no anomalous flag combinations.'",
+          "rationale": "Packet metadata confirms the response was a 403 error page with no data exfiltration, no anomalous payload, and no sustained outbound transfer."
         }
       ],
       "ignored_factors": [],
@@ -527,16 +527,16 @@
     },
     {
       "seq": 30,
-      "t": 55.822,
+      "t": 51.682,
       "kind": "conclusion",
       "case_id": "CASE-1001",
       "label": "initial",
       "outcome": "FAILED",
       "confidence": 0.95,
       "score": 0.05,
-      "hypothesis": "The SQL injection attack (UNION SELECT) against SRV-WEB-01 was ATTEMPTED but did NOT SUCCEED. The host was running patched service versions, the WAF blocked the attack, and no data was exfiltrated.",
-      "sufficiency": "Sufficient to classify. Three evidence classes established: version_patched (host runs patched versions), logs_clean (WAF blocked attack, no malicious query reached DB), packet_benign (no exfiltration). The attack was attempted but did not succeed.",
-      "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) whether the host was vulnerable \u2014 it was not, running patched versions; (2) whether the attack actually executed on the host \u2014 it did not, the WAF blocked it and MySQL logs show no UNION SELECT; (3) whether data was exfiltrated \u2014 it was not, packet metadata shows no exfil indicators and a 403-sized response. All disconfirming checks confirm the attack did not succeed.",
+      "hypothesis": "The SQL injection attack (UNION SELECT) against SRV-WEB-01 did NOT succeed. The host runs patched service versions, the WAF blocked the attack at the application layer, the database never received the malicious query, and packet metadata shows no exfiltration.",
+      "sufficiency": "Sufficient evidence to classify. Three evidence classes were established: (1) version_patched \u2014 the host runs MySQL 8.0.36 and Apache 2.4.58, both outside all known vulnerable ranges; (2) logs_clean \u2014 the WAF blocked the attack, and the database only received a benign query; (3) packet_benign \u2014 no exfiltration, response was a 403 error page. The attack was attempted but blocked at the WAF layer and never reached the database.",
+      "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) whether the malicious query actually executed on the database \u2014 the MySQL general log shows only a benign query, confirming it did not; (2) whether any data exfiltrated \u2014 packet metadata shows exfil_indicators: false and response size consistent with a 403 page; (3) whether the host was vulnerable \u2014 running versions are all above affected ranges. No disconfirming evidence was found.",
       "scoring": {
         "base": 0.5,
         "raw_sum": -0.15,
@@ -548,22 +548,22 @@
             "factor": "version_patched",
             "label": "Running version outside all affected ranges (patched)",
             "delta": -0.3,
-            "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36, apache 2.4.58. CVE-2023-21980 affects >=5.7.0,<5.7.30 (8.0.36 is outside). CVE-2022-21444 affects >=8.0.0,<8.0.30 (8.0.36 > 8.0.30, outside). CVE-2021-41773 affects >=2.4.49,<=2.4.50 (2.4.58 is outside). All running versions are above the affected ranges \u2014 host is NOT vulnerable.",
-            "rationale": "The host runs MySQL 8.0.36 and Apache 2.4.58, both above the affected version ranges for all known SQL injection CVEs. The host is patched."
+            "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36, apache 2.4.58. CVE-2023-21980 affects >=5.7.0,<5.7.30 (8.0.36 is outside). CVE-2022-21444 affects >=8.0.0,<8.0.30 (8.0.36 > 8.0.30, outside). CVE-2021-41773 affects >=2.4.49,<=2.4.50 (2.4.58 is outside). All running versions are above the affected ranges.",
+            "rationale": "The host runs MySQL 8.0.36 and Apache 2.4.58, both of which are above all known vulnerable version ranges. The host is not affected by any of the relevant CVEs."
           },
           {
             "factor": "logs_clean",
             "label": "Server logs clean across the relevant window",
             "delta": -0.25,
-            "citation": "get_server_logs: ModSecurity WAF blocked the request at 02:14:07Z with event id 942100, returning 403. Apache access log shows the UNION SELECT request returned 403 199. MySQL general log shows only the normal query 'SELECT name,price FROM catalog WHERE id=17' \u2014 no UNION SELECT query was ever executed on the database.",
-            "rationale": "The WAF blocked the SQL injection attempt before it reached the database. MySQL logs confirm no malicious query executed. The attack was visible but demonstrably failed."
+            "citation": "get_server_logs: ModSecurity WAF blocked the UNION SELECT payload at 02:14:07Z, returning 403 to 203.0.113.45. Apache access log confirms the malicious request 'GET /catalog?id=17 UNION SELECT 1,2,3--' returned 403. MySQL general log shows only the benign query 'SELECT name,price FROM catalog WHERE id=17' \u2014 no UNION SELECT or malicious payload ever reached the database. A second attempt ('OR 1=1--') also returned 403.",
+            "rationale": "The WAF blocked the attack before it reached the database. The MySQL query log confirms only a legitimate query executed. No malicious activity succeeded on the host."
           },
           {
             "factor": "packet_benign",
             "label": "Packet metadata benign",
             "delta": -0.1,
-            "citation": "get_packet_metadata: exfil_indicators: false, bytes_to_client: 1840 (consistent with a 403 error page), duration: 96ms, no sustained outbound transfer, no encoded blob, no anomalous flag combinations.",
-            "rationale": "The response was a small 403 error page, not data exfiltration. No evidence of data leaving the host."
+            "citation": "get_packet_metadata: 412 bytes to server, 1840 bytes to client, duration 96ms, exfil_indicators: false, protocol_anomalies: [], payload_entropy: 4.1. Notes: 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob, no anomalous flag combinations.'",
+            "rationale": "Packet metadata confirms the response was a 403 error page with no data exfiltration, no anomalous payload, and no sustained outbound transfer."
           }
         ],
         "ignored_factors": [],
@@ -571,11 +571,11 @@
         "degraded_sources": [],
         "ceiling_note": ""
       },
-      "at": "2026-09-12T10:12:28Z"
+      "at": "2026-09-12T10:31:16Z"
     },
     {
       "seq": 31,
-      "t": 55.822,
+      "t": 51.682,
       "kind": "state_change",
       "case_id": "CASE-1001",
       "state": "ACT",
@@ -583,15 +583,15 @@
     },
     {
       "seq": 32,
-      "t": 58.341,
+      "t": 54.723,
       "kind": "thought",
       "case_id": "CASE-1001",
-      "text": "The deterministic scoring for CASE-1001 produced outcome **FAILED** with a score of 0.05. Per the standing action policy (section 7.3), a FAILED outcome means **no action** is warranted.\n\nLet me verify the current firewall state to confirm nothing was changed.",
+      "text": "The deterministic scoring for CASE-1001 / ALERT-1001 produced **FAILED** with a score of 0.05. Per the standing action policy (section 7.3), a **FAILED** outcome means **no action** is warranted.\n\nLet me record the current firewall state to verify nothing was changed:",
       "turn": 1
     },
     {
       "seq": 33,
-      "t": 58.341,
+      "t": 54.723,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "check_firewall_state",
@@ -599,11 +599,11 @@
         "ip": "203.0.113.45"
       },
       "attempt": 1,
-      "reason": "Verify current firewall state for source IP 203.0.113.45 after FAILED scoring outcome in CASE-1001. No action was taken per policy, so this IP should not have any DROP rule."
+      "reason": "CASE-1001 ALERT-1001 scored FAILED (0.05). Policy dictates no action. Checking current firewall state to confirm no block exists for this IP."
     },
     {
       "seq": 34,
-      "t": 58.342,
+      "t": 54.723,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "check_firewall_state",
@@ -619,15 +619,15 @@
     },
     {
       "seq": 35,
-      "t": 62.644,
+      "t": 58.181,
       "kind": "sufficiency",
       "case_id": "CASE-1001",
-      "text": "**Summary of actions taken and verification:**\n\n1. **Assessed the scoring outcome:** CASE-1001 / ALERT-1001 produced a **FAILED** outcome with a score of 0.05 and confidence of 0.95. Per the standing action policy (section 7.3), a FAILED outcome explicitly calls for **no action**.\n\n2. **Took no action:** No block or unblock was issued against `203.0.113.45`, as the policy does not warrant any intervention.\n\n3. **Verified from disk:** Queried the firewall state for `203.0.113.45`. The result confirms:\n   - `blocked: false`\n   - `total_blocked: 0`\n   - No DROP rule exists for this IP\n\nThis is exactly what we expect when no action is taken. The firewall state is consistent with the no-action policy, and the case is closed.",
+      "text": "**Summary:**\n\n- **Case/Alert:** CASE-1001 / ALERT-1001 \u2014 source IP `203.0.113.45` against `SRV-WEB-01` (high criticality).\n- **Scoring result:** FAILED (score 0.05, confidence 0.95).\n- **Policy applied:** Per section 7.3, a **FAILED** outcome means **no action** is taken.\n- **No block rule was added** to the firewall for `203.0.113.45`.\n- **Verification:** `check_firewall_state` confirmed that `203.0.113.45` is **not blocked** (`blocked: false`, `record: null`), which is exactly the expected state \u2014 the firewall remains untouched, consistent with the no-action policy.\n\nNo further action is warranted for this case.",
       "turn": 2
     },
     {
       "seq": 36,
-      "t": 62.644,
+      "t": 58.181,
       "kind": "state_change",
       "case_id": "CASE-1001",
       "state": "VERIFY",
@@ -635,7 +635,7 @@
     },
     {
       "seq": 37,
-      "t": 62.644,
+      "t": 58.182,
       "kind": "verification",
       "case_id": "CASE-1001",
       "ip": "203.0.113.45",
@@ -665,9 +665,9 @@
           "outcome": "FAILED",
           "confidence": 0.95,
           "score": 0.05,
-          "hypothesis": "The SQL injection attack (UNION SELECT) against SRV-WEB-01 was ATTEMPTED but did NOT SUCCEED. The host was running patched service versions, the WAF blocked the attack, and no data was exfiltrated.",
-          "sufficiency": "Sufficient to classify. Three evidence classes established: version_patched (host runs patched versions), logs_clean (WAF blocked attack, no malicious query reached DB), packet_benign (no exfiltration). The attack was attempted but did not succeed.",
-          "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) whether the host was vulnerable \u2014 it was not, running patched versions; (2) whether the attack actually executed on the host \u2014 it did not, the WAF blocked it and MySQL logs show no UNION SELECT; (3) whether data was exfiltrated \u2014 it was not, packet metadata shows no exfil indicators and a 403-sized response. All disconfirming checks confirm the attack did not succeed.",
+          "hypothesis": "The SQL injection attack (UNION SELECT) against SRV-WEB-01 did NOT succeed. The host runs patched service versions, the WAF blocked the attack at the application layer, the database never received the malicious query, and packet metadata shows no exfiltration.",
+          "sufficiency": "Sufficient evidence to classify. Three evidence classes were established: (1) version_patched \u2014 the host runs MySQL 8.0.36 and Apache 2.4.58, both outside all known vulnerable ranges; (2) logs_clean \u2014 the WAF blocked the attack, and the database only received a benign query; (3) packet_benign \u2014 no exfiltration, response was a 403 error page. The attack was attempted but blocked at the WAF layer and never reached the database.",
+          "disconfirming_evidence_checked": "I checked for evidence that would falsify the 'attack failed' hypothesis: (1) whether the malicious query actually executed on the database \u2014 the MySQL general log shows only a benign query, confirming it did not; (2) whether any data exfiltrated \u2014 packet metadata shows exfil_indicators: false and response size consistent with a 403 page; (3) whether the host was vulnerable \u2014 running versions are all above affected ranges. No disconfirming evidence was found.",
           "scoring": {
             "base": 0.5,
             "raw_sum": -0.15,
@@ -679,22 +679,22 @@
                 "factor": "version_patched",
                 "label": "Running version outside all affected ranges (patched)",
                 "delta": -0.3,
-                "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36, apache 2.4.58. CVE-2023-21980 affects >=5.7.0,<5.7.30 (8.0.36 is outside). CVE-2022-21444 affects >=8.0.0,<8.0.30 (8.0.36 > 8.0.30, outside). CVE-2021-41773 affects >=2.4.49,<=2.4.50 (2.4.58 is outside). All running versions are above the affected ranges \u2014 host is NOT vulnerable.",
-                "rationale": "The host runs MySQL 8.0.36 and Apache 2.4.58, both above the affected version ranges for all known SQL injection CVEs. The host is patched."
+                "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36, apache 2.4.58. CVE-2023-21980 affects >=5.7.0,<5.7.30 (8.0.36 is outside). CVE-2022-21444 affects >=8.0.0,<8.0.30 (8.0.36 > 8.0.30, outside). CVE-2021-41773 affects >=2.4.49,<=2.4.50 (2.4.58 is outside). All running versions are above the affected ranges.",
+                "rationale": "The host runs MySQL 8.0.36 and Apache 2.4.58, both of which are above all known vulnerable version ranges. The host is not affected by any of the relevant CVEs."
               },
               {
                 "factor": "logs_clean",
                 "label": "Server logs clean across the relevant window",
                 "delta": -0.25,
-                "citation": "get_server_logs: ModSecurity WAF blocked the request at 02:14:07Z with event id 942100, returning 403. Apache access log shows the UNION SELECT request returned 403 199. MySQL general log shows only the normal query 'SELECT name,price FROM catalog WHERE id=17' \u2014 no UNION SELECT query was ever executed on the database.",
-                "rationale": "The WAF blocked the SQL injection attempt before it reached the database. MySQL logs confirm no malicious query executed. The attack was visible but demonstrably failed."
+                "citation": "get_server_logs: ModSecurity WAF blocked the UNION SELECT payload at 02:14:07Z, returning 403 to 203.0.113.45. Apache access log confirms the malicious request 'GET /catalog?id=17 UNION SELECT 1,2,3--' returned 403. MySQL general log shows only the benign query 'SELECT name,price FROM catalog WHERE id=17' \u2014 no UNION SELECT or malicious payload ever reached the database. A second attempt ('OR 1=1--') also returned 403.",
+                "rationale": "The WAF blocked the attack before it reached the database. The MySQL query log confirms only a legitimate query executed. No malicious activity succeeded on the host."
               },
               {
                 "factor": "packet_benign",
                 "label": "Packet metadata benign",
                 "delta": -0.1,
-                "citation": "get_packet_metadata: exfil_indicators: false, bytes_to_client: 1840 (consistent with a 403 error page), duration: 96ms, no sustained outbound transfer, no encoded blob, no anomalous flag combinations.",
-                "rationale": "The response was a small 403 error page, not data exfiltration. No evidence of data leaving the host."
+                "citation": "get_packet_metadata: 412 bytes to server, 1840 bytes to client, duration 96ms, exfil_indicators: false, protocol_anomalies: [], payload_entropy: 4.1. Notes: 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob, no anomalous flag combinations.'",
+                "rationale": "Packet metadata confirms the response was a 403 error page with no data exfiltration, no anomalous payload, and no sustained outbound transfer."
               }
             ],
             "ignored_factors": [],
@@ -702,7 +702,7 @@
             "degraded_sources": [],
             "ceiling_note": ""
           },
-          "at": "2026-09-12T10:12:28Z"
+          "at": "2026-09-12T10:31:16Z"
         }
       ],
       "actions": [],
@@ -725,8 +725,8 @@
       "tools_called": [
         "get_alert",
         "get_asset_info",
-        "get_packet_metadata",
         "get_server_logs",
+        "get_packet_metadata",
         "get_related_alerts",
         "get_vulnerabilities",
         "submit_assessment",

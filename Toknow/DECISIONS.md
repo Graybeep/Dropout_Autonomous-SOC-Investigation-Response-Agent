@@ -663,3 +663,68 @@ where Scenario 3 only has to add evidence from a host it had never examined.
 Case A has now passed in three runs and failed in one. It is the least stable of
 the six and should be expected to flake occasionally on a small model; §2's
 escalation path (one config line) is the real remedy.
+
+---
+
+## Part 7 — Third full live run: 6/6, and the stability verdict
+
+Third consecutive full run, 13 minutes wall clock, **exit 0 — every scenario
+passed every check.** First fully clean sweep.
+
+| # | Trajectory | Action | Status |
+|---|---|---|---|
+| 1 | `FAILED` (0.05) | none | CONCLUDED |
+| 2 | `SUCCEEDED` (0.95) | block_ip | CONCLUDED |
+| 3 | `INCONCLUSIVE` (0.40) → `SUCCEEDED` (0.95) | block_ip | CONCLUDED |
+| 4 | `SUCCEEDED` (0.95) | block_ip → unblock_ip | OVERRIDDEN_BENIGN |
+| 5A | `INCONCLUSIVE` (0.40) → `SUCCEEDED` (0.95) | block_ip | CONCLUDED |
+| 5B | `SUCCEEDED` (0.95) | block_ip | CONCLUDED |
+| 6 | `INCONCLUSIVE` (0.65, raw 0.90) | block_ip **precautionary** | CONCLUDED |
+
+### Three runs, side by side
+
+| # | Run A | Run B | Run C |
+|---|---|---|---|
+| 1 | FAIL (P-013) | PASS | PASS |
+| 2 | FAIL (P-014, mine) | PASS | PASS |
+| 3 | PASS | PASS | PASS |
+| 4 | PASS | PASS | PASS |
+| 5 | PASS | FAIL (P-015) | PASS |
+| 6 | PASS | PASS | PASS |
+
+§11 asked for three runs before the demo. This is them. Every failure across all
+three was diagnosed to a root cause and fixed — none were left as "flaky":
+
+- **P-013** (run A, scenario 1) — malformed tool calls were a dead end rather
+  than a recoverable error. Code fix, 5 regression checks.
+- **P-014** (run A, scenario 2) — a concurrent `selfcheck.py` deleted the live
+  sandbox. Not the agent. Code fix: sandbox lock.
+- **P-015** (run B, scenario 5) — the agent read later exploitation evidence as
+  belonging to a different alert's window. Prompt fix, scoped to `RELATED_CASE`.
+
+### What is genuinely stable, stated plainly
+
+- **Outcome classes: stable.** Every scenario has landed on its expected outcome
+  in every run since its respective fix. Runs B and C were identical on all
+  seven cases.
+- **Tool ordering: varies every run, by design.** The harness deliberately does
+  not assert a sequence — pinning one would re-introduce the scripted behaviour
+  §3 guardrail 2 forbids. Scenario 1 has opened with `get_alert` then
+  `get_asset_info`, and has swapped the order of `get_server_logs` and
+  `get_packet_metadata` between runs, with identical verdicts.
+- **Factor sets: vary at the margins**, which is why the thresholds have room on
+  either side rather than sitting on a boundary. Scenario 3's T0 has landed on
+  both 0.40 and 0.65 — both `INCONCLUSIVE`.
+- **Retry/rejection loops fire routinely and recover.** Across these runs the
+  agent has had assessments rejected for claiming corroboration from an empty
+  lookup, and has corrected on the next attempt. That is the designed behaviour,
+  visible in the traces.
+- **Scenario 5 case A remains the thinnest margin.** 3 passes, 1 failure. It is
+  the only case that must *replace* a −0.25 factor with a +0.25 one rather than
+  simply add evidence. On a small free model this should be expected to flake
+  occasionally; §2's escalation path is the remedy, and it is one config line.
+
+### Cost of a run
+~13 minutes for six scenarios (roughly 90-110 model calls), the large majority
+of which is deliberate request pacing and 429 backoff on the free tier rather
+than model latency. `SOC_MIN_INTERVAL` can be lowered on a paid key.
