@@ -24,7 +24,28 @@ from soc_agent import config, control, llm, report, sandbox, trace as trace_mod
 from scenarios.definitions import SCENARIOS
 
 
-def _check(scenario, result) -> list[tuple[bool, str]]:
+def _tool_args_called(tr, tool: str, key: str, value: str,
+                      phase: str = "any") -> bool:
+    """Was `tool` called with `key`=`value`? Order within the phase is irrelevant.
+
+    phase="pre_conclusion" restricts the search to steps before the FIRST
+    conclusion. That distinction matters: in the P-016 trace the agent did
+    eventually look up mysql - but only during reconsideration, long after it
+    had already concluded `FAILED` from tomcat alone. A whole-trace search
+    passes that trace; a pre-conclusion search fails it, which is the point.
+    """
+    steps = tr.steps
+    if phase == "pre_conclusion":
+        for i, s in enumerate(steps):
+            if s["kind"] == "conclusion":
+                steps = steps[:i]
+                break
+    return any(s["kind"] == "tool_call" and s.get("tool") == tool
+               and str((s.get("args") or {}).get(key, "")).lower() == value.lower()
+               for s in steps)
+
+
+def _check(scenario, result, tr=None) -> list[tuple[bool, str]]:
     case = result["primary"]
     exp = scenario.expect
     cur = case.current
@@ -54,6 +75,29 @@ def _check(scenario, result) -> list[tuple[bool, str]]:
         got = any(bool(a.get("precautionary")) for a in case.actions)
         checks.append((got == exp.precautionary,
                        f"precautionary {got} == {exp.precautionary}"))
+
+    # Assert ARGUMENTS, not just tool names. "get_vulnerabilities was called"
+    # passed a scenario that had looked up the wrong service (Toknow P-016).
+    if tr is not None:
+        for spec in exp.expected_tool_args:
+            tool, key, value = spec[0], spec[1], spec[2]
+            phase = spec[3] if len(spec) > 3 else "any"
+            when = " before concluding" if phase == "pre_conclusion" else ""
+            checks.append((_tool_args_called(tr, tool, key, value, phase),
+                           f"{tool}({key}={value!r}) was called{when}"))
+
+    # Assert the reasoning path, not only the final number: the first
+    # conclusion and the findings that had to be established.
+    if exp.initial_outcome and case.conclusions:
+        got = case.conclusions[0].outcome
+        checks.append((got == exp.initial_outcome,
+                       f"initial outcome {got!r} == {exp.initial_outcome!r}"))
+    if exp.required_factors and case.conclusions:
+        declared = {f["factor"] for c in case.conclusions
+                    for f in c.scoring.get("applied_factors", [])}
+        missing = [f for f in exp.required_factors if f not in declared]
+        checks.append((not missing,
+                       f"required factors established (missing: {missing or 'none'})"))
 
     # Verification must actually reflect the mutation (guardrail 4).
     if case.verifications:
@@ -100,7 +144,7 @@ def run_one(key: str) -> dict:
 
     checks: list[tuple[bool, str]] = []
     if result:
-        checks = _check(scenario, result)
+        checks = _check(scenario, result, tr)
         config.REPORT_DIR.mkdir(parents=True, exist_ok=True)
         for case in result["cases"]:
             md = report.render(case, tr, scenario.title)

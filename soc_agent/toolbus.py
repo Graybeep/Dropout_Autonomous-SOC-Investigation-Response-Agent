@@ -35,6 +35,9 @@ class ToolBus:
         # universal coverage. See confidence.check_version_patched_coverage.
         self.asset_services: dict[str, list[str]] = {}
         self.services_checked: set[str] = set()
+        # Scope tracking for the universal/provenance guards on the negatives.
+        self.packet_alerts: set[str] = set()
+        self.log_windows: list[str | None] = []
 
     # -- introspection used by the harness and the report -------------------
     def called(self, name: str) -> bool:
@@ -72,12 +75,17 @@ class ToolBus:
             from . import confidence
             declared = [f.get("factor", "") for f in args.get("factors", [])]
             problems = confidence.check_preconditions(declared, self.ok_tools)
+            from . import config, sandbox
             if "version_patched" in declared:
-                from . import config, sandbox
                 kb = [k for k in sandbox.read_json(config.CVE_KB)
                       if not k.startswith("_")]
                 problems += confidence.check_version_patched_coverage(
                     self.asset_services, self.services_checked, kb)
+            case_alert = self.ctx.get("alert_id", "")
+            alert_rec = sandbox.read_json(config.ALERTS).get(case_alert) or {}
+            problems += confidence.check_negative_scope(
+                declared, case_alert, self.packet_alerts, self.log_windows,
+                alert_rec.get("timestamp"))
             if problems:
                 result = {"status": "rejected", "problems": problems,
                           "detail": "Assessment not accepted. Fix these and resubmit."}
@@ -174,6 +182,13 @@ class ToolBus:
                         (a.get("service_versions") or {}).keys())
             elif name == "get_vulnerabilities":
                 self.services_checked.add(str(result.get("service", "")).lower())
+            elif name == "get_packet_metadata":
+                aid = (result.get("packet_metadata") or {}).get("alert_id")
+                if aid:
+                    self.packet_alerts.add(aid)
+            elif name == "get_server_logs":
+                tr_ = result.get("time_range")
+                self.log_windows.append(None if tr_ in (None, "all") else tr_)
 
         if name == "submit_assessment" and result.get("status") == "accepted":
             self.assessment = result

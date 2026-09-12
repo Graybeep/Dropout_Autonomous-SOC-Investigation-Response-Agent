@@ -27,6 +27,13 @@ class Expectation:
     final_status: str | None = None
     precautionary: bool | None = None
     notes: str = ""
+    # Asserting tool NAMES alone let a scenario pass while reasoning wrongly:
+    # get_vulnerabilities was called, just on the wrong service (Toknow P-016).
+    # These pin the reasoning path without pinning tool ORDER, which would
+    # re-introduce the scripted behaviour guardrail 2 forbids.
+    expected_tool_args: list[tuple[str, str, str]] = field(default_factory=list)
+    initial_outcome: str | None = None
+    required_factors: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -178,6 +185,9 @@ SCENARIOS: dict[str, Scenario] = {
             outcome="FAILED", action_fired=False, reconsideration_fired=False,
             expected_tools=["get_alert", "get_asset_info", "get_vulnerabilities",
                             "get_server_logs", "submit_assessment"],
+            expected_tool_args=[("get_vulnerabilities", "service_name", "mysql",
+                                 "pre_conclusion")],
+            required_factors=["version_patched"],
             final_status="CONCLUDED",
             notes="Severity label must not drive the verdict."),
     ),
@@ -205,6 +215,11 @@ SCENARIOS: dict[str, Scenario] = {
         expect=Expectation(
             outcome="SUCCEEDED", action_fired=True, reconsideration_fired=True,
             expected_tools=["get_server_logs", "submit_assessment"],
+            expected_tool_args=[("get_vulnerabilities", "service_name", "mysql",
+                                 "pre_conclusion"),
+                                ("get_asset_info", "asset_id", "SRV-DB-09")],
+            initial_outcome="INCONCLUSIVE",
+            required_factors=["version_in_range"],
             final_status="CONCLUDED",
             notes="Highest-value adaptation demo: must GATHER after the injection."),
     ),
@@ -231,6 +246,8 @@ SCENARIOS: dict[str, Scenario] = {
         expect=Expectation(
             outcome="SUCCEEDED", action_fired=True, reconsideration_fired=True,
             expected_tools=["get_related_alerts", "submit_assessment"],
+            expected_tool_args=[("get_related_alerts", "asset_id", "SRV-WEB-04")],
+            initial_outcome="INCONCLUSIVE",
             final_status="CONCLUDED",
             notes="Two cases, one trace. Case A shows a reconsideration entry."),
     ),
@@ -246,6 +263,8 @@ SCENARIOS: dict[str, Scenario] = {
             outcome="INCONCLUSIVE", action_fired=True, reconsideration_fired=False,
             expected_tools=["get_server_logs", "get_packet_metadata",
                             "submit_assessment", "block_ip"],
+            expected_tool_args=[("get_packet_metadata", "alert_id", "ALERT-6001")],
+            required_factors=["version_in_range"],
             final_status="CONCLUDED", precautionary=True,
             notes="Degraded clamp must be cited as the reason for the ceiling."),
         fail_tools=["get_server_logs"],

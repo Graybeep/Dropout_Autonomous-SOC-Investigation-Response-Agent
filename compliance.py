@@ -81,7 +81,8 @@ def main() -> int:
 
     # Section 8 - control-plane tools are never exposed as agent tools.
     sys.path.insert(0, str(ROOT))
-    from soc_agent import schemas, tools
+    from soc_agent import schemas, tools, confidence as _c
+    from scenarios.definitions import SCENARIOS
     names = {t["name"] for t in schemas.ANTHROPIC_TOOLS}
     control = {"inject_new_evidence", "inject_alert", "human_override",
                "reset_sandbox", "related_case_event"}
@@ -115,8 +116,58 @@ def main() -> int:
            and confidence.DEGRADED_CLAMP == (0.35, 0.65),
            "7.2: base, clamp and degraded clamp match the spec")
 
+    # Fixture invariants the scenarios silently depend on.
+    import re as _re
+    inv = json.loads((ROOT / "fixtures/seed/asset_inventory.json").read_text(encoding="utf-8"))
+    kb_by = {k: v for k, v in kb_data.items() if not k.startswith("_")}
+
+    def _norm(v):
+        m = _re.match(r"^(\d+)\.(\d+)\.(\d+)(?:p(\d+))?$", v)
+        return tuple(int(x) if x else 0 for x in m.groups()) if m else None
+
+    def _in_range(v, spec):
+        vt = _norm(v)
+        if not vt:
+            return False
+        for clause in spec.split(","):
+            m = _re.match(r"^(>=|<=|>|<)(.+)$", clause.strip())
+            op, b = m.group(1), _norm(m.group(2))
+            if op == ">=" and not vt >= b: return False
+            if op == "<=" and not vt <= b: return False
+            if op == ">" and not vt > b: return False
+            if op == "<" and not vt < b: return False
+        return True
+
+    # Scenario 1 needs version_patched, which now requires enumerating EVERY
+    # KB-covered service on that host. If any of them were in range, S1 could
+    # never reach FAILED.
+    s1 = inv["SRV-WEB-01"]["service_versions"]
+    s1_hits = [c["cve_id"] for svc, ver in s1.items()
+               for c in kb_by.get(svc.lower(), []) if _in_range(ver, c["affected_versions"])]
+    record(not s1_hits,
+           "4: Scenario 1's host is outside every CVE range (so FAILED is reachable)",
+           f"in range: {s1_hits}")
+
+    # Keep the gather loop bounded: version_patched costs one lookup per
+    # KB-covered service the host runs.
+    wide = {a: len(v["service_versions"]) for a, v in inv.items()
+            if not 2 <= len(v["service_versions"]) <= 4}
+    record(not wide, "4: every asset runs 2-4 services (bounds the gather loop)",
+           str(wide))
+
+    # 7.2 boundary: a single positive factor must not reach SUCCEEDED on its
+    # own, or a scenario expected to start INCONCLUSIVE can be tipped by one
+    # finding and have nothing left to flip to.
+    lone = confidence.score([{"factor": "version_in_range", "citation": "c",
+                              "rationale": "r"}])
+    record(lone.outcome != confidence.SUCCEEDED
+           or any(s.expect.initial_outcome != "INCONCLUSIVE"
+                  for s in SCENARIOS.values()),
+           "7.2: single-factor boundary is asserted by a scenario expectation",
+           f"version_in_range alone scores {lone.score} -> {lone.outcome}; "
+           f"scenarios 3 and 5 assert initial_outcome=INCONCLUSIVE to catch it")
+
     # Section 4 - exactly six scenarios, no seventh.
-    from scenarios.definitions import SCENARIOS
     record(len(SCENARIOS) == 6, "4: exactly six scenarios",
            f"found {len(SCENARIOS)}")
 

@@ -156,6 +156,61 @@ def check_version_patched_coverage(
     return problems
 
 
+def check_negative_scope(
+    declared: list[str],
+    case_alert_id: str,
+    packet_alerts: set[str] | list[str],
+    log_windows: list[str | None],
+    alert_ts: str | None,
+) -> list[str]:
+    """Scope guards for the remaining universal / provenance claims.
+
+    Section 7.2's three positive factors are EXISTENTIAL - one witness settles
+    them. All three negatives are UNIVERSAL: "I looked and found nothing" is
+    meaningless without a stated scope. `version_patched` is handled by
+    check_version_patched_coverage; this covers the other two.
+
+      logs_clean     asserts nothing happened across the relevant window, so
+                     the window actually queried must contain the alert. A
+                     query with no time_range reads everything and qualifies.
+      packet_benign  and its positive twin are about THIS case's flow, so the
+                     packet record cited must be this case's own alert - not a
+                     sibling alert's record borrowed from a related case.
+    """
+    problems: list[str] = []
+
+    if "packet_benign" in declared or "exfil_indicators" in declared:
+        seen = set(packet_alerts)
+        if case_alert_id and case_alert_id not in seen:
+            which = "packet_benign" if "packet_benign" in declared else "exfil_indicators"
+            got = ", ".join(sorted(seen)) or "none"
+            problems.append(
+                f"factor '{which}' describes the flow for this case's alert "
+                f"{case_alert_id}, but you have not read its packet metadata "
+                f"(you read: {got}). Call get_packet_metadata('{case_alert_id}') "
+                f"before characterising this case's traffic."
+            )
+
+    if "logs_clean" in declared and alert_ts:
+        covered = any(w is None for w in log_windows)
+        for w in log_windows:
+            if not w or "/" not in w:
+                continue
+            start, end = (x.strip() for x in w.split("/", 1))
+            if start <= alert_ts <= end:
+                covered = True
+        if not covered:
+            shown = ", ".join(w for w in log_windows if w) or "none"
+            problems.append(
+                f"factor 'logs_clean' asserts the logs are clean across the "
+                f"relevant window, but no log query you made covers the alert "
+                f"timestamp {alert_ts} (windows queried: {shown}). Re-query "
+                f"get_server_logs over a window that contains the alert, or omit "
+                f"time_range to read the whole log, before claiming it is clean."
+            )
+    return problems
+
+
 def score(
     factors: list[dict[str, Any]],
     degraded_sources: list[str] | None = None,

@@ -936,3 +936,108 @@ did not tell it what to conclude; it refused a universal claim made from partial
 coverage, and the agent went and completed the coverage.
 
 Offline: 78/78 behavioural, 12/12 guardrail.
+
+---
+
+## Part 10 — Review follow-up: the asymmetry generalises
+
+An external review of the `version_patched` guard raised five points. Each was
+verified before acting; one changed shape under verification.
+
+### R-1 — The 0.75 boundary is real (verified, fixture-side guard added)
+
+With mysql now correctly checked, `version_in_range` **alone** scores
+`0.50 + 0.25 = 0.75`, and §7.2 maps `S >= 0.75` to `SUCCEEDED`. Confirmed
+empirically:
+
+| declared at T0 | S | outcome |
+|---|---|---|
+| `version_in_range` | **0.75** | **SUCCEEDED — breaks Scenario 3** |
+| `version_in_range`, `packet_benign` | 0.65 | INCONCLUSIVE |
+| `version_in_range`, `logs_clean` | 0.50 | INCONCLUSIVE |
+| all three | 0.40 | INCONCLUSIVE |
+
+If the agent declares the positive and neither negative, Scenario 3 concludes
+`SUCCEEDED` at T0 and T1 has nothing to flip to.
+
+Per §14 the thresholds are untouchable, so the guard is assertion-side: scenarios
+3 and 5 now assert `initial_outcome == "INCONCLUSIVE"`, and `compliance.py`
+records the boundary explicitly so it cannot be forgotten.
+
+### R-2 — The asymmetry generalises to the other two negatives (implemented)
+
+The review's central insight: **all three §7.2 positives are existential** (one
+witness settles them) and **all three negatives are universal** ("I looked and
+found nothing" is meaningless without a stated scope). `version_patched` was
+guarded; the other two were the same bug shape, unguarded.
+
+- **`logs_clean`** — the bus records every `time_range` queried. The factor is
+  refused unless some query covered the alert timestamp (a query with no
+  `time_range` reads everything and qualifies). Verified with a window that
+  *returns rows but excludes the alert*: refused, naming the timestamp.
+- **`packet_benign` / `exfil_indicators`** — the cited packet record must be the
+  case's own alert. Stops case B characterising its traffic from case A's flow.
+  This one is provenance rather than universality, which is why the positive
+  twin is guarded too.
+
+`logs_consistent` is deliberately left alone: one matching log line establishes
+it, and demanding window proof for an existential claim would be wrong.
+
+*Note on the review's predicted side effect:* it suggested the window guard would
+also stop `reconsider()` carrying a stale `logs_clean` forward. That is true, but
+it was **already** structurally impossible — `reconsider()` builds a fresh
+`ToolBus`, so `ok_tools` is empty and the agent must re-call `get_server_logs`
+before declaring any log factor at all. The window guard adds precision, not that
+property.
+
+### R-3 — Assert arguments, not tool names (implemented, and sharpened)
+
+§11's "expected tools were called" passed the P-016 run:
+`get_vulnerabilities` *was* called, just on the wrong service.
+
+Replayed the actual P-016 trace (`ee50c21`) against the first implementation and
+it **still passed** — because the agent did eventually look up mysql, during
+reconsideration, long after concluding `FAILED` from tomcat alone. A whole-trace
+argument search is not enough.
+
+So the assertion is phase-aware: `("get_vulnerabilities", "service_name",
+"mysql", "pre_conclusion")` searches only steps **before the first conclusion**.
+Verified against both traces:
+
+| trace | mysql before concluding | initial outcome |
+|---|---|---|
+| P-016 (`ee50c21`) | **False** | `FAILED` |
+| current (`ce347ff`) | True | `INCONCLUSIVE` |
+
+Both new assertions now fail the broken trace and pass the fixed one. Tool
+*order* is still never asserted — that would be the scripted behaviour §3
+guardrail 2 forbids.
+
+### R-4 — Scenario 1 regression invariants (verified, automated)
+
+Checked rather than assumed: `SRV-WEB-01` runs apache 2.4.58, mysql 8.0.36,
+openssh 8.9p1 — all three KB-covered, all three outside every range, so
+`version_patched` (and therefore `FAILED`) remains reachable at a cost of three
+lookups. Every asset runs 2-3 services, inside the 2-4 bound that keeps the
+gather loop from bloating. Both are now `compliance.py` checks rather than
+facts someone has to remember.
+
+### R-5 — The refusal is a hint, so it is now disclosed (implemented)
+
+The guard names the missing services. That is a hint channel, and the report was
+showing only `-> rejected` without the reason — so the evidence chain read as
+though the agent had spontaneously decided to check MySQL. Section 2 of the
+report now prints every refusal reason inline, followed by an explicit note that
+the agent was told what was wrong and resubmitted.
+
+### Why none of this violates D-001
+
+Exhaustive coverage encodes no detection knowledge. A rule like *"SQLi alerts
+must check SQL services"* would be a hardcoded signature→service mapping, and
+that would be the D-001 violation — Python deciding what the evidence means.
+Refusing a universal claim from partial coverage, or a scope claim with no
+stated scope, is a statement about the **form** of the assertion, not its
+content. The agent still decides which versions are in range, what the logs
+show, and what any of it means.
+
+Offline after this round: **84/84** behavioural, **15/15** guardrail.

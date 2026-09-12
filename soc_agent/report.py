@@ -85,6 +85,16 @@ def render(case: Case, tr: trace_mod.Trace, scenario_title: str = "") -> str:
             A(f"   - *Reason:* {s.get('reason') or '(none stated)'}")
         elif s["kind"] == trace_mod.TOOL_RESULT and n:
             A(f"   - *Result:* `{s.get('status')}`")
+            # A rejection tells the agent what was wrong with its submission -
+            # that is a hint, and it is only defensible if it is disclosed.
+            # Without this the report reads as though the agent spontaneously
+            # went and checked the thing it was told to check.
+            if s.get("status") == "rejected":
+                for prob in (s.get("result") or {}).get("problems", []):
+                    A(f"     - **Refused:** {prob}")
+                A("     - *The agent was told what was wrong and resubmitted; "
+                  "both the refusal and the corrected submission are steps in "
+                  "this chain.*")
         elif s["kind"] == trace_mod.TOOL_FAILURE and n:
             r = s.get("result", {})
             A(f"   - *Result:* **`{r.get('status')}` - {r.get('reason','')}** "

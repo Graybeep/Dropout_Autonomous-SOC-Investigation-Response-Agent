@@ -293,6 +293,62 @@ def offline_selfcheck() -> int:
     check("insufficient-credits is NOT treated as a body-read failure",
           not _llm._is_transient_400("Insufficient credits. Please top up."))
 
+
+    # -- the other two negatives are universal too -------------------------
+    section("negative-factor scope guards")
+    control.reset_sandbox()
+    tr_n = trace_mod.Trace(case_id="CASE-NEG", scenario="neg")
+    nctx = {"case_id": "CASE-3001", "alert_id": "ALERT-3001",
+            "asset_id": "SRV-APP-03"}
+
+    bus_p1 = ToolBus(tr_n, nctx)
+    bus_p1.invoke("get_packet_metadata", {"alert_id": "ALERT-5001", "reason": "x"})
+    wrong = bus_p1.invoke("submit_assessment", {
+        "hypothesis": "h", "sufficiency": "s",
+        "factors": [{"factor": "packet_benign", "citation": "c", "rationale": "r"}]})
+    check("packet_benign refused when citing another alert's flow",
+          wrong["status"] == "rejected")
+
+    bus_p2 = ToolBus(tr_n, nctx)
+    bus_p2.invoke("get_packet_metadata", {"alert_id": "ALERT-3001", "reason": "x"})
+    right = bus_p2.invoke("submit_assessment", {
+        "hypothesis": "h", "sufficiency": "s",
+        "factors": [{"factor": "packet_benign", "citation": "c", "rationale": "r"}]})
+    check("packet_benign accepted for the case's own alert",
+          right["status"] == "accepted")
+
+    # ALERT-3001 is at 01:07:33Z; this window returns rows but excludes it.
+    bus_l1 = ToolBus(tr_n, nctx)
+    bus_l1.invoke("get_server_logs", {
+        "asset_id": "SRV-APP-03",
+        "time_range": "2026-09-11T01:08:00Z/2026-09-11T01:13:00Z", "reason": "x"})
+    narrow = bus_l1.invoke("submit_assessment", {
+        "hypothesis": "h", "sufficiency": "s",
+        "factors": [{"factor": "logs_clean", "citation": "c", "rationale": "r"}]})
+    check("logs_clean refused when the window excludes the alert",
+          narrow["status"] == "rejected")
+    check("the refusal names the alert timestamp",
+          "01:07:33" in " ".join(narrow.get("problems", [])))
+
+    bus_l2 = ToolBus(tr_n, nctx)
+    bus_l2.invoke("get_server_logs", {"asset_id": "SRV-APP-03", "reason": "x"})
+    full_log = bus_l2.invoke("submit_assessment", {
+        "hypothesis": "h", "sufficiency": "s",
+        "factors": [{"factor": "logs_clean", "citation": "c", "rationale": "r"}]})
+    check("logs_clean accepted after reading the whole log",
+          full_log["status"] == "accepted")
+
+    # Positives stay existential - one witness is enough, no scope demanded.
+    bus_e = ToolBus(tr_n, nctx)
+    bus_e.invoke("get_server_logs", {
+        "asset_id": "SRV-APP-03",
+        "time_range": "2026-09-11T01:08:00Z/2026-09-11T01:13:00Z", "reason": "x"})
+    pos = bus_e.invoke("submit_assessment", {
+        "hypothesis": "h", "sufficiency": "s",
+        "factors": [{"factor": "logs_consistent", "citation": "c", "rationale": "r"}]})
+    check("logs_consistent is existential and needs no window proof",
+          pos["status"] == "accepted")
+
     # -- action policy ---------------------------------------------------
     section("action policy (section 7.3)")
     check("SUCCEEDED -> block",
