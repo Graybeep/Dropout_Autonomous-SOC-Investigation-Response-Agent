@@ -54,6 +54,12 @@
   .step{position:relative;margin:0 0 11px;opacity:0;transform:translateY(5px);
     transition:opacity .3s,transform .3s}
   .step.on{opacity:1;transform:none}
+  /* Base rail marker. This rule is load-bearing: a pseudo-element with no
+     `content` generates no box at all, so without it every .k-*::before and
+     [data-refused]::before rule below is dead CSS that paints nothing. The
+     default is a round dot on the rail; the kind rules override shape. */
+  .step::before{content:"";position:absolute;left:-24.5px;top:14px;width:9px;height:9px;
+    border-radius:50%;background:var(--line);z-index:1}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:11px 14px}
   .lbl{font-size:10.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2);
     display:flex;gap:9px;align-items:center;margin-bottom:5px}

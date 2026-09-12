@@ -1982,3 +1982,61 @@ Scrubbing it entirely needs a force-push over shared history, which is
 destructive and is the user's call, not mine. Flagged, not done. Nothing secret
 was in the pack - it was copies of already-published source plus traces - so the
 exposure is redundancy, not disclosure.
+
+---
+
+## Part 20 — scoring/extra (reviewer priority list)
+
+**N-9. What was sent.** All five remaining traces, viewer + 3 screenshots,
+config.py, three reports, cve_kb + asset_inventory, and the offline suites -
+plus `verify_claims.py`, which recomputes the census, refusal density, the S4
+override sequence and the S5 provenance gap from the traces themselves and
+prints the step indices it read.
+
+**P-022. The viewer's rail markers never rendered. Dead CSS shipped as a
+feature.** Verifying the "greyscale-safe shape-coded rail markers" claim found
+`getComputedStyle(el,'::before').content === "none"` for every kind. viewer.html
+had ~14 rules setting background / border-radius / rotate(45deg) on
+`.step::before` and `.step[data-refused="1"]::before`, but NO rule set
+`content`. A pseudo-element without `content` generates no box, so none of it
+painted. What was visible in earlier screenshots - and in docs/viewer.png - was
+the card `border-left` stripe, which was always real. The claim was false as
+shipped and I had repeated it. Fixed with the one missing base rule
+(`.step::before{content:"";position:absolute;...}`); shapes then verified by
+computed style: dot 9px/50%, refused diamond 9px/2px/rotate45, conclusion
+diamond 13px, reconsider hollow circle 13px, state bar 5x18.
+
+**N-10. The greyscale claim, corrected rather than re-asserted.** Even with
+markers rendering, at 9px the diamond-vs-dot difference is subtle. The signal
+that actually survives grayscale(1) is the text label (REJECTED / ACCEPTED /
+ATTEMPT 2). The viewer's own CSS comment already said the marker is
+"reinforcement, never the only signal" - that was the accurate description all
+along, and the pitch had oversold the marker's share. Stated that way in
+scoring/extra/README.md instead of claiming a win.
+
+**N-11. Reviewer's paraphrase of the S5 gap was wrong, and it mattered.** They
+wrote "packet_benign cited from a sibling's flow". The factor is actually
+`exfil_indicators` - positive, governed by check_preconditions. packet_benign is
+negative, governed by check_negative_scope. Correcting it sends them to the
+right guard. The gap itself is real: the citation names ALERT-5002 while the
+case is CASE-5001, and check_preconditions passes because the agent DID read its
+own alert's flow at step 90; the guard never compares the cited alert id against
+the case's own. Outcome impact recomputed, not restated: 0.95 -> SUCCEEDED both
+with and without the factor.
+
+**P-023. "Bounded at 3" was under-specified, and the reviewer's off-by-one was
+right.** MAX_ASSESSMENT_REJECTIONS is 3 (they inferred 2 from
+`remaining_attempts: 2`, which counts down after the current attempt - a fair
+reading). Their catch that toolbus.py:97 is `self.rejections += 1` and the bound
+is tested at :98 is correct; the citation was off by one. Worse, neither of us
+had written down that `rejections` is per-ToolBus and `reconsider()` installs a
+fresh one, so the counter RESETS per reconsideration - visible in S3 as
+attempt=1 (step 23), attempt=1 again (step 80), attempt=2 (step 83). The bound
+is 3 per investigation phase, not 3 per case; a case with N reconsiderations
+tolerates up to 3(N+1). Defensible, but not what "bounded at 3" sounds like.
+
+**N-12. Browser tooling wedged mid-session.** The first tab's window collapsed
+to 422x79 and would not resize across three attempts, so zoom failed on
+viewport-bounds. Worked around with a fresh tab (1536x742) rather than retrying
+further. Local http.server was used because viewer.html fetches trace JSON and
+file:// fails CORS - worth knowing for any judge who double-clicks the file.
