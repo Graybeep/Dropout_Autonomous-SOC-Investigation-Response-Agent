@@ -598,3 +598,68 @@ cross-process: a second process attempting a reset is now blocked.
 independently re-reads the same file `block_ip` writes, the contradiction was
 visible in the trace rather than being silently absorbed. A verification step
 that merely trusted the agent's own report would have shown a clean pass.
+
+---
+
+## Part 6 — Second full live run, and what is actually stable
+
+| # | Run A (pre-fix) | Run B (post-fix) |
+|---|---|---|
+| 1 | **FAIL** 5/6 — malformed tool calls (P-013) | PASS 6/6 |
+| 2 | **FAIL** 4/6 — sandbox contamination (P-014) | PASS 7/7 |
+| 3 | PASS 6/6 | PASS 6/6 |
+| 4 | PASS 6/6 | PASS 6/6 |
+| 5 | PASS 6/6 | **FAIL** 3/6 — see P-015 |
+| 6 | PASS 7/7 | PASS 7/7 |
+
+Both P-013 and P-014 fixes held. A different scenario failed instead.
+
+### P-015 — Scenario 5's case A is the genuinely marginal one
+**Severity:** flaky scenario, prompt-side fix applied, honestly still the least
+stable of the six
+
+Case A came back `INCONCLUSIVE 0.40 -> INCONCLUSIVE 0.55` instead of reaching
+`SUCCEEDED`. It *did* reconsider, and it *did* add
+`related_alert_corroborates` (+0.15) — but it kept `logs_clean` (−0.25) and
+`packet_benign` (−0.10) from its T0 reading, landing at 0.55, short of the 0.75
+threshold.
+
+**First hypothesis was wrong.** The obvious explanation — "it didn't re-read the
+logs, it just re-scored" — was checked and disproved. The trace shows it *did*
+call `get_server_logs(SRV-WEB-04)` during reconsideration, and the result
+contained all three injected exploitation entries: a `UNION SELECT` that
+executed, 38,402 rows returned, 1.7 MB sent to the same source IP.
+
+(A second false trail: inspecting `fixtures/run/server_logs.json` *after* the run
+showed zero injected entries, suggesting the injection had failed. It had not —
+scenario 6 runs after scenario 5 and resets the sandbox. The state during a
+scenario must be read from that scenario's trace, never from the run directory
+afterwards.)
+
+**So the agent saw the evidence and still called the logs clean.** That is a
+model judgement error, not a code defect. The probable reasoning is defensible in
+isolation: case A is about ALERT-5001, the 05:02 port scan; the exploitation
+entries are timestamped 07:14 and belong to ALERT-5002. "For *my* alert's window,
+the logs are clean."
+
+What that misses is that both alerts come from one source against one asset, and
+the question is whether the asset was breached — not whether that one scan packet
+did damage by itself.
+
+**Fix (prompt-side, per §11).** `reconsider_framing()` now appends a
+`RELATED_CASE`-specific note — and only for that trigger — saying: judge whether
+THIS asset was compromised by THIS source rather than whether the single packet
+your alert fired on did damage; reconnaissance that finds a way in is part of an
+attack that succeeded; and evidence timestamped outside your original alert's
+window still counts, so do not carry forward a "logs clean" reading taken before
+that evidence existed.
+
+It deliberately does **not** tell the agent what to conclude, and it is scoped to
+`RELATED_CASE` so Scenario 3's `NEW_EVIDENCE` path is untouched.
+
+**Stated honestly:** case A demands a bigger judgement swing than any other
+scenario — it must *replace* `logs_clean` with `logs_consistent`, a 0.50 swing,
+where Scenario 3 only has to add evidence from a host it had never examined.
+Case A has now passed in three runs and failed in one. It is the least stable of
+the six and should be expected to flake occasionally on a small model; §2's
+escalation path (one config line) is the real remedy.

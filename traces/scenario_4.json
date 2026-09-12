@@ -42,7 +42,7 @@
     },
     {
       "seq": 5,
-      "t": 3.102,
+      "t": 2.976,
       "kind": "thought",
       "case_id": "CASE-4001",
       "text": "I'll start by retrieving the alert details to understand what kind of attack was flagged, then form a hypothesis and gather evidence.",
@@ -50,7 +50,7 @@
     },
     {
       "seq": 6,
-      "t": 3.103,
+      "t": 2.976,
       "kind": "tool_call",
       "case_id": "CASE-4001",
       "tool": "get_alert",
@@ -58,11 +58,11 @@
         "alert_id": "ALERT-4001"
       },
       "attempt": 1,
-      "reason": "Get the alert details: signature, source/destination IP, target asset, and severity label to understand what attack was detected and form initial hypothesis."
+      "reason": "Get the alert details: signature, source/destination IP, target asset, and severity label to understand what attack was detected and form an initial hypothesis."
     },
     {
       "seq": 7,
-      "t": 3.105,
+      "t": 2.977,
       "kind": "tool_result",
       "case_id": "CASE-4001",
       "tool": "get_alert",
@@ -86,15 +86,15 @@
     },
     {
       "seq": 8,
-      "t": 8.423,
+      "t": 7.776,
       "kind": "sufficiency",
       "case_id": "CASE-4001",
-      "text": "The alert is a **SQL Injection Attempt (UNION SELECT)** targeting **SRV-FIN-07** on port 3306 (MySQL), flagged as **critical**. Let me now gather all the evidence I need.\n\n**Hypothesis:** For this attack to have *succeeded*, the host must be running a vulnerable MySQL version, the injection must have actually executed on the host (not blocked/errored), and ideally data exfiltrated.\n\n**What would falsify it:** Patched/out-of-range MySQL version, logs showing blocked/errored queries, or benign packet metadata.\n\nLet me gather all evidence sources now",
+      "text": "The alert is a **SQL Injection Attempt (UNION SELECT)** targeting **SRV-FIN-07** on port 3306 (MySQL), sourced from 198.51.100.88, labeled **\"critical\"** by the sensor.\n\n**Initial Hypothesis:** For this attack to have *succeeded*, the host must be running a vulnerable MySQL version, the injection must have actually executed on the host (not blocked/errored), and data may have been exfiltrated.\n\n**Evidence that would falsify it:** Patched/out-of-range MySQL version, logs showing blocked/403/errored queries, or benign packet metadata.\n\nLet me now gather all the independent evidence sources in parallel",
       "turn": 2
     },
     {
       "seq": 9,
-      "t": 8.423,
+      "t": 7.776,
       "kind": "tool_call",
       "case_id": "CASE-4001",
       "tool": "get_asset_info",
@@ -102,11 +102,11 @@
         "asset_id": "SRV-FIN-07"
       },
       "attempt": 1,
-      "reason": "Find the running MySQL version on SRV-FIN-07 to determine if it's vulnerable to any SQL injection CVEs."
+      "reason": "Determine what MySQL version SRV-FIN-07 is actually running, to check against CVE affected ranges."
     },
     {
       "seq": 10,
-      "t": 8.425,
+      "t": 7.778,
       "kind": "tool_result",
       "case_id": "CASE-4001",
       "tool": "get_asset_info",
@@ -130,7 +130,7 @@
     },
     {
       "seq": 11,
-      "t": 8.425,
+      "t": 7.778,
       "kind": "tool_call",
       "case_id": "CASE-4001",
       "tool": "get_server_logs",
@@ -138,11 +138,11 @@
         "asset_id": "SRV-FIN-07"
       },
       "attempt": 1,
-      "reason": "Check host-side logs for evidence the SQL injection actually executed \u2014 queries run, rows returned, processes spawned."
+      "reason": "Check host-side logs for any evidence the SQL injection actually executed \u2014 queries run, rows returned, processes spawned, accounts created."
     },
     {
       "seq": 12,
-      "t": 8.427,
+      "t": 7.779,
       "kind": "tool_result",
       "case_id": "CASE-4001",
       "tool": "get_server_logs",
@@ -182,7 +182,7 @@
     },
     {
       "seq": 13,
-      "t": 8.427,
+      "t": 7.779,
       "kind": "tool_call",
       "case_id": "CASE-4001",
       "tool": "get_packet_metadata",
@@ -190,11 +190,11 @@
         "alert_id": "ALERT-4001"
       },
       "attempt": 1,
-      "reason": "Check flow-level metadata for exfil indicators, bytes transferred, payload entropy \u2014 did data actually leave?"
+      "reason": "Check flow-level metadata for exfiltration indicators, bytes transferred, payload entropy \u2014 to distinguish a blocked attempt from a successful data exfiltration."
     },
     {
       "seq": 14,
-      "t": 8.429,
+      "t": 7.781,
       "kind": "tool_result",
       "case_id": "CASE-4001",
       "tool": "get_packet_metadata",
@@ -219,7 +219,7 @@
     },
     {
       "seq": 15,
-      "t": 8.429,
+      "t": 7.781,
       "kind": "tool_call",
       "case_id": "CASE-4001",
       "tool": "get_related_alerts",
@@ -227,11 +227,11 @@
         "asset_id": "SRV-FIN-07"
       },
       "attempt": 1,
-      "reason": "Check if SRV-FIN-07 has a history of alerts that might change how I read this one."
+      "reason": "Check if SRV-FIN-07 has a history of alerts that might change how I read this current alert."
     },
     {
       "seq": 16,
-      "t": 8.438,
+      "t": 7.783,
       "kind": "tool_result",
       "case_id": "CASE-4001",
       "tool": "get_related_alerts",
@@ -244,7 +244,15 @@
     },
     {
       "seq": 17,
-      "t": 8.438,
+      "t": 11.674,
+      "kind": "sufficiency",
+      "case_id": "CASE-4001",
+      "text": "Now I have strong evidence. Let me check the MySQL CVE knowledge base to confirm whether version 5.7.19 falls within any affected range",
+      "turn": 3
+    },
+    {
+      "seq": 18,
+      "t": 11.674,
       "kind": "tool_call",
       "case_id": "CASE-4001",
       "tool": "get_vulnerabilities",
@@ -252,11 +260,11 @@
         "service_name": "mysql"
       },
       "attempt": 1,
-      "reason": "Get known MySQL CVEs and their affected version ranges to compare against the running version."
+      "reason": "Check if MySQL 5.7.19 falls within any CVE affected version ranges, particularly for SQL injection vulnerabilities."
     },
     {
-      "seq": 18,
-      "t": 8.439,
+      "seq": 19,
+      "t": 11.676,
       "kind": "tool_result",
       "case_id": "CASE-4001",
       "tool": "get_vulnerabilities",
@@ -286,57 +294,52 @@
       }
     },
     {
-      "seq": 19,
-      "t": 16.649,
+      "seq": 20,
+      "t": 19.145,
       "kind": "sufficiency",
       "case_id": "CASE-4001",
-      "text": "All evidence is in. Let me analyze what I've gathered:\n\n**Evidence Summary:**\n\n1. **Vulnerability Check**: SRV-FIN-07 runs MySQL **5.7.19**. CVE-2023-21980 affects `>=5.7.0,<5.7.30` \u2014 so 5.7.19 is **inside the affected range**. This is a CVSS 9.8 SQL injection vulnerability specifically involving UNION payloads.\n\n2. **Host Logs**: The UNION SELECT injection query **actually executed** on the host:\n   - `SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--` (04:22:10Z)\n   - Followed by `SELECT account_no,routing_no,balance FROM accounts LIMIT 25000` returning **24,117 rows** (04:22:31Z)\n   - Connection closed after sending **1,988,342 bytes** (04:23:14Z)\n\n3. **Packet Metadata**: **exfil_indicators: true**, 1.9 MB returned to external IP 198.51.100.88, with `mysql_response_size_outlier` and `sustained_egress_off_hours` anomalies, payload entropy 7.7.\n\n4. **Related Alerts**: None \u2014 no history to complicate the reading.\n\n**Falsification check**: I looked for signs the attack was blocked or errored \u2014 none found. The query appears in the general log (not error log), rows were returned, and data was sent. The attack was not blocked.\n\n**Conclusion**: The attack succeeded. The host was vulnerable, the injection executed, and 1.9 MB of data exfiltrated.",
-      "turn": 3
+      "text": "All evidence is now gathered. Here's my synthesis:\n\n---\n\n**Vulnerability confirmed**: SRV-FIN-07 runs MySQL **5.7.19**. CVE-2023-21980 affects `>=5.7.0,<5.7.30` \u2014 so 5.7.19 is **inside** the affected range. This CVE specifically covers \"improper neutralisation of crafted UNION payloads\" \u2014 exactly matching the UNION SELECT signature in the alert.\n\n**Attack executed on host**: The MySQL general log at `04:22:10Z` shows the query `SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--` **actually ran** on the database. A follow-up query at `04:22:31Z` pulled 24,117 rows from the accounts table.\n\n**Data exfiltrated**: Packet metadata confirms **1,988,342 bytes (~1.9 MB)** were sent to the external IP 198.51.100.88, with `exfil_indicators: true`, `mysql_response_size_outlier`, `sustained_egress_off_hours`, and high payload entropy (7.7).\n\n**No related alerts** on this asset to complicate the reading.\n\n---\n\nThe attack **succeeded**. Every element aligns: vulnerable version, executed query, and confirmed data exfiltration",
+      "turn": 4
     },
     {
-      "seq": 20,
-      "t": 16.65,
+      "seq": 21,
+      "t": 19.145,
       "kind": "tool_call",
       "case_id": "CASE-4001",
       "tool": "submit_assessment",
       "args": {
-        "hypothesis": "The SQL injection attack on SRV-FIN-07 (ALERT-4001) succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the host, and ~1.9 MB of data was exfiltrated to the attacker's IP.",
+        "hypothesis": "The SQL injection attack on SRV-FIN-07 succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the database, and approximately 1.9 MB of data was exfiltrated to the external attacker IP.",
         "factors": [
           {
             "factor": "version_in_range",
-            "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. CVSS 9.8, attack_class: sql_injection.",
-            "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, making the host exploitable via UNION SELECT payloads."
+            "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. The CVE specifically covers UNION payload neutralisation failure (CVSS 9.8, attack_class: sql_injection).",
+            "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, and the CVE's attack class matches the alert signature exactly."
           },
           {
             "factor": "logs_consistent",
-            "citation": "get_server_logs: At 04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed. At 04:22:31Z, a follow-up query returned 24,117 rows. Connection closed after 33.2s with 1,988,342 bytes sent.",
-            "rationale": "The UNION SELECT injection query actually executed on the host, returned data, and the connection completed normally \u2014 not blocked or errored."
+            "citation": "get_server_logs: At 2026-09-11T04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed successfully. Follow-up query at 04:22:31Z returned 24,117 rows from accounts table.",
+            "rationale": "The UNION SELECT injection query actually executed on the host database \u2014 it was not blocked, errored, or returning zero rows."
           },
           {
             "factor": "exfil_indicators",
-            "citation": "get_packet_metadata: exfil_indicators: true, bytes_to_client: 1,988,342 (1.9 MB), protocol_anomalies: ['mysql_response_size_outlier', 'sustained_egress_off_hours'], payload_entropy: 7.7.",
-            "rationale": "Packet metadata confirms ~1.9 MB of data was returned to the external attacker IP with high entropy and off-hours egress \u2014 clear data exfiltration."
-          },
-          {
-            "factor": "logs_clean",
-            "citation": "get_server_logs: No error entries indicating the injection was blocked or rejected. The query appears in the general (successful) log.",
-            "rationale": "No evidence of blocking or error \u2014 the attack was not stopped."
+            "citation": "get_packet_metadata: 1,988,342 bytes returned to 198.51.100.88 over 33.2s; exfil_indicators: true; protocol_anomalies include mysql_response_size_outlier and sustained_egress_off_hours; payload_entropy 7.7.",
+            "rationale": "Packet metadata confirms large-volume data exfiltration to the external attacker IP, with multiple anomaly flags and high entropy payload."
           },
           {
             "factor": "related_alert_corroborates",
             "citation": "get_related_alerts: No other alerts recorded against SRV-FIN-07.",
-            "rationale": "No corroborating or contradicting history from prior alerts."
+            "rationale": "No corroborating or contradicting history from prior alerts on this asset."
           }
         ],
-        "sufficiency": "Sufficient to classify. All four key evidence classes are established: (1) the host runs a vulnerable MySQL version inside CVE-2023-21980's range, (2) the UNION SELECT injection query executed on the host and returned rows, (3) packet metadata confirms exfil of 1.9 MB to an external IP, and (4) no evidence of blocking or error. The attack succeeded.",
-        "disconfirming_evidence_checked": "I checked for signs the attack was blocked or errored: the query appears in the general log (not error log), rows were returned, and the connection closed normally after sending 1.9 MB. No blocking or error evidence was found, confirming the attack was not stopped."
+        "sufficiency": "All four evidence classes have been established. The host was vulnerable (MySQL 5.7.19 inside CVE-2023-21980 range), the attack query executed on the host (confirmed in MySQL general logs), and ~1.9 MB of data was exfiltrated (confirmed by packet metadata with exfil_indicators=true). No disconfirming evidence was found \u2014 the query did not error out, was not blocked, and the response volume is far outside baseline. The conclusion is that the attack SUCCEEDED.",
+        "disconfirming_evidence_checked": "I checked for evidence that would falsify the success hypothesis: (1) whether the MySQL version was patched/out-of-range \u2014 it was not, 5.7.19 is inside the CVE range; (2) whether logs showed the query was blocked or errored \u2014 the general log shows it executed and returned rows; (3) whether packet metadata showed benign/small responses \u2014 instead it showed 1.9 MB with exfil indicators. No disconfirming evidence was found."
       },
       "attempt": 1,
       "reason": "(no stated reason)"
     },
     {
-      "seq": 21,
-      "t": 16.65,
+      "seq": 22,
+      "t": 19.145,
       "kind": "tool_result",
       "case_id": "CASE-4001",
       "tool": "submit_assessment",
@@ -350,145 +353,86 @@
       }
     },
     {
-      "seq": 22,
-      "t": 22.81,
+      "seq": 23,
+      "t": 23.987,
       "kind": "sufficiency",
       "case_id": "CASE-4001",
-      "text": "The system correctly flagged that `related_alert_corroborates` cannot be declared when `get_related_alerts` returned `no_data`. Let me resubmit without that factor",
-      "turn": 4
+      "text": "The assessment was rejected because I incorrectly declared `related_alert_corroborates` as a factor despite `get_related_alerts` returning `no_data`. Per the rules, an empty lookup establishes nothing and cannot be cited. Let me resubmit without that factor.",
+      "turn": 5
     },
     {
-      "seq": 23,
-      "t": 22.81,
+      "seq": 24,
+      "t": 23.987,
       "kind": "tool_call",
       "case_id": "CASE-4001",
       "tool": "submit_assessment",
       "args": {
-        "hypothesis": "The SQL injection attack on SRV-FIN-07 (ALERT-4001) succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the host, and ~1.9 MB of data was exfiltrated to the attacker's IP.",
+        "hypothesis": "The SQL injection attack on SRV-FIN-07 succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the database, and approximately 1.9 MB of data was exfiltrated to the external attacker IP.",
         "factors": [
           {
             "factor": "version_in_range",
-            "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. CVSS 9.8, attack_class: sql_injection.",
-            "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, making the host exploitable via UNION SELECT payloads."
+            "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. The CVE specifically covers UNION payload neutralisation failure (CVSS 9.8, attack_class: sql_injection).",
+            "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, and the CVE's attack class matches the alert signature exactly."
           },
           {
             "factor": "logs_consistent",
-            "citation": "get_server_logs: At 04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed. At 04:22:31Z, a follow-up query returned 24,117 rows. Connection closed after 33.2s with 1,988,342 bytes sent.",
-            "rationale": "The UNION SELECT injection query actually executed on the host, returned data, and the connection completed normally \u2014 not blocked or errored."
+            "citation": "get_server_logs: At 2026-09-11T04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed successfully. Follow-up query at 04:22:31Z returned 24,117 rows from accounts table.",
+            "rationale": "The UNION SELECT injection query actually executed on the host database \u2014 it was not blocked, errored, or returning zero rows."
           },
           {
             "factor": "exfil_indicators",
-            "citation": "get_packet_metadata: exfil_indicators: true, bytes_to_client: 1,988,342 (1.9 MB), protocol_anomalies: ['mysql_response_size_outlier', 'sustained_egress_off_hours'], payload_entropy: 7.7.",
-            "rationale": "Packet metadata confirms ~1.9 MB of data was returned to the external attacker IP with high entropy and off-hours egress \u2014 clear data exfiltration."
-          },
-          {
-            "factor": "logs_clean",
-            "citation": "get_server_logs: No error entries indicating the injection was blocked or rejected. The query appears in the general (successful) log.",
-            "rationale": "No evidence of blocking or error \u2014 the attack was not stopped."
+            "citation": "get_packet_metadata: 1,988,342 bytes returned to 198.51.100.88 over 33.2s; exfil_indicators: true; protocol_anomalies include mysql_response_size_outlier and sustained_egress_off_hours; payload_entropy 7.7.",
+            "rationale": "Packet metadata confirms large-volume data exfiltration to the external attacker IP, with multiple anomaly flags and high entropy payload."
           }
         ],
-        "sufficiency": "Sufficient to classify. Three key evidence classes are established: (1) the host runs a vulnerable MySQL version inside CVE-2023-21980's range, (2) the UNION SELECT injection query executed on the host and returned rows, and (3) packet metadata confirms exfil of 1.9 MB to an external IP. No evidence of blocking or error was found. The attack succeeded.",
-        "disconfirming_evidence_checked": "I checked for signs the attack was blocked or errored: the query appears in the general log (not error log), rows were returned, and the connection closed normally after sending 1.9 MB. No blocking or error evidence was found, confirming the attack was not stopped."
+        "sufficiency": "Three evidence classes have been established: (1) version_in_range \u2014 MySQL 5.7.19 is inside CVE-2023-21980's affected range (>=5.7.0,<5.7.30), and the CVE's attack class is sql_injection matching the UNION SELECT signature; (2) logs_consistent \u2014 the UNION SELECT query executed on the host database and returned rows; (3) exfil_indicators \u2014 1.9 MB was sent to the external IP with confirmed exfil flags. No disconfirming evidence was found. The conclusion is that the attack SUCCEEDED.",
+        "disconfirming_evidence_checked": "I checked for evidence that would falsify the success hypothesis: (1) whether the MySQL version was patched/out-of-range \u2014 it was not, 5.7.19 is inside the CVE range; (2) whether logs showed the query was blocked or errored \u2014 the general log shows it executed and returned rows; (3) whether packet metadata showed benign/small responses \u2014 instead it showed 1.9 MB with exfil indicators. No disconfirming evidence was found."
       },
       "attempt": 2,
       "reason": "(no stated reason)"
     },
     {
-      "seq": 24,
-      "t": 22.81,
-      "kind": "tool_result",
-      "case_id": "CASE-4001",
-      "tool": "submit_assessment",
-      "status": "rejected",
-      "result": {
-        "status": "rejected",
-        "problems": [
-          "contradictory factors 'logs_consistent' and 'logs_clean' were both declared; the evidence cannot support both at once."
-        ],
-        "detail": "Assessment not accepted. Fix these and resubmit."
-      }
-    },
-    {
       "seq": 25,
-      "t": 28.076,
-      "kind": "sufficiency",
-      "case_id": "CASE-4001",
-      "text": "Good catch \u2014 `logs_consistent` and `logs_clean` are contradictory. The logs show the attack *did* execute, so `logs_clean` is incorrect. Removing it.",
-      "turn": 5
-    },
-    {
-      "seq": 26,
-      "t": 28.076,
-      "kind": "tool_call",
-      "case_id": "CASE-4001",
-      "tool": "submit_assessment",
-      "args": {
-        "disconfirming_evidence_checked": "I checked for signs the attack was blocked or errored: the query appears in the general log (not error log), rows were returned, and the connection closed normally after sending 1.9 MB. No blocking or error evidence was found, confirming the attack was not stopped.",
-        "factors": [
-          {
-            "factor": "version_in_range",
-            "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. CVSS 9.8, attack_class: sql_injection.",
-            "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, making the host exploitable via UNION SELECT payloads."
-          },
-          {
-            "factor": "logs_consistent",
-            "citation": "get_server_logs: At 04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed. At 04:22:31Z, a follow-up query returned 24,117 rows. Connection closed after 33.2s with 1,988,342 bytes sent.",
-            "rationale": "The UNION SELECT injection query actually executed on the host, returned data, and the connection completed normally \u2014 not blocked or errored."
-          },
-          {
-            "factor": "exfil_indicators",
-            "citation": "get_packet_metadata: exfil_indicators: true, bytes_to_client: 1,988,342 (1.9 MB), protocol_anomalies: ['mysql_response_size_outlier', 'sustained_egress_off_hours'], payload_entropy: 7.7.",
-            "rationale": "Packet metadata confirms ~1.9 MB of data was returned to the external attacker IP with high entropy and off-hours egress \u2014 clear data exfiltration."
-          }
-        ],
-        "hypothesis": "The SQL injection attack on SRV-FIN-07 (ALERT-4001) succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the host, and ~1.9 MB of data was exfiltrated to the attacker's IP.",
-        "sufficiency": "Sufficient to classify. Three key evidence classes are established: (1) the host runs a vulnerable MySQL version inside CVE-2023-21980's range, (2) the UNION SELECT injection query executed on the host and returned rows, and (3) packet metadata confirms exfil of 1.9 MB to an external IP. No evidence of blocking or error was found. The attack succeeded."
-      },
-      "attempt": 3,
-      "reason": "(no stated reason)"
-    },
-    {
-      "seq": 27,
-      "t": 28.076,
+      "t": 23.987,
       "kind": "tool_result",
       "case_id": "CASE-4001",
       "tool": "submit_assessment",
       "status": "accepted",
       "result": {
         "status": "accepted",
-        "hypothesis": "The SQL injection attack on SRV-FIN-07 (ALERT-4001) succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the host, and ~1.9 MB of data was exfiltrated to the attacker's IP.",
+        "hypothesis": "The SQL injection attack on SRV-FIN-07 succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the database, and approximately 1.9 MB of data was exfiltrated to the external attacker IP.",
         "factors": [
           {
             "factor": "version_in_range",
-            "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. CVSS 9.8, attack_class: sql_injection.",
-            "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, making the host exploitable via UNION SELECT payloads."
+            "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. The CVE specifically covers UNION payload neutralisation failure (CVSS 9.8, attack_class: sql_injection).",
+            "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, and the CVE's attack class matches the alert signature exactly."
           },
           {
             "factor": "logs_consistent",
-            "citation": "get_server_logs: At 04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed. At 04:22:31Z, a follow-up query returned 24,117 rows. Connection closed after 33.2s with 1,988,342 bytes sent.",
-            "rationale": "The UNION SELECT injection query actually executed on the host, returned data, and the connection completed normally \u2014 not blocked or errored."
+            "citation": "get_server_logs: At 2026-09-11T04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed successfully. Follow-up query at 04:22:31Z returned 24,117 rows from accounts table.",
+            "rationale": "The UNION SELECT injection query actually executed on the host database \u2014 it was not blocked, errored, or returning zero rows."
           },
           {
             "factor": "exfil_indicators",
-            "citation": "get_packet_metadata: exfil_indicators: true, bytes_to_client: 1,988,342 (1.9 MB), protocol_anomalies: ['mysql_response_size_outlier', 'sustained_egress_off_hours'], payload_entropy: 7.7.",
-            "rationale": "Packet metadata confirms ~1.9 MB of data was returned to the external attacker IP with high entropy and off-hours egress \u2014 clear data exfiltration."
+            "citation": "get_packet_metadata: 1,988,342 bytes returned to 198.51.100.88 over 33.2s; exfil_indicators: true; protocol_anomalies include mysql_response_size_outlier and sustained_egress_off_hours; payload_entropy 7.7.",
+            "rationale": "Packet metadata confirms large-volume data exfiltration to the external attacker IP, with multiple anomaly flags and high entropy payload."
           }
         ],
-        "sufficiency": "Sufficient to classify. Three key evidence classes are established: (1) the host runs a vulnerable MySQL version inside CVE-2023-21980's range, (2) the UNION SELECT injection query executed on the host and returned rows, and (3) packet metadata confirms exfil of 1.9 MB to an external IP. No evidence of blocking or error was found. The attack succeeded.",
-        "disconfirming_evidence_checked": "I checked for signs the attack was blocked or errored: the query appears in the general log (not error log), rows were returned, and the connection closed normally after sending 1.9 MB. No blocking or error evidence was found, confirming the attack was not stopped."
+        "sufficiency": "Three evidence classes have been established: (1) version_in_range \u2014 MySQL 5.7.19 is inside CVE-2023-21980's affected range (>=5.7.0,<5.7.30), and the CVE's attack class is sql_injection matching the UNION SELECT signature; (2) logs_consistent \u2014 the UNION SELECT query executed on the host database and returned rows; (3) exfil_indicators \u2014 1.9 MB was sent to the external IP with confirmed exfil flags. No disconfirming evidence was found. The conclusion is that the attack SUCCEEDED.",
+        "disconfirming_evidence_checked": "I checked for evidence that would falsify the success hypothesis: (1) whether the MySQL version was patched/out-of-range \u2014 it was not, 5.7.19 is inside the CVE range; (2) whether logs showed the query was blocked or errored \u2014 the general log shows it executed and returned rows; (3) whether packet metadata showed benign/small responses \u2014 instead it showed 1.9 MB with exfil indicators. No disconfirming evidence was found."
       }
     },
     {
-      "seq": 28,
-      "t": 28.076,
+      "seq": 26,
+      "t": 23.987,
       "kind": "state_change",
       "case_id": "CASE-4001",
       "state": "DETERMINE_OUTCOME",
       "note": "Confidence computed in Python from declared factors."
     },
     {
-      "seq": 29,
-      "t": 28.076,
+      "seq": 27,
+      "t": 23.987,
       "kind": "scoring",
       "case_id": "CASE-4001",
       "base": 0.5,
@@ -501,22 +445,22 @@
           "factor": "version_in_range",
           "label": "Running version falls inside a CVE's affected range",
           "delta": 0.25,
-          "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. CVSS 9.8, attack_class: sql_injection.",
-          "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, making the host exploitable via UNION SELECT payloads."
+          "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. The CVE specifically covers UNION payload neutralisation failure (CVSS 9.8, attack_class: sql_injection).",
+          "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, and the CVE's attack class matches the alert signature exactly."
         },
         {
           "factor": "logs_consistent",
           "label": "Server logs show activity consistent with the signature",
           "delta": 0.25,
-          "citation": "get_server_logs: At 04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed. At 04:22:31Z, a follow-up query returned 24,117 rows. Connection closed after 33.2s with 1,988,342 bytes sent.",
-          "rationale": "The UNION SELECT injection query actually executed on the host, returned data, and the connection completed normally \u2014 not blocked or errored."
+          "citation": "get_server_logs: At 2026-09-11T04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed successfully. Follow-up query at 04:22:31Z returned 24,117 rows from accounts table.",
+          "rationale": "The UNION SELECT injection query actually executed on the host database \u2014 it was not blocked, errored, or returning zero rows."
         },
         {
           "factor": "exfil_indicators",
           "label": "Packet metadata shows exfil / payload-anomaly indicators",
           "delta": 0.15,
-          "citation": "get_packet_metadata: exfil_indicators: true, bytes_to_client: 1,988,342 (1.9 MB), protocol_anomalies: ['mysql_response_size_outlier', 'sustained_egress_off_hours'], payload_entropy: 7.7.",
-          "rationale": "Packet metadata confirms ~1.9 MB of data was returned to the external attacker IP with high entropy and off-hours egress \u2014 clear data exfiltration."
+          "citation": "get_packet_metadata: 1,988,342 bytes returned to 198.51.100.88 over 33.2s; exfil_indicators: true; protocol_anomalies include mysql_response_size_outlier and sustained_egress_off_hours; payload_entropy 7.7.",
+          "rationale": "Packet metadata confirms large-volume data exfiltration to the external attacker IP, with multiple anomaly flags and high entropy payload."
         }
       ],
       "ignored_factors": [],
@@ -525,17 +469,17 @@
       "ceiling_note": ""
     },
     {
-      "seq": 30,
-      "t": 28.077,
+      "seq": 28,
+      "t": 23.989,
       "kind": "conclusion",
       "case_id": "CASE-4001",
       "label": "initial",
       "outcome": "SUCCEEDED",
       "confidence": 0.95,
       "score": 0.95,
-      "hypothesis": "The SQL injection attack on SRV-FIN-07 (ALERT-4001) succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the host, and ~1.9 MB of data was exfiltrated to the attacker's IP.",
-      "sufficiency": "Sufficient to classify. Three key evidence classes are established: (1) the host runs a vulnerable MySQL version inside CVE-2023-21980's range, (2) the UNION SELECT injection query executed on the host and returned rows, and (3) packet metadata confirms exfil of 1.9 MB to an external IP. No evidence of blocking or error was found. The attack succeeded.",
-      "disconfirming_evidence_checked": "I checked for signs the attack was blocked or errored: the query appears in the general log (not error log), rows were returned, and the connection closed normally after sending 1.9 MB. No blocking or error evidence was found, confirming the attack was not stopped.",
+      "hypothesis": "The SQL injection attack on SRV-FIN-07 succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the database, and approximately 1.9 MB of data was exfiltrated to the external attacker IP.",
+      "sufficiency": "Three evidence classes have been established: (1) version_in_range \u2014 MySQL 5.7.19 is inside CVE-2023-21980's affected range (>=5.7.0,<5.7.30), and the CVE's attack class is sql_injection matching the UNION SELECT signature; (2) logs_consistent \u2014 the UNION SELECT query executed on the host database and returned rows; (3) exfil_indicators \u2014 1.9 MB was sent to the external IP with confirmed exfil flags. No disconfirming evidence was found. The conclusion is that the attack SUCCEEDED.",
+      "disconfirming_evidence_checked": "I checked for evidence that would falsify the success hypothesis: (1) whether the MySQL version was patched/out-of-range \u2014 it was not, 5.7.19 is inside the CVE range; (2) whether logs showed the query was blocked or errored \u2014 the general log shows it executed and returned rows; (3) whether packet metadata showed benign/small responses \u2014 instead it showed 1.9 MB with exfil indicators. No disconfirming evidence was found.",
       "scoring": {
         "base": 0.5,
         "raw_sum": 1.15,
@@ -547,22 +491,22 @@
             "factor": "version_in_range",
             "label": "Running version falls inside a CVE's affected range",
             "delta": 0.25,
-            "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. CVSS 9.8, attack_class: sql_injection.",
-            "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, making the host exploitable via UNION SELECT payloads."
+            "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. The CVE specifically covers UNION payload neutralisation failure (CVSS 9.8, attack_class: sql_injection).",
+            "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, and the CVE's attack class matches the alert signature exactly."
           },
           {
             "factor": "logs_consistent",
             "label": "Server logs show activity consistent with the signature",
             "delta": 0.25,
-            "citation": "get_server_logs: At 04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed. At 04:22:31Z, a follow-up query returned 24,117 rows. Connection closed after 33.2s with 1,988,342 bytes sent.",
-            "rationale": "The UNION SELECT injection query actually executed on the host, returned data, and the connection completed normally \u2014 not blocked or errored."
+            "citation": "get_server_logs: At 2026-09-11T04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed successfully. Follow-up query at 04:22:31Z returned 24,117 rows from accounts table.",
+            "rationale": "The UNION SELECT injection query actually executed on the host database \u2014 it was not blocked, errored, or returning zero rows."
           },
           {
             "factor": "exfil_indicators",
             "label": "Packet metadata shows exfil / payload-anomaly indicators",
             "delta": 0.15,
-            "citation": "get_packet_metadata: exfil_indicators: true, bytes_to_client: 1,988,342 (1.9 MB), protocol_anomalies: ['mysql_response_size_outlier', 'sustained_egress_off_hours'], payload_entropy: 7.7.",
-            "rationale": "Packet metadata confirms ~1.9 MB of data was returned to the external attacker IP with high entropy and off-hours egress \u2014 clear data exfiltration."
+            "citation": "get_packet_metadata: 1,988,342 bytes returned to 198.51.100.88 over 33.2s; exfil_indicators: true; protocol_anomalies include mysql_response_size_outlier and sustained_egress_off_hours; payload_entropy 7.7.",
+            "rationale": "Packet metadata confirms large-volume data exfiltration to the external attacker IP, with multiple anomaly flags and high entropy payload."
           }
         ],
         "ignored_factors": [],
@@ -570,32 +514,40 @@
         "degraded_sources": [],
         "ceiling_note": ""
       },
-      "at": "2026-09-12T09:45:45Z"
+      "at": "2026-09-12T10:16:33Z"
     },
     {
-      "seq": 31,
-      "t": 28.077,
+      "seq": 29,
+      "t": 23.989,
       "kind": "state_change",
       "case_id": "CASE-4001",
       "state": "ACT",
       "note": "Policy: block_ip - Outcome SUCCEEDED with score >= 0.75."
     },
     {
-      "seq": 32,
-      "t": 32.115,
+      "seq": 30,
+      "t": 57.094,
+      "kind": "thought",
+      "case_id": "CASE-4001",
+      "text": "The scoring outcome is **SUCCEEDED** with a score of **0.95** (\u2265 0.75), so the standing policy mandates **block_ip**. Let me execute that",
+      "turn": 1
+    },
+    {
+      "seq": 31,
+      "t": 57.094,
       "kind": "tool_call",
       "case_id": "CASE-4001",
       "tool": "block_ip",
       "args": {
         "ip": "198.51.100.88",
-        "reason": "CASE-4001: Alert ALERT-4001 from 198.51.100.88 against SRV-FIN-07 (critical). Scoring outcome SUCCEEDED with score 0.95 (>= 0.75 threshold). Policy mandates block_ip."
+        "reason": "CASE-4001 / ALERT-4001: SUCCEEDED outcome with score 0.95 against critical asset SRV-FIN-07. Score \u2265 0.75 threshold triggers block_ip per standing policy."
       },
       "attempt": 1,
-      "reason": "CASE-4001: Alert ALERT-4001 from 198.51.100.88 against SRV-FIN-07 (critical). Scoring outcome SUCCEEDED with score 0.95 (>= 0.75 threshold). Policy mandates block_ip."
+      "reason": "CASE-4001 / ALERT-4001: SUCCEEDED outcome with score 0.95 against critical asset SRV-FIN-07. Score \u2265 0.75 threshold triggers block_ip per standing policy."
     },
     {
-      "seq": 33,
-      "t": 32.116,
+      "seq": 32,
+      "t": 57.096,
       "kind": "tool_result",
       "case_id": "CASE-4001",
       "tool": "block_ip",
@@ -606,9 +558,9 @@
         "ip": "198.51.100.88",
         "record": {
           "ip": "198.51.100.88",
-          "reason": "CASE-4001: Alert ALERT-4001 from 198.51.100.88 against SRV-FIN-07 (critical). Scoring outcome SUCCEEDED with score 0.95 (>= 0.75 threshold). Policy mandates block_ip.",
+          "reason": "CASE-4001 / ALERT-4001: SUCCEEDED outcome with score 0.95 against critical asset SRV-FIN-07. Score \u2265 0.75 threshold triggers block_ip per standing policy.",
           "precautionary": false,
-          "blocked_at": "2026-09-12T09:45:49Z",
+          "blocked_at": "2026-09-12T10:17:06Z",
           "case_id": "CASE-4001",
           "rule": "DROP all from 198.51.100.88"
         },
@@ -616,8 +568,16 @@
       }
     },
     {
+      "seq": 33,
+      "t": 59.929,
+      "kind": "sufficiency",
+      "case_id": "CASE-4001",
+      "text": "Block applied. Now verifying it took effect from disk.",
+      "turn": 2
+    },
+    {
       "seq": 34,
-      "t": 56.478,
+      "t": 59.93,
       "kind": "tool_call",
       "case_id": "CASE-4001",
       "tool": "check_firewall_state",
@@ -625,11 +585,11 @@
         "ip": "198.51.100.88"
       },
       "attempt": 1,
-      "reason": "Verify that the block_ip for 198.51.100.88 (CASE-4001) took effect and is persisted on disk."
+      "reason": "Verify that the DROP rule for 198.51.100.88 (CASE-4001/ALERT-4001) is actually present in the firewall state on disk after the block_ip mutation."
     },
     {
       "seq": 35,
-      "t": 56.488,
+      "t": 59.94,
       "kind": "tool_result",
       "case_id": "CASE-4001",
       "tool": "check_firewall_state",
@@ -640,9 +600,9 @@
         "blocked": true,
         "record": {
           "ip": "198.51.100.88",
-          "reason": "CASE-4001: Alert ALERT-4001 from 198.51.100.88 against SRV-FIN-07 (critical). Scoring outcome SUCCEEDED with score 0.95 (>= 0.75 threshold). Policy mandates block_ip.",
+          "reason": "CASE-4001 / ALERT-4001: SUCCEEDED outcome with score 0.95 against critical asset SRV-FIN-07. Score \u2265 0.75 threshold triggers block_ip per standing policy.",
           "precautionary": false,
-          "blocked_at": "2026-09-12T09:45:49Z",
+          "blocked_at": "2026-09-12T10:17:06Z",
           "case_id": "CASE-4001",
           "rule": "DROP all from 198.51.100.88"
         },
@@ -652,15 +612,15 @@
     },
     {
       "seq": 36,
-      "t": 60.321,
+      "t": 64.24,
       "kind": "sufficiency",
       "case_id": "CASE-4001",
-      "text": "Done. Here's a summary of what happened:\n\n**Action taken:** Blocked IP `198.51.100.88` via a DROP rule.\n\n**Rationale:** Alert ALERT-4001 from `198.51.100.88` against critical asset SRV-FIN-07 scored **SUCCEEDED with 0.95** (well above the 0.75 threshold), so the standing policy mandated `block_ip`.\n\n**Verification:** Re-read the firewall state from disk (`firewall_state.json`). The record confirms `198.51.100.88` is **blocked** with the DROP rule persisted, `precautionary: false`, and timestamped `2026-09-12T09:45:49Z`. The block is confirmed active.",
+      "text": "Done. Here's a summary of what happened:\n\n**Action taken:** Blocked source IP **198.51.100.88** by adding a DROP rule to the firewall.\n\n**Rationale:** The deterministic scoring for CASE-4001 / ALERT-4001 returned **SUCCEEDED** with a score of **0.95** against the critical asset **SRV-FIN-07**. Since the score (0.95) exceeds the 0.75 threshold, the standing policy dictated a `block_ip` action.\n\n**Verification:** Confirmed from disk that the DROP rule is present and active in the firewall state. The IP is confirmed **blocked** as of `2026-09-12T10:17:06Z`. This was a definitive block based on a high-confidence verdict, not a precautionary containment measure.",
       "turn": 3
     },
     {
       "seq": 37,
-      "t": 60.321,
+      "t": 64.24,
       "kind": "state_change",
       "case_id": "CASE-4001",
       "state": "VERIFY",
@@ -668,7 +628,7 @@
     },
     {
       "seq": 38,
-      "t": 60.321,
+      "t": 64.241,
       "kind": "verification",
       "case_id": "CASE-4001",
       "ip": "198.51.100.88",
@@ -680,9 +640,9 @@
       "matches_policy": true,
       "record": {
         "ip": "198.51.100.88",
-        "reason": "CASE-4001: Alert ALERT-4001 from 198.51.100.88 against SRV-FIN-07 (critical). Scoring outcome SUCCEEDED with score 0.95 (>= 0.75 threshold). Policy mandates block_ip.",
+        "reason": "CASE-4001 / ALERT-4001: SUCCEEDED outcome with score 0.95 against critical asset SRV-FIN-07. Score \u2265 0.75 threshold triggers block_ip per standing policy.",
         "precautionary": false,
-        "blocked_at": "2026-09-12T09:45:49Z",
+        "blocked_at": "2026-09-12T10:17:06Z",
         "case_id": "CASE-4001",
         "rule": "DROP all from 198.51.100.88"
       },
@@ -690,7 +650,7 @@
     },
     {
       "seq": 39,
-      "t": 60.332,
+      "t": 64.251,
       "kind": "event",
       "case_id": "CASE-4001",
       "event_kind": "HUMAN_OVERRIDE",
@@ -699,7 +659,7 @@
     },
     {
       "seq": 40,
-      "t": 60.332,
+      "t": 64.251,
       "kind": "reconsider",
       "case_id": "CASE-4001",
       "trigger": "HUMAN_OVERRIDE",
@@ -708,9 +668,9 @@
         "outcome": "SUCCEEDED",
         "confidence": 0.95,
         "score": 0.95,
-        "hypothesis": "The SQL injection attack on SRV-FIN-07 (ALERT-4001) succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the host, and ~1.9 MB of data was exfiltrated to the attacker's IP.",
-        "sufficiency": "Sufficient to classify. Three key evidence classes are established: (1) the host runs a vulnerable MySQL version inside CVE-2023-21980's range, (2) the UNION SELECT injection query executed on the host and returned rows, and (3) packet metadata confirms exfil of 1.9 MB to an external IP. No evidence of blocking or error was found. The attack succeeded.",
-        "disconfirming_evidence_checked": "I checked for signs the attack was blocked or errored: the query appears in the general log (not error log), rows were returned, and the connection closed normally after sending 1.9 MB. No blocking or error evidence was found, confirming the attack was not stopped.",
+        "hypothesis": "The SQL injection attack on SRV-FIN-07 succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the database, and approximately 1.9 MB of data was exfiltrated to the external attacker IP.",
+        "sufficiency": "Three evidence classes have been established: (1) version_in_range \u2014 MySQL 5.7.19 is inside CVE-2023-21980's affected range (>=5.7.0,<5.7.30), and the CVE's attack class is sql_injection matching the UNION SELECT signature; (2) logs_consistent \u2014 the UNION SELECT query executed on the host database and returned rows; (3) exfil_indicators \u2014 1.9 MB was sent to the external IP with confirmed exfil flags. No disconfirming evidence was found. The conclusion is that the attack SUCCEEDED.",
+        "disconfirming_evidence_checked": "I checked for evidence that would falsify the success hypothesis: (1) whether the MySQL version was patched/out-of-range \u2014 it was not, 5.7.19 is inside the CVE range; (2) whether logs showed the query was blocked or errored \u2014 the general log shows it executed and returned rows; (3) whether packet metadata showed benign/small responses \u2014 instead it showed 1.9 MB with exfil indicators. No disconfirming evidence was found.",
         "scoring": {
           "base": 0.5,
           "raw_sum": 1.15,
@@ -722,22 +682,22 @@
               "factor": "version_in_range",
               "label": "Running version falls inside a CVE's affected range",
               "delta": 0.25,
-              "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. CVSS 9.8, attack_class: sql_injection.",
-              "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, making the host exploitable via UNION SELECT payloads."
+              "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. The CVE specifically covers UNION payload neutralisation failure (CVSS 9.8, attack_class: sql_injection).",
+              "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, and the CVE's attack class matches the alert signature exactly."
             },
             {
               "factor": "logs_consistent",
               "label": "Server logs show activity consistent with the signature",
               "delta": 0.25,
-              "citation": "get_server_logs: At 04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed. At 04:22:31Z, a follow-up query returned 24,117 rows. Connection closed after 33.2s with 1,988,342 bytes sent.",
-              "rationale": "The UNION SELECT injection query actually executed on the host, returned data, and the connection completed normally \u2014 not blocked or errored."
+              "citation": "get_server_logs: At 2026-09-11T04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed successfully. Follow-up query at 04:22:31Z returned 24,117 rows from accounts table.",
+              "rationale": "The UNION SELECT injection query actually executed on the host database \u2014 it was not blocked, errored, or returning zero rows."
             },
             {
               "factor": "exfil_indicators",
               "label": "Packet metadata shows exfil / payload-anomaly indicators",
               "delta": 0.15,
-              "citation": "get_packet_metadata: exfil_indicators: true, bytes_to_client: 1,988,342 (1.9 MB), protocol_anomalies: ['mysql_response_size_outlier', 'sustained_egress_off_hours'], payload_entropy: 7.7.",
-              "rationale": "Packet metadata confirms ~1.9 MB of data was returned to the external attacker IP with high entropy and off-hours egress \u2014 clear data exfiltration."
+              "citation": "get_packet_metadata: 1,988,342 bytes returned to 198.51.100.88 over 33.2s; exfil_indicators: true; protocol_anomalies include mysql_response_size_outlier and sustained_egress_off_hours; payload_entropy 7.7.",
+              "rationale": "Packet metadata confirms large-volume data exfiltration to the external attacker IP, with multiple anomaly flags and high entropy payload."
             }
           ],
           "ignored_factors": [],
@@ -745,13 +705,13 @@
           "degraded_sources": [],
           "ceiling_note": ""
         },
-        "at": "2026-09-12T09:45:45Z"
+        "at": "2026-09-12T10:16:33Z"
       },
       "detail": "Human analyst marked this case 'benign'. Justification: Confirmed as an authorised red-team exercise. 198.51.100.88 is the contracted tester's egress address; engagement ref PT-2026-0914. The data access was in-scope and the extract was destroyed under the engagement terms."
     },
     {
       "seq": 41,
-      "t": 60.332,
+      "t": 64.251,
       "kind": "state_change",
       "case_id": "CASE-4001",
       "state": "ACT",
@@ -759,7 +719,7 @@
     },
     {
       "seq": 42,
-      "t": 60.332,
+      "t": 64.251,
       "kind": "tool_call",
       "case_id": "CASE-4001",
       "tool": "unblock_ip",
@@ -772,7 +732,7 @@
     },
     {
       "seq": 43,
-      "t": 60.333,
+      "t": 64.252,
       "kind": "tool_result",
       "case_id": "CASE-4001",
       "tool": "unblock_ip",
@@ -783,9 +743,9 @@
         "ip": "198.51.100.88",
         "removed": {
           "ip": "198.51.100.88",
-          "reason": "CASE-4001: Alert ALERT-4001 from 198.51.100.88 against SRV-FIN-07 (critical). Scoring outcome SUCCEEDED with score 0.95 (>= 0.75 threshold). Policy mandates block_ip.",
+          "reason": "CASE-4001 / ALERT-4001: SUCCEEDED outcome with score 0.95 against critical asset SRV-FIN-07. Score \u2265 0.75 threshold triggers block_ip per standing policy.",
           "precautionary": false,
-          "blocked_at": "2026-09-12T09:45:49Z",
+          "blocked_at": "2026-09-12T10:17:06Z",
           "case_id": "CASE-4001",
           "rule": "DROP all from 198.51.100.88"
         },
@@ -794,20 +754,20 @@
     },
     {
       "seq": 44,
-      "t": 60.333,
+      "t": 64.252,
       "kind": "action",
       "case_id": "CASE-4001",
       "decision": "benign",
       "justification": "Confirmed as an authorised red-team exercise. 198.51.100.88 is the contracted tester's egress address; engagement ref PT-2026-0914. The data access was in-scope and the extract was destroyed under the engagement terms.",
-      "at": "2026-09-12T09:46:17Z",
+      "at": "2026-09-12T10:17:13Z",
       "prior_conclusion": {
         "label": "initial",
         "outcome": "SUCCEEDED",
         "confidence": 0.95,
         "score": 0.95,
-        "hypothesis": "The SQL injection attack on SRV-FIN-07 (ALERT-4001) succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the host, and ~1.9 MB of data was exfiltrated to the attacker's IP.",
-        "sufficiency": "Sufficient to classify. Three key evidence classes are established: (1) the host runs a vulnerable MySQL version inside CVE-2023-21980's range, (2) the UNION SELECT injection query executed on the host and returned rows, and (3) packet metadata confirms exfil of 1.9 MB to an external IP. No evidence of blocking or error was found. The attack succeeded.",
-        "disconfirming_evidence_checked": "I checked for signs the attack was blocked or errored: the query appears in the general log (not error log), rows were returned, and the connection closed normally after sending 1.9 MB. No blocking or error evidence was found, confirming the attack was not stopped.",
+        "hypothesis": "The SQL injection attack on SRV-FIN-07 succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the database, and approximately 1.9 MB of data was exfiltrated to the external attacker IP.",
+        "sufficiency": "Three evidence classes have been established: (1) version_in_range \u2014 MySQL 5.7.19 is inside CVE-2023-21980's affected range (>=5.7.0,<5.7.30), and the CVE's attack class is sql_injection matching the UNION SELECT signature; (2) logs_consistent \u2014 the UNION SELECT query executed on the host database and returned rows; (3) exfil_indicators \u2014 1.9 MB was sent to the external IP with confirmed exfil flags. No disconfirming evidence was found. The conclusion is that the attack SUCCEEDED.",
+        "disconfirming_evidence_checked": "I checked for evidence that would falsify the success hypothesis: (1) whether the MySQL version was patched/out-of-range \u2014 it was not, 5.7.19 is inside the CVE range; (2) whether logs showed the query was blocked or errored \u2014 the general log shows it executed and returned rows; (3) whether packet metadata showed benign/small responses \u2014 instead it showed 1.9 MB with exfil indicators. No disconfirming evidence was found.",
         "scoring": {
           "base": 0.5,
           "raw_sum": 1.15,
@@ -819,22 +779,22 @@
               "factor": "version_in_range",
               "label": "Running version falls inside a CVE's affected range",
               "delta": 0.25,
-              "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. CVSS 9.8, attack_class: sql_injection.",
-              "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, making the host exploitable via UNION SELECT payloads."
+              "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. The CVE specifically covers UNION payload neutralisation failure (CVSS 9.8, attack_class: sql_injection).",
+              "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, and the CVE's attack class matches the alert signature exactly."
             },
             {
               "factor": "logs_consistent",
               "label": "Server logs show activity consistent with the signature",
               "delta": 0.25,
-              "citation": "get_server_logs: At 04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed. At 04:22:31Z, a follow-up query returned 24,117 rows. Connection closed after 33.2s with 1,988,342 bytes sent.",
-              "rationale": "The UNION SELECT injection query actually executed on the host, returned data, and the connection completed normally \u2014 not blocked or errored."
+              "citation": "get_server_logs: At 2026-09-11T04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed successfully. Follow-up query at 04:22:31Z returned 24,117 rows from accounts table.",
+              "rationale": "The UNION SELECT injection query actually executed on the host database \u2014 it was not blocked, errored, or returning zero rows."
             },
             {
               "factor": "exfil_indicators",
               "label": "Packet metadata shows exfil / payload-anomaly indicators",
               "delta": 0.15,
-              "citation": "get_packet_metadata: exfil_indicators: true, bytes_to_client: 1,988,342 (1.9 MB), protocol_anomalies: ['mysql_response_size_outlier', 'sustained_egress_off_hours'], payload_entropy: 7.7.",
-              "rationale": "Packet metadata confirms ~1.9 MB of data was returned to the external attacker IP with high entropy and off-hours egress \u2014 clear data exfiltration."
+              "citation": "get_packet_metadata: 1,988,342 bytes returned to 198.51.100.88 over 33.2s; exfil_indicators: true; protocol_anomalies include mysql_response_size_outlier and sustained_egress_off_hours; payload_entropy 7.7.",
+              "rationale": "Packet metadata confirms large-volume data exfiltration to the external attacker IP, with multiple anomaly flags and high entropy payload."
             }
           ],
           "ignored_factors": [],
@@ -842,7 +802,7 @@
           "degraded_sources": [],
           "ceiling_note": ""
         },
-        "at": "2026-09-12T09:45:45Z"
+        "at": "2026-09-12T10:16:33Z"
       },
       "resulting_status": "OVERRIDDEN_BENIGN",
       "firewall_result": {
@@ -851,9 +811,9 @@
         "ip": "198.51.100.88",
         "removed": {
           "ip": "198.51.100.88",
-          "reason": "CASE-4001: Alert ALERT-4001 from 198.51.100.88 against SRV-FIN-07 (critical). Scoring outcome SUCCEEDED with score 0.95 (>= 0.75 threshold). Policy mandates block_ip.",
+          "reason": "CASE-4001 / ALERT-4001: SUCCEEDED outcome with score 0.95 against critical asset SRV-FIN-07. Score \u2265 0.75 threshold triggers block_ip per standing policy.",
           "precautionary": false,
-          "blocked_at": "2026-09-12T09:45:49Z",
+          "blocked_at": "2026-09-12T10:17:06Z",
           "case_id": "CASE-4001",
           "rule": "DROP all from 198.51.100.88"
         },
@@ -862,7 +822,7 @@
     },
     {
       "seq": 45,
-      "t": 60.333,
+      "t": 64.252,
       "kind": "state_change",
       "case_id": "CASE-4001",
       "state": "VERIFY",
@@ -870,7 +830,7 @@
     },
     {
       "seq": 46,
-      "t": 60.345,
+      "t": 64.26,
       "kind": "verification",
       "case_id": "CASE-4001",
       "ip": "198.51.100.88",
@@ -898,9 +858,9 @@
           "outcome": "SUCCEEDED",
           "confidence": 0.95,
           "score": 0.95,
-          "hypothesis": "The SQL injection attack on SRV-FIN-07 (ALERT-4001) succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the host, and ~1.9 MB of data was exfiltrated to the attacker's IP.",
-          "sufficiency": "Sufficient to classify. Three key evidence classes are established: (1) the host runs a vulnerable MySQL version inside CVE-2023-21980's range, (2) the UNION SELECT injection query executed on the host and returned rows, and (3) packet metadata confirms exfil of 1.9 MB to an external IP. No evidence of blocking or error was found. The attack succeeded.",
-          "disconfirming_evidence_checked": "I checked for signs the attack was blocked or errored: the query appears in the general log (not error log), rows were returned, and the connection closed normally after sending 1.9 MB. No blocking or error evidence was found, confirming the attack was not stopped.",
+          "hypothesis": "The SQL injection attack on SRV-FIN-07 succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the database, and approximately 1.9 MB of data was exfiltrated to the external attacker IP.",
+          "sufficiency": "Three evidence classes have been established: (1) version_in_range \u2014 MySQL 5.7.19 is inside CVE-2023-21980's affected range (>=5.7.0,<5.7.30), and the CVE's attack class is sql_injection matching the UNION SELECT signature; (2) logs_consistent \u2014 the UNION SELECT query executed on the host database and returned rows; (3) exfil_indicators \u2014 1.9 MB was sent to the external IP with confirmed exfil flags. No disconfirming evidence was found. The conclusion is that the attack SUCCEEDED.",
+          "disconfirming_evidence_checked": "I checked for evidence that would falsify the success hypothesis: (1) whether the MySQL version was patched/out-of-range \u2014 it was not, 5.7.19 is inside the CVE range; (2) whether logs showed the query was blocked or errored \u2014 the general log shows it executed and returned rows; (3) whether packet metadata showed benign/small responses \u2014 instead it showed 1.9 MB with exfil indicators. No disconfirming evidence was found.",
           "scoring": {
             "base": 0.5,
             "raw_sum": 1.15,
@@ -912,22 +872,22 @@
                 "factor": "version_in_range",
                 "label": "Running version falls inside a CVE's affected range",
                 "delta": 0.25,
-                "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. CVSS 9.8, attack_class: sql_injection.",
-                "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, making the host exploitable via UNION SELECT payloads."
+                "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. The CVE specifically covers UNION payload neutralisation failure (CVSS 9.8, attack_class: sql_injection).",
+                "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, and the CVE's attack class matches the alert signature exactly."
               },
               {
                 "factor": "logs_consistent",
                 "label": "Server logs show activity consistent with the signature",
                 "delta": 0.25,
-                "citation": "get_server_logs: At 04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed. At 04:22:31Z, a follow-up query returned 24,117 rows. Connection closed after 33.2s with 1,988,342 bytes sent.",
-                "rationale": "The UNION SELECT injection query actually executed on the host, returned data, and the connection completed normally \u2014 not blocked or errored."
+                "citation": "get_server_logs: At 2026-09-11T04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed successfully. Follow-up query at 04:22:31Z returned 24,117 rows from accounts table.",
+                "rationale": "The UNION SELECT injection query actually executed on the host database \u2014 it was not blocked, errored, or returning zero rows."
               },
               {
                 "factor": "exfil_indicators",
                 "label": "Packet metadata shows exfil / payload-anomaly indicators",
                 "delta": 0.15,
-                "citation": "get_packet_metadata: exfil_indicators: true, bytes_to_client: 1,988,342 (1.9 MB), protocol_anomalies: ['mysql_response_size_outlier', 'sustained_egress_off_hours'], payload_entropy: 7.7.",
-                "rationale": "Packet metadata confirms ~1.9 MB of data was returned to the external attacker IP with high entropy and off-hours egress \u2014 clear data exfiltration."
+                "citation": "get_packet_metadata: 1,988,342 bytes returned to 198.51.100.88 over 33.2s; exfil_indicators: true; protocol_anomalies include mysql_response_size_outlier and sustained_egress_off_hours; payload_entropy 7.7.",
+                "rationale": "Packet metadata confirms large-volume data exfiltration to the external attacker IP, with multiple anomaly flags and high entropy payload."
               }
             ],
             "ignored_factors": [],
@@ -935,7 +895,7 @@
             "degraded_sources": [],
             "ceiling_note": ""
           },
-          "at": "2026-09-12T09:45:45Z"
+          "at": "2026-09-12T10:16:33Z"
         }
       ],
       "actions": [
@@ -943,14 +903,14 @@
           "action": "block_ip",
           "ip": "198.51.100.88",
           "precautionary": false,
-          "reason": "CASE-4001: Alert ALERT-4001 from 198.51.100.88 against SRV-FIN-07 (critical). Scoring outcome SUCCEEDED with score 0.95 (>= 0.75 threshold). Policy mandates block_ip.",
-          "at": "2026-09-12T09:45:49Z",
+          "reason": "CASE-4001 / ALERT-4001: SUCCEEDED outcome with score 0.95 against critical asset SRV-FIN-07. Score \u2265 0.75 threshold triggers block_ip per standing policy.",
+          "at": "2026-09-12T10:17:06Z",
           "verified": true
         },
         {
           "action": "unblock_ip",
           "ip": "198.51.100.88",
-          "at": "2026-09-12T09:46:17Z",
+          "at": "2026-09-12T10:17:13Z",
           "verified": true,
           "reason": "Human override (benign): Confirmed as an authorised red-team exercise. 198.51.100.88 is the contracted tester's egress address; engagement ref PT-2026-0914. The data access was in-scope and the extract was destroyed under the engagement terms."
         }
@@ -966,9 +926,9 @@
           "matches_policy": true,
           "record": {
             "ip": "198.51.100.88",
-            "reason": "CASE-4001: Alert ALERT-4001 from 198.51.100.88 against SRV-FIN-07 (critical). Scoring outcome SUCCEEDED with score 0.95 (>= 0.75 threshold). Policy mandates block_ip.",
+            "reason": "CASE-4001 / ALERT-4001: SUCCEEDED outcome with score 0.95 against critical asset SRV-FIN-07. Score \u2265 0.75 threshold triggers block_ip per standing policy.",
             "precautionary": false,
-            "blocked_at": "2026-09-12T09:45:49Z",
+            "blocked_at": "2026-09-12T10:17:06Z",
             "case_id": "CASE-4001",
             "rule": "DROP all from 198.51.100.88"
           },
@@ -993,9 +953,9 @@
             "outcome": "SUCCEEDED",
             "confidence": 0.95,
             "score": 0.95,
-            "hypothesis": "The SQL injection attack on SRV-FIN-07 (ALERT-4001) succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the host, and ~1.9 MB of data was exfiltrated to the attacker's IP.",
-            "sufficiency": "Sufficient to classify. Three key evidence classes are established: (1) the host runs a vulnerable MySQL version inside CVE-2023-21980's range, (2) the UNION SELECT injection query executed on the host and returned rows, and (3) packet metadata confirms exfil of 1.9 MB to an external IP. No evidence of blocking or error was found. The attack succeeded.",
-            "disconfirming_evidence_checked": "I checked for signs the attack was blocked or errored: the query appears in the general log (not error log), rows were returned, and the connection closed normally after sending 1.9 MB. No blocking or error evidence was found, confirming the attack was not stopped.",
+            "hypothesis": "The SQL injection attack on SRV-FIN-07 succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the database, and approximately 1.9 MB of data was exfiltrated to the external attacker IP.",
+            "sufficiency": "Three evidence classes have been established: (1) version_in_range \u2014 MySQL 5.7.19 is inside CVE-2023-21980's affected range (>=5.7.0,<5.7.30), and the CVE's attack class is sql_injection matching the UNION SELECT signature; (2) logs_consistent \u2014 the UNION SELECT query executed on the host database and returned rows; (3) exfil_indicators \u2014 1.9 MB was sent to the external IP with confirmed exfil flags. No disconfirming evidence was found. The conclusion is that the attack SUCCEEDED.",
+            "disconfirming_evidence_checked": "I checked for evidence that would falsify the success hypothesis: (1) whether the MySQL version was patched/out-of-range \u2014 it was not, 5.7.19 is inside the CVE range; (2) whether logs showed the query was blocked or errored \u2014 the general log shows it executed and returned rows; (3) whether packet metadata showed benign/small responses \u2014 instead it showed 1.9 MB with exfil indicators. No disconfirming evidence was found.",
             "scoring": {
               "base": 0.5,
               "raw_sum": 1.15,
@@ -1007,22 +967,22 @@
                   "factor": "version_in_range",
                   "label": "Running version falls inside a CVE's affected range",
                   "delta": 0.25,
-                  "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. CVSS 9.8, attack_class: sql_injection.",
-                  "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, making the host exploitable via UNION SELECT payloads."
+                  "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. The CVE specifically covers UNION payload neutralisation failure (CVSS 9.8, attack_class: sql_injection).",
+                  "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, and the CVE's attack class matches the alert signature exactly."
                 },
                 {
                   "factor": "logs_consistent",
                   "label": "Server logs show activity consistent with the signature",
                   "delta": 0.25,
-                  "citation": "get_server_logs: At 04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed. At 04:22:31Z, a follow-up query returned 24,117 rows. Connection closed after 33.2s with 1,988,342 bytes sent.",
-                  "rationale": "The UNION SELECT injection query actually executed on the host, returned data, and the connection completed normally \u2014 not blocked or errored."
+                  "citation": "get_server_logs: At 2026-09-11T04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed successfully. Follow-up query at 04:22:31Z returned 24,117 rows from accounts table.",
+                  "rationale": "The UNION SELECT injection query actually executed on the host database \u2014 it was not blocked, errored, or returning zero rows."
                 },
                 {
                   "factor": "exfil_indicators",
                   "label": "Packet metadata shows exfil / payload-anomaly indicators",
                   "delta": 0.15,
-                  "citation": "get_packet_metadata: exfil_indicators: true, bytes_to_client: 1,988,342 (1.9 MB), protocol_anomalies: ['mysql_response_size_outlier', 'sustained_egress_off_hours'], payload_entropy: 7.7.",
-                  "rationale": "Packet metadata confirms ~1.9 MB of data was returned to the external attacker IP with high entropy and off-hours egress \u2014 clear data exfiltration."
+                  "citation": "get_packet_metadata: 1,988,342 bytes returned to 198.51.100.88 over 33.2s; exfil_indicators: true; protocol_anomalies include mysql_response_size_outlier and sustained_egress_off_hours; payload_entropy 7.7.",
+                  "rationale": "Packet metadata confirms large-volume data exfiltration to the external attacker IP, with multiple anomaly flags and high entropy payload."
                 }
               ],
               "ignored_factors": [],
@@ -1030,26 +990,26 @@
               "degraded_sources": [],
               "ceiling_note": ""
             },
-            "at": "2026-09-12T09:45:45Z"
+            "at": "2026-09-12T10:16:33Z"
           },
           "new_conclusion": null,
           "note": "Prior machine conclusion is preserved and NOT overwritten. The case status reflects the human decision.",
-          "at": "2026-09-12T09:46:17Z"
+          "at": "2026-09-12T10:17:13Z"
         }
       ],
       "overrides": [
         {
           "decision": "benign",
           "justification": "Confirmed as an authorised red-team exercise. 198.51.100.88 is the contracted tester's egress address; engagement ref PT-2026-0914. The data access was in-scope and the extract was destroyed under the engagement terms.",
-          "at": "2026-09-12T09:46:17Z",
+          "at": "2026-09-12T10:17:13Z",
           "prior_conclusion": {
             "label": "initial",
             "outcome": "SUCCEEDED",
             "confidence": 0.95,
             "score": 0.95,
-            "hypothesis": "The SQL injection attack on SRV-FIN-07 (ALERT-4001) succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the host, and ~1.9 MB of data was exfiltrated to the attacker's IP.",
-            "sufficiency": "Sufficient to classify. Three key evidence classes are established: (1) the host runs a vulnerable MySQL version inside CVE-2023-21980's range, (2) the UNION SELECT injection query executed on the host and returned rows, and (3) packet metadata confirms exfil of 1.9 MB to an external IP. No evidence of blocking or error was found. The attack succeeded.",
-            "disconfirming_evidence_checked": "I checked for signs the attack was blocked or errored: the query appears in the general log (not error log), rows were returned, and the connection closed normally after sending 1.9 MB. No blocking or error evidence was found, confirming the attack was not stopped.",
+            "hypothesis": "The SQL injection attack on SRV-FIN-07 succeeded: the host ran a vulnerable MySQL version, the UNION SELECT payload executed on the database, and approximately 1.9 MB of data was exfiltrated to the external attacker IP.",
+            "sufficiency": "Three evidence classes have been established: (1) version_in_range \u2014 MySQL 5.7.19 is inside CVE-2023-21980's affected range (>=5.7.0,<5.7.30), and the CVE's attack class is sql_injection matching the UNION SELECT signature; (2) logs_consistent \u2014 the UNION SELECT query executed on the host database and returned rows; (3) exfil_indicators \u2014 1.9 MB was sent to the external IP with confirmed exfil flags. No disconfirming evidence was found. The conclusion is that the attack SUCCEEDED.",
+            "disconfirming_evidence_checked": "I checked for evidence that would falsify the success hypothesis: (1) whether the MySQL version was patched/out-of-range \u2014 it was not, 5.7.19 is inside the CVE range; (2) whether logs showed the query was blocked or errored \u2014 the general log shows it executed and returned rows; (3) whether packet metadata showed benign/small responses \u2014 instead it showed 1.9 MB with exfil indicators. No disconfirming evidence was found.",
             "scoring": {
               "base": 0.5,
               "raw_sum": 1.15,
@@ -1061,22 +1021,22 @@
                   "factor": "version_in_range",
                   "label": "Running version falls inside a CVE's affected range",
                   "delta": 0.25,
-                  "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. CVSS 9.8, attack_class: sql_injection.",
-                  "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, making the host exploitable via UNION SELECT payloads."
+                  "citation": "get_asset_info: SRV-FIN-07 runs mysql 5.7.19; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.19 is inside the affected range. The CVE specifically covers UNION payload neutralisation failure (CVSS 9.8, attack_class: sql_injection).",
+                  "rationale": "The running MySQL version is inside the CVE-2023-21980 affected range, and the CVE's attack class matches the alert signature exactly."
                 },
                 {
                   "factor": "logs_consistent",
                   "label": "Server logs show activity consistent with the signature",
                   "delta": 0.25,
-                  "citation": "get_server_logs: At 04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed. At 04:22:31Z, a follow-up query returned 24,117 rows. Connection closed after 33.2s with 1,988,342 bytes sent.",
-                  "rationale": "The UNION SELECT injection query actually executed on the host, returned data, and the connection completed normally \u2014 not blocked or errored."
+                  "citation": "get_server_logs: At 2026-09-11T04:22:10Z, mysql/general log shows 'SELECT id,label FROM ledgers WHERE id=4 UNION SELECT username,password_hash FROM admin_users--' executed successfully. Follow-up query at 04:22:31Z returned 24,117 rows from accounts table.",
+                  "rationale": "The UNION SELECT injection query actually executed on the host database \u2014 it was not blocked, errored, or returning zero rows."
                 },
                 {
                   "factor": "exfil_indicators",
                   "label": "Packet metadata shows exfil / payload-anomaly indicators",
                   "delta": 0.15,
-                  "citation": "get_packet_metadata: exfil_indicators: true, bytes_to_client: 1,988,342 (1.9 MB), protocol_anomalies: ['mysql_response_size_outlier', 'sustained_egress_off_hours'], payload_entropy: 7.7.",
-                  "rationale": "Packet metadata confirms ~1.9 MB of data was returned to the external attacker IP with high entropy and off-hours egress \u2014 clear data exfiltration."
+                  "citation": "get_packet_metadata: 1,988,342 bytes returned to 198.51.100.88 over 33.2s; exfil_indicators: true; protocol_anomalies include mysql_response_size_outlier and sustained_egress_off_hours; payload_entropy 7.7.",
+                  "rationale": "Packet metadata confirms large-volume data exfiltration to the external attacker IP, with multiple anomaly flags and high entropy payload."
                 }
               ],
               "ignored_factors": [],
@@ -1084,7 +1044,7 @@
               "degraded_sources": [],
               "ceiling_note": ""
             },
-            "at": "2026-09-12T09:45:45Z"
+            "at": "2026-09-12T10:16:33Z"
           },
           "resulting_status": "OVERRIDDEN_BENIGN",
           "firewall_result": {
@@ -1093,9 +1053,9 @@
             "ip": "198.51.100.88",
             "removed": {
               "ip": "198.51.100.88",
-              "reason": "CASE-4001: Alert ALERT-4001 from 198.51.100.88 against SRV-FIN-07 (critical). Scoring outcome SUCCEEDED with score 0.95 (>= 0.75 threshold). Policy mandates block_ip.",
+              "reason": "CASE-4001 / ALERT-4001: SUCCEEDED outcome with score 0.95 against critical asset SRV-FIN-07. Score \u2265 0.75 threshold triggers block_ip per standing policy.",
               "precautionary": false,
-              "blocked_at": "2026-09-12T09:45:49Z",
+              "blocked_at": "2026-09-12T10:17:06Z",
               "case_id": "CASE-4001",
               "rule": "DROP all from 198.51.100.88"
             },

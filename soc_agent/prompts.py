@@ -127,8 +127,26 @@ confirm it and what would falsify it. Then gather what you need.
 """
 
 
+RELATED_CASE_NOTE = """\
+
+This trigger is a CONCLUSION REACHED ON ANOTHER CASE for the same asset. Two
+things follow from that:
+
+- Judge whether THIS ASSET was compromised by THIS SOURCE, not whether the one
+  packet your alert fired on did damage by itself. Reconnaissance that succeeds
+  in finding a way in is part of an attack that succeeded; scoring it in
+  isolation misses the campaign.
+- Evidence timestamped outside your original alert window still counts. Go and
+  re-read the host logs: entries may have landed since you last looked, and
+  activity from the same source at a later hour bears directly on whether this
+  asset was breached. Do not carry forward a "logs clean" reading taken before
+  that evidence existed.
+"""
+
+
 def reconsider_framing(case_id: str, event_kind: str, detail: str,
                        prior: str) -> str:
+    extra = RELATED_CASE_NOTE if event_kind == "RELATED_CASE" else ""
     return f"""\
 NEW DEVELOPMENT on case {case_id}. The case is being re-opened.
 
@@ -151,4 +169,5 @@ Stay on this case. Investigate this case's asset and any host, account or alert
 that the evidence in front of you actually implicates. Do not go fishing through
 unrelated alert ids - use get_related_alerts if you want to know what else
 touched an asset.
+{extra}
 """
