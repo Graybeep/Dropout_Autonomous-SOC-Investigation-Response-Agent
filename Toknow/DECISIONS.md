@@ -866,3 +866,49 @@ on that factor.
 **Lesson, again:** a green scenario is not proof the reasoning was sound. P-010
 was the same shape, and both were found by reading traces rather than by the
 pass/fail table.
+
+### P-017 — I defeated my own sandbox lock
+**Severity:** killed a live run; same class as P-014, and less excusable
+
+The post-guard run reached scenario 6 and then simply stopped: no summary table,
+`scenario_6.json` left at the previous run's timestamp, process exit 0.
+
+**Cause:** the regression block added for P-016 called
+`control.reset_sandbox(force=True)` inside `selfcheck.py`. `force=True` is
+exactly the escape hatch that bypasses the `SandboxBusy` lock built in P-014 to
+stop this happening. Running `selfcheck.py` while `run_all.py` was starting
+scenario 6 therefore wiped `fixtures/run` again — through the very door I had
+left open.
+
+P-014 was a missing guard. This was a guard that existed, worked, and was
+walked around by its own author.
+
+**Fix:**
+- `selfcheck.py` never forces. It now calls plain `reset_sandbox()` and, on
+  `SandboxBusy`, prints `REFUSING TO RUN: …` and exits 2 rather than proceeding.
+- Verified by holding the lock from a second process: selfcheck refuses, naming
+  the holding pid and start time.
+- `force=True` survives only as a deliberate manual override for a provably dead
+  run; no script in the repo passes it.
+
+**Rule taken from this:** an escape hatch that a test suite reaches for by
+default is not an escape hatch, it is the default. The guard has to be the easy
+path.
+
+### P-018 — A transient 400 was treated as permanent
+**Severity:** cost one scenario in the same run
+
+Scenario 5 failed with
+`HTTP 400 {"type":"bad_request","message":"Could not read the request body."}`.
+
+`_post()` retried 408/429/5xx but treated every 400 as permanent — correct for a
+validation error, wrong here. The first suspicion was payload size, so the
+conversation was measured: **23 KB** of tool results across 25 calls. Nowhere
+near a limit. This was a gateway failing to read the body — a transport failure
+wearing a 400.
+
+**Fix:** a narrow retry class. A 400 is retried only when its message matches a
+body-read/transport pattern (`could not read the request body`, `connection
+reset`, `timeout`, …); validation 400s, unknown-model 400s and
+insufficient-credits errors are still raised immediately. Four regression checks
+assert exactly that split (78/78 offline).

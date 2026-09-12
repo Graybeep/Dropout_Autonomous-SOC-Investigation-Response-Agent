@@ -26,7 +26,7 @@
     },
     {
       "seq": 3,
-      "t": 0.002,
+      "t": 0.001,
       "kind": "state_change",
       "case_id": "CASE-1001",
       "state": "HYPOTHESIZE",
@@ -34,7 +34,7 @@
     },
     {
       "seq": 4,
-      "t": 0.002,
+      "t": 0.001,
       "kind": "state_change",
       "case_id": "CASE-1001",
       "state": "GATHER_EVIDENCE",
@@ -42,15 +42,15 @@
     },
     {
       "seq": 5,
-      "t": 29.472,
+      "t": 24.477,
       "kind": "thought",
       "case_id": "CASE-1001",
-      "text": "I'll start by reading the raw alert to see what the sensor actually claims.",
+      "text": "I'll start by reading the alert itself.",
       "turn": 1
     },
     {
       "seq": 6,
-      "t": 29.472,
+      "t": 24.478,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "get_alert",
@@ -58,11 +58,11 @@
         "alert_id": "ALERT-1001"
       },
       "attempt": 1,
-      "reason": "Establish the basic facts of the alert: signature, source/destination, target asset, and the sensor's severity opinion, so I can form a hypothesis about what a successful attack would look like."
+      "reason": "Establish the baseline facts: signature, source/destination, target asset, and the sensor's severity_label (opinion, not evidence). This tells me which vulnerability class and which host I need to investigate."
     },
     {
       "seq": 7,
-      "t": 29.474,
+      "t": 24.48,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "get_alert",
@@ -86,15 +86,15 @@
     },
     {
       "seq": 8,
-      "t": 55.299,
+      "t": 51.961,
       "kind": "sufficiency",
       "case_id": "CASE-1001",
-      "text": "The alert is a SQL injection attempt (UNION SELECT) against a web server, labeled \"critical\" by the sensor. The label is the sensor's opinion \u2014 I need to establish independently whether it succeeded.\n\n**Leading hypothesis (to be tested):** The attacker exploited a SQL injection on SRV-WEB-01 and either extracted data or gained a foothold.\n\n**What would confirm success:**\n- A vulnerable component version on SRV-WEB-01 (running version inside a CVE's affected range)\n- Host logs showing a malicious query actually executing / returning rows / a process spawning\n- Packet metadata showing abnormal outbound data volume (exfil)\n\n**What would falsify it:**\n- Running version outside all affected ranges (patched)\n- Logs showing the request was blocked, errored out, or returned zero rows\n- Benign flow metadata (small, symmetric, error-page-sized response)\n\nLet me establish the target's running software and what CVEs affect it.",
+      "text": "The alert is a SQL injection attempt against SRV-WEB-01 on port 443. Severity label is \"critical\" but that's the sensor's opinion.\n\n**Hypothesis for SUCCESS:** The web server on SRV-WEB-01 runs an application whose backend DB is vulnerable to UNION SELECT injection via the `443` service; the injected query actually executed and returned data; and/or that data left the host.\n\n**Would confirm:** version of the exposed service inside an affected CVE range, host logs showing a query that executed / rows returned, or packet metadata showing anomalous outbound payload.\n\n**Would falsify:** service version outside all affected ranges, WAF/error responses (403/400), zero-row results, or benign packet flow.\n\nFirst I need to know what SRV-WEB-01 actually runs, and separately what CVEs affect that service.",
       "turn": 2
     },
     {
       "seq": 9,
-      "t": 55.299,
+      "t": 51.961,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "get_asset_info",
@@ -102,11 +102,11 @@
         "asset_id": "SRV-WEB-01"
       },
       "attempt": 1,
-      "reason": "I need the actual running service versions on the targeted host to compare against CVE affected ranges - this is the only way to know whether SRV-WEB-01 is genuinely vulnerable rather than just targeted."
+      "reason": "Get the actual running service versions on the targeted host so I can later compare them against CVE affected_versions. Without this I cannot tell patched from vulnerable."
     },
     {
       "seq": 10,
-      "t": 55.302,
+      "t": 51.964,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "get_asset_info",
@@ -131,7 +131,7 @@
     },
     {
       "seq": 11,
-      "t": 55.302,
+      "t": 51.964,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "get_packet_metadata",
@@ -139,11 +139,11 @@
         "alert_id": "ALERT-1001"
       },
       "attempt": 1,
-      "reason": "To see whether the response to the injection was an error page / small rejection or a large data-bearing response. This distinguishes a blocked attempt from a successful extraction."
+      "reason": "Check the flow shape: bytes in/out, duration, exfil_indicators. A UNION SELECT that succeeded typically returns bulk data (large server->client bytes); a blocked/errored attempt is small and symmetric. This is my primary success/failure discriminator at network level."
     },
     {
       "seq": 12,
-      "t": 55.303,
+      "t": 51.966,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "get_packet_metadata",
@@ -165,15 +165,15 @@
     },
     {
       "seq": 13,
-      "t": 82.762,
+      "t": 86.985,
       "kind": "sufficiency",
       "case_id": "CASE-1001",
-      "text": "Two important facts:\n\n1. **SRV-WEB-01 runs apache 2.4.58 and mysql 8.0.36**, last patched 2026-08-30.\n2. **Packet metadata shows 412 bytes out, 1840 bytes back, 96ms, single request/response, no exfil indicators, entropy 4.1** \u2014 the notes say the response size is consistent with a **403 error page**. That is a strong early signal that the injection was *rejected*, not executed.\n\nNow I must not trust the sensor's note either. Let me independently check the CVE ranges for MySQL and Apache to see whether these running versions are inside any affected range.",
+      "text": "Key facts so far:\n\n- **Host runs:** apache 2.4.58, mysql 8.0.36, openssh 8.9p1, patched 2026-08-30.\n- **Flow:** 412 bytes in, 1840 bytes out, 96 ms, single request/response pair. `exfil_indicators: false`, entropy 4.1 (low). The notes say the response size is consistent with a **403 error page** and there is no sustained outbound transfer, no encoded blob.\n\nThat already points strongly toward a failed/blocked attempt. Now I need to independently verify (a) whether the running versions are actually vulnerable to any relevant CVE, and (b) whether host logs show anything executed.",
       "turn": 3
     },
     {
       "seq": 14,
-      "t": 82.762,
+      "t": 86.985,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "get_vulnerabilities",
@@ -181,11 +181,11 @@
         "service_name": "mysql"
       },
       "attempt": 1,
-      "reason": "To get the affected_versions ranges for MySQL, so I can compare against the running 8.0.36 and state explicitly which side of each range it falls on."
+      "reason": "SRV-WEB-01 runs mysql 8.0.36. I need the CVE affected_versions ranges to compare against 8.0.36 myself and determine which side of each range this host falls on."
     },
     {
       "seq": 15,
-      "t": 82.764,
+      "t": 86.987,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "get_vulnerabilities",
@@ -216,7 +216,7 @@
     },
     {
       "seq": 16,
-      "t": 82.765,
+      "t": 86.987,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "get_vulnerabilities",
@@ -224,11 +224,11 @@
         "service_name": "apache"
       },
       "attempt": 2,
-      "reason": "To get affected_versions ranges for Apache httpd, so I can compare against running 2.4.58 and determine whether the web tier itself carries an applicable injection/served vulnerability."
+      "reason": "SRV-WEB-01 runs apache 2.4.58 and the alert targets port 443 on the web front end. Check whether the exposed Apache version is inside any affected range."
     },
     {
       "seq": 17,
-      "t": 82.765,
+      "t": 86.988,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "get_vulnerabilities",
@@ -251,28 +251,20 @@
     },
     {
       "seq": 18,
-      "t": 108.092,
-      "kind": "sufficiency",
-      "case_id": "CASE-1001",
-      "text": "This is decisive on the vulnerability side. Doing the comparison explicitly:\n\n**MySQL 8.0.36 (running) vs the two entries:**\n- CVE-2023-21980 (sql_injection, CVSS 9.8): affects `>=5.7.0,<5.7.30`. Running version **8.0.36** is on the 8.0.x line \u2014 it is **outside** this range entirely (not a 5.7.x build, and above the 5.7.30 fix).\n- CVE-2022-21444: affects `>=8.0.0,<8.0.30`. Running **8.0.36 > 8.0.30** \u2014 **above** the fix, so **outside** this range too.\n\nSo the MySQL injection CVE (the only sql_injection entry) does **not** apply. Neither does the DoS entry.\n\n**Apache 2.4.58 (running) vs the entry:**\n- CVE-2021-41773 affects `>=2.4.49,<=2.4.50`. Running **2.4.58 > 2.4.50** \u2014 **above** the range, **outside** it.\n\nBoth running versions fall outside **all** affected ranges. That's the `version_patched` factor. Now I must not stop here \u2014 the version comparison is necessary but I still need host-side evidence to confirm the injection was actually rejected, and I should look for post-exploitation signs.",
-      "turn": 4
-    },
-    {
-      "seq": 19,
-      "t": 108.092,
+      "t": 86.988,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "get_server_logs",
       "args": {
         "asset_id": "SRV-WEB-01",
-        "time_range": "2026-09-11T01:30:00Z/2026-09-11T03:00:00Z"
+        "time_range": "2026-09-11T01:44:00Z/2026-09-11T02:44:00Z"
       },
       "attempt": 1,
-      "reason": "The version comparison says the host is patched, but I need host-side confirmation: were any SQL queries actually executed, rows returned, or processes spawned around 2026-09-11T02:14:07Z? This either corroborates rejection or falsifies my 'blocked' hypothesis."
+      "reason": "Primary host-side evidence: did anything actually execute? I want to see the request around 2026-09-11T02:14:07Z - a 403/400 or zero-row result means the attempt failed, while a query that ran and returned rows would mean success."
     },
     {
-      "seq": 20,
-      "t": 108.096,
+      "seq": 19,
+      "t": 86.99,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "get_server_logs",
@@ -280,7 +272,7 @@
       "result": {
         "status": "ok",
         "asset_id": "SRV-WEB-01",
-        "time_range": "2026-09-11T01:30:00Z/2026-09-11T03:00:00Z",
+        "time_range": "2026-09-11T01:44:00Z/2026-09-11T02:44:00Z",
         "entry_count": 7,
         "entries": [
           {
@@ -329,8 +321,16 @@
       }
     },
     {
+      "seq": 20,
+      "t": 118.339,
+      "kind": "sufficiency",
+      "case_id": "CASE-1001",
+      "text": "Now I can do the version comparison explicitly.\n\n**MySQL 8.0.36 vs the CVE list:**\n- CVE-2023-21980 affects `>=5.7.0,<5.7.30` \u2014 this is the **5.7.x** branch. 8.0.36 is not in the 5.7.x line at all, and it's above the 5.7.30 fix. **NOT affected.**\n- CVE-2022-21444 affects `>=8.0.0,<8.0.30`. 8.0.36 **> 8.0.30**, i.e. above the fix, so **outside the affected range**. (Also it's a DoS, not data disclosure, so it wouldn't match a UNION SELECT exfil anyway.)\n\nSo the running MySQL is **outside both affected ranges** \u2014 the SQL-injection CVE does not apply to this host.\n\n**Apache 2.4.58 vs CVE-2021-41773:** affects `>=2.4.49,<=2.4.50`; 2.4.58 is **above** the 2.4.51 fix. **NOT affected** (and it's path traversal, unrelated to this signature).\n\n**Host logs \u2014 decisive:** At 02:14:07 the request `GET /catalog?id=17 UNION SELECT 1,2,3--` was **blocked by modsecurity** (WAF rule 942100) and Apache returned **403 with 199 bytes**. The second injection at 02:14:22 also returned **403**. The only MySQL query near that time is the *benign* pre-existing application query `SELECT name,price FROM catalog WHERE id=17` \u2014 no attacker-controlled SQL. The \"Aborted connection\" note is just the client closing; no data returned.\n\nSo: the attack was attempted, visible, and demonstrably **failed** \u2014 blocked at the WAF.\n\nNow the disconfirming check. My leading hypothesis is \"failed/blocked.\" The falsifying search is: *is there any post-exploitation activity I haven't looked at?* Specifically, did the attacker get in by another route around the WAF, and does this asset have a history that changes the reading?",
+      "turn": 4
+    },
+    {
       "seq": 21,
-      "t": 108.097,
+      "t": 118.339,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "get_related_alerts",
@@ -338,11 +338,11 @@
         "asset_id": "SRV-WEB-01"
       },
       "attempt": 1,
-      "reason": "To check whether this public-facing host has a history of repeated/related injection activity that would raise the reading, or prior cases already concluded as benign."
+      "reason": "Check whether SRV-WEB-01 has prior/other alerts or a stored case conclusion that corroborates or contradicts a blocked-SQLi reading. Also looking for any sign of a successful compromise on another vector."
     },
     {
       "seq": 22,
-      "t": 108.099,
+      "t": 118.342,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "get_related_alerts",
@@ -355,85 +355,259 @@
     },
     {
       "seq": 23,
-      "t": 140.731,
-      "kind": "sufficiency",
+      "t": 118.342,
+      "kind": "tool_call",
       "case_id": "CASE-1001",
-      "text": "The host logs are explicit and confirm the rejection:\n\n- **02:14:07 \u2014 modsecurity WAF block:** `[id \"942100\"] SQL Injection Attack Detected via libinjection - request BLOCKED, returned 403 to 203.0.113.45`\n- **02:14:07 \u2014 apache access log:** the UNION SELECT request returned **403, 199 bytes**\n- **02:14:22 \u2014 second attempt** (`OR 1=1`) also returned **403, 199 bytes**\n- **The MySQL query at 02:14:09** is `SELECT name,price FROM catalog WHERE id=17` \u2014 that is the *legitimate, parameterised* query for the preceding benign request at 02:13:51, **not** the injected payload. No malicious query text appears in the DB logs.\n- **02:15:40** is a routine \"Aborted connection ... client closed connection\" note \u2014 a normal idle/cleanup event, not evidence of exploitation.\n- **02:18:02** is an sshd `Accepted publickey for deploy from 10.20.0.9` \u2014 an internal management host using key auth, not the attacker (203.0.113.45) and not related to the injection.\n\n**Related alerts:** `no_data` \u2014 no other alerts on SRV-WEB-01. That is a genuine empty result, so it corroborates nothing and I will not cite it.\n\nThis matches the packet metadata exactly: the 1840-byte response / 96ms single pair is the 403 error page, no exfil.\n\n**Disconfirming check for my \"attack failed\" hypothesis:** I looked for any sign of post-exploitation \u2014 a malicious query that executed, rows returned from an injected statement, a spawned process, a created account, or outbound data. The falsifier would be a DB log containing the injected `UNION SELECT` text or a WAF-passed 200 response; instead the WAF logged an explicit block and every injected request returned 403. The DB query present is the benign parameterised one. No spawn, no account creation, no exfil.\n\nI have evidence across all relevant classes: version comparison, host logs, packet metadata, and a (negative) related-alert lookup. Submitting.",
-      "turn": 5
+      "tool": "get_server_logs",
+      "args": {
+        "asset_id": "SRV-WEB-01",
+        "time_range": "2026-09-11T02:00:00Z/2026-09-11T06:00:00Z"
+      },
+      "attempt": 2,
+      "reason": "Widen the window beyond the alert to hunt for post-exploitation: new processes, account creation, or successful DB reads after 02:14. This is the disconfirming check for my 'blocked' hypothesis."
     },
     {
       "seq": 24,
-      "t": 140.731,
+      "t": 118.343,
+      "kind": "tool_result",
+      "case_id": "CASE-1001",
+      "tool": "get_server_logs",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "asset_id": "SRV-WEB-01",
+        "time_range": "2026-09-11T02:00:00Z/2026-09-11T06:00:00Z",
+        "entry_count": 8,
+        "entries": [
+          {
+            "ts": "2026-09-11T02:13:51Z",
+            "source": "apache/access",
+            "event_type": "http_request",
+            "raw": "203.0.113.45 - - [11/Sep/2026:02:13:51] \"GET /catalog?id=17 HTTP/1.1\" 200 4821"
+          },
+          {
+            "ts": "2026-09-11T02:14:07Z",
+            "source": "modsecurity",
+            "event_type": "waf_block",
+            "raw": "[id \"942100\"] SQL Injection Attack Detected via libinjection - request BLOCKED, returned 403 to 203.0.113.45"
+          },
+          {
+            "ts": "2026-09-11T02:14:07Z",
+            "source": "apache/access",
+            "event_type": "http_request",
+            "raw": "203.0.113.45 - - [11/Sep/2026:02:14:07] \"GET /catalog?id=17%20UNION%20SELECT%201,2,3-- HTTP/1.1\" 403 199"
+          },
+          {
+            "ts": "2026-09-11T02:14:09Z",
+            "source": "mysql/general",
+            "event_type": "db_query",
+            "raw": "Query  SELECT name,price FROM catalog WHERE id=17"
+          },
+          {
+            "ts": "2026-09-11T02:14:22Z",
+            "source": "apache/access",
+            "event_type": "http_request",
+            "raw": "203.0.113.45 - - [11/Sep/2026:02:14:22] \"GET /catalog?id=17%27%20OR%201=1-- HTTP/1.1\" 403 199"
+          },
+          {
+            "ts": "2026-09-11T02:15:40Z",
+            "source": "mysql/error",
+            "event_type": "db_status",
+            "raw": "Note  Aborted connection 88213 to db: catalog user: web_ro - client closed connection"
+          },
+          {
+            "ts": "2026-09-11T02:18:02Z",
+            "source": "auth",
+            "event_type": "auth_success",
+            "raw": "sshd: Accepted publickey for deploy from 10.20.0.9 port 51022"
+          },
+          {
+            "ts": "2026-09-11T03:00:01Z",
+            "source": "cron",
+            "event_type": "process_spawn",
+            "raw": "CRON[41122]: (root) CMD (/usr/local/bin/rotate-logs.sh)"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 25,
+      "t": 186.337,
+      "kind": "sufficiency",
+      "case_id": "CASE-1001",
+      "text": "The wider window shows nothing new: no post-exploitation processes, no account creation, no attacker SQL in MySQL, just a legitimate cron job and a legitimate publickey SSH login from an internal host (10.20.0.9) \u2014 the `deploy` user's key, an internal management source, not the attacker IP 203.0.113.45. `get_related_alerts` returned **no_data** \u2014 no other alerts on this asset, so there's nothing to corroborate, and I must not cite that empty lookup as a factor.\n\n**Disconfirming check result:** I explicitly looked for signs the attack *did* succeed despite the 403 \u2014 attacker-controlled SQL reaching MySQL, outbound data, follow-on process spawns or a new session from the attacker IP. I found none. The only MySQL query is the benign application query, the flow is a single 403 request/response pair, and `exfil_indicators` is false.\n\n**Conclusion:** This is a failed attack. The version analysis and the host logs both independently rule out success, and the WAF log states the request was BLOCKED. The \"critical\" label is the sensor's opinion about the signature, not evidence the injection worked.",
+      "turn": 5
+    },
+    {
+      "seq": 26,
+      "t": 186.337,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "submit_assessment",
       "args": {
-        "hypothesis": "The SQL injection attempt against SRV-WEB-01 FAILED. The host is patched (running versions outside all affected CVE ranges) and the injected requests were blocked at the WAF with 403 responses, with no successful query execution, no process spawn, and no data exfiltration.",
+        "hypothesis": "BLOCKED ATTACK (failed). The SQL injection at 02:14:07 was stopped by modSecurity before it reached the application/DB; the host is not running a version affected by the relevant SQLi CVE, no attacker SQL executed, and no data left the host.",
         "factors": [
           {
             "factor": "version_patched",
-            "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36 and apache 2.4.58. get_vulnerabilities(mysql): CVE-2023-21980 (sql_injection) affects >=5.7.0,<5.7.30 and CVE-2022-21444 affects >=8.0.0,<8.0.30. 8.0.36 is above the 8.0.30 fix and off the 5.7.x line entirely, so it is outside BOTH ranges. get_vulnerabilities(apache): CVE-2021-41773 affects >=2.4.49,<=2.4.50; running 2.4.58 > 2.4.50, outside the range.",
-            "rationale": "The only sql_injection CVE in the knowledge base (CVE-2023-21980, CVSS 9.8) does not apply to the running 8.0.36 - the host is on the far side of every affected range. The web tier likewise runs above the only Apache range. There is no applicable vulnerable component for this injection."
+            "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36 and apache 2.4.58. get_vulnerabilities: CVE-2023-21980 (sql_injection, UNION payload read) affects >=5.7.0,<5.7.30 - 8.0.36 is not in the 5.7.x branch and is above the 5.7.30 fix; CVE-2022-21444 affects >=8.0.0,<8.0.30 - 8.0.36 is above the 8.0.30 fix; CVE-2021-41773 affects >=2.4.49,<=2.4.50 - 2.4.58 is above the 2.4.51 fix. Running versions are outside ALL affected ranges.",
+            "rationale": "Explicit version-range comparison: 8.0.36 falls on the patched side of every listed range for both services, so the vuln the signature probes does not apply to this host."
           },
           {
             "factor": "logs_clean",
-            "citation": "get_server_logs (SRV-WEB-01, 01:30-03:00Z): modsecurity 02:14:07 '[id \"942100\"] SQL Injection Attack Detected via libinjection - request BLOCKED, returned 403 to 203.0.113.45'; apache/access 02:14:07 'GET /catalog?id=17%20UNION%20SELECT%201,2,3-- HTTP/1.1\" 403 199' and 02:14:22 '...OR%201=1-- 403 199'. The only db_query logged is the benign 'SELECT name,price FROM catalog WHERE id=17' matching the earlier legitimate 200 request; 02:15:40 is a routine aborted-connection Note; 02:18:02 is internal sshd key auth from 10.20.0.9.",
-            "rationale": "Host-side evidence shows the injection was actively BLOCKED by modsecurity and every injected request returned HTTP 403. No injected SQL text reached the database, no rows were returned from a malicious query, and there is no process spawn or account creation in the window. The attempt is visible but demonstrably failed."
+            "citation": "get_server_logs SRV-WEB-01 01:44-02:44Z: modsecurity '[id \"942100\"] SQL Injection Attack Detected via libinjection - request BLOCKED, returned 403'; apache/access 'GET /catalog?id=17%20UNION%20SELECT%201,2,3-- HTTP/1.1\" 403 199' at 02:14:07 and 'OR 1=1--' -> 403 at 02:14:22; only mysql/general entry is the benign 'SELECT name,price FROM catalog WHERE id=17'. No attacker SQL executed, no rows returned, no process spawned.",
+            "rationale": "The injection attempts are visible in the logs but demonstrably failed - WAF-blocked with 403 responses and no attacker-controlled query reaching MySQL."
           },
           {
             "factor": "packet_benign",
-            "citation": "get_packet_metadata: 412 bytes_to_server, 1840 bytes_to_client, 96ms, single request/response pair, exfil_indicators=false, payload_entropy 4.1; notes 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob.'",
-            "rationale": "The flow is a single small request/response consistent with a 403 error page. There is no large outbound transfer, no encoded blob, and the exfil flag is false - independently confirming no data left the host."
+            "citation": "get_packet_metadata ALERT-1001: bytes_to_server 412, bytes_to_client 1840, duration 96ms, single request/response pair, exfil_indicators false, payload_entropy 4.1, notes 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob.'",
+            "rationale": "Flow shape matches a small blocked error response, not bulk data retrieval; no exfiltration signature."
           }
         ],
-        "sufficiency": "Evidence is sufficient and mutually consistent across four independent sources: (1) version comparison shows the host runs software outside all affected CVE ranges, (2) host logs show the WAF explicitly blocked the injection and returned 403 to both attempts, with no malicious DB query executing, (3) packet metadata shows a small error-page-sized response with no exfil, and (4) no post-exploitation artifacts (process spawn, account creation, outbound transfer) appear. The falsifying check was performed: I looked for any sign the injection executed or was only partially blocked (a passed 200, injected SQL in the DB log, exfil) and found none - the only DB query was the benign parameterised SELECT for a prior legitimate request. What I could not establish: get_related_alerts returned no_data (no other alerts on this asset), so I have no corroboration from history - I do not cite it as a factor. The absence of related alerts does not change the reading given the direct block evidence.",
-        "disconfirming_evidence_checked": "My leading hypothesis is that the attack failed, so the falsifier would be any sign of successful execution or post-exploitation: an injected SQL statement reaching the database, a WAF-passed 200 response to the injection, a spawned process, a new account, or outbound data transfer. I searched for exactly these in get_server_logs for 01:30-03:00Z: the only DB query was the benign 'SELECT name,price FROM catalog WHERE id=17' (matching the legitimate 200 request at 02:13:51), every injected request returned 403, and the sole other events were a routine aborted-connection Note and internal sshd key auth from 10.20.0.9 - none tied to attacker IP 203.0.113.45. get_packet_metadata independently ruled out exfiltration. No disconfirming evidence was found; the attempt is demonstrably blocked."
+        "disconfirming_evidence_checked": "My leading hypothesis was that the attack FAILED. The falsifying check was whether there was post-exploitation activity I had not looked at: attacker-controlled SQL reaching the database, outbound data transfer, or follow-on actions. I widened the log window to 02:00-06:00Z and found only the benign application query 'SELECT name,price FROM catalog WHERE id=17', an 'Aborted connection' note (client closed, no rows returned), a legitimate SSH publickey login for 'deploy' from internal 10.20.0.9 (not the attacker IP 203.0.113.45), and a routine root cron rotate-logs.sh. Packet metadata showed no outbound transfer and exfil_indicators false. get_related_alerts returned no_data (no other alerts), so nothing corroborates an intrusion - I did not treat that empty lookup as a factor. No sign of success was found.",
+        "sufficiency": "Sufficient to classify as a blocked/failed attack: three independent sources agree. (1) Version analysis - running mysql 8.0.36 and apache 2.4.58 sit on the patched side of every affected range in the knowledge base, so the SQLi CVE does not apply. (2) Host logs - modSecurity explicitly BLOCKED the request with a 403, and the only DB query is the benign application query, i.e. the attack did nothing. (3) Packet flow - a 96ms single request/response of 1840 bytes with no exfil indicators, consistent with an error page. Limitations: I could not see the WAF ruleset config or the full raw HTTP body, and get_related_alerts had no history for this asset (an empty lookup, which establishes nothing). I also note the sensor's 'critical' severity_label is its opinion about the signature, not evidence the injection executed."
       },
       "attempt": 1,
       "reason": "(no stated reason)"
     },
     {
-      "seq": 25,
-      "t": 140.731,
+      "seq": 27,
+      "t": 186.338,
+      "kind": "tool_result",
+      "case_id": "CASE-1001",
+      "tool": "submit_assessment",
+      "status": "rejected",
+      "result": {
+        "status": "rejected",
+        "problems": [
+          "factor 'version_patched' claims SRV-WEB-01 is outside ALL affected ranges, but you have not looked up openssh - service(s) this host runs that the CVE knowledge base covers. Call get_vulnerabilities for each of them and compare the running version before claiming the host is patched."
+        ],
+        "detail": "Assessment not accepted. Fix these and resubmit."
+      }
+    },
+    {
+      "seq": 28,
+      "t": 223.935,
+      "kind": "sufficiency",
+      "case_id": "CASE-1001",
+      "text": "Fair catch \u2014 SRV-WEB-01 also runs openssh 8.9p1, and I claimed the host is outside ALL affected ranges without checking it.",
+      "turn": 6
+    },
+    {
+      "seq": 29,
+      "t": 223.935,
+      "kind": "tool_call",
+      "case_id": "CASE-1001",
+      "tool": "get_vulnerabilities",
+      "args": {
+        "service_name": "openssh"
+      },
+      "attempt": 3,
+      "reason": "SRV-WEB-01 runs openssh 8.9p1; I must compare it against affected ranges before I can claim version_patched for every service on this host."
+    },
+    {
+      "seq": 30,
+      "t": 223.936,
+      "kind": "tool_result",
+      "case_id": "CASE-1001",
+      "tool": "get_vulnerabilities",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "service": "openssh",
+        "cves": [
+          {
+            "cve_id": "CVE-2024-6387",
+            "affected_versions": ">=9.0p1,<9.8p1",
+            "fixed_in": "9.8p1",
+            "cvss": 8.1,
+            "attack_class": "remote_code_execution",
+            "description": "regreSSHion. Signal handler race condition in OpenSSH server permitting unauthenticated remote code execution as root on glibc-based Linux."
+          }
+        ],
+        "note": "This knowledge base does not know which version any host is running. To decide whether a host is affected, compare that host's running version (from get_asset_info) against affected_versions above."
+      }
+    },
+    {
+      "seq": 31,
+      "t": 260.021,
+      "kind": "sufficiency",
+      "case_id": "CASE-1001",
+      "text": "**OpenSSH 8.9p1 vs CVE-2024-6387 (regreSSHion):** affects `>=9.0p1,<9.8p1`. The running 8.9p1 is **below 9.0p1**, i.e. outside the affected range entirely \u2014 this host is not in the regreSSHion range (and 8.9p1 predates the 9.0p1 introduction of the vulnerable code path). Note this CVE is also RCE and unrelated to the SQLi signature.\n\nSo all three services on SRV-WEB-01 \u2014 apache 2.4.58, mysql 8.0.36, openssh 8.9p1 \u2014 fall outside every affected range the knowledge base holds. Re-submitting with the openssh comparison included.",
+      "turn": 7
+    },
+    {
+      "seq": 32,
+      "t": 260.021,
+      "kind": "tool_call",
+      "case_id": "CASE-1001",
+      "tool": "submit_assessment",
+      "args": {
+        "disconfirming_evidence_checked": "My leading hypothesis was that the attack FAILED. The falsifying check was whether there was post-exploitation activity I had not looked at: attacker-controlled SQL reaching the database, outbound data transfer, or follow-on actions. I widened the log window to 02:00-06:00Z and found only the benign application query 'SELECT name,price FROM catalog WHERE id=17', an 'Aborted connection' note (client closed, no rows returned), a legitimate SSH publickey login for 'deploy' from internal 10.20.0.9 (not the attacker IP 203.0.113.45), and a routine root cron rotate-logs.sh. Packet metadata showed no outbound transfer and exfil_indicators false. get_related_alerts returned no_data (no other alerts), so nothing corroborates an intrusion - I did not treat that empty lookup as a factor. No sign of success was found.",
+        "factors": [
+          {
+            "citation": "get_asset_info: SRV-WEB-01 runs apache 2.4.58, mysql 8.0.36, openssh 8.9p1. get_vulnerabilities(mysql): CVE-2023-21980 (sql_injection, UNION payload arbitrary read) affects >=5.7.0,<5.7.30 - 8.0.36 is not in the 5.7.x branch and is above the 5.7.30 fix; CVE-2022-21444 affects >=8.0.0,<8.0.30 - 8.0.36 is above the 8.0.30 fix. get_vulnerabilities(apache): CVE-2021-41773 affects >=2.4.49,<=2.4.50 - 2.4.58 is above the 2.4.51 fix. get_vulnerabilities(openssh): CVE-2024-6387 affects >=9.0p1,<9.8p1 - 8.9p1 is below 9.0p1, outside the range. All three services' running versions are outside ALL affected ranges listed.",
+            "factor": "version_patched",
+            "rationale": "Explicit version-range comparison across every service this host runs that the KB covers (apache, mysql, openssh): each running version falls on the patched/outside side of every affected range, so none of the listed CVEs - including the SQL-injection one the signature probes - applies to this host."
+          },
+          {
+            "citation": "get_server_logs SRV-WEB-01 01:44-02:44Z: modsecurity '[id \"942100\"] SQL Injection Attack Detected via libinjection - request BLOCKED, returned 403'; apache/access 'GET /catalog?id=17%20UNION%20SELECT%201,2,3-- HTTP/1.1\" 403 199' at 02:14:07 and 'OR 1=1--' -> 403 at 02:14:22; only mysql/general entry is the benign 'SELECT name,price FROM catalog WHERE id=17'. No attacker SQL executed, no rows returned, no process spawned. Wider 02:00-06:00Z window adds only a deploy publickey SSH login from internal 10.20.0.9 and a routine root cron rotate-logs.sh.",
+            "factor": "logs_clean",
+            "rationale": "The injection attempts are visible in the logs but demonstrably failed - WAF-blocked with 403 responses and no attacker-controlled query reaching MySQL; no post-exploitation activity in the widened window."
+          },
+          {
+            "citation": "get_packet_metadata ALERT-1001: bytes_to_server 412, bytes_to_client 1840, duration 96ms, single request/response pair, exfil_indicators false, payload_entropy 4.1, notes 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob, no anomalous flag combinations.'",
+            "factor": "packet_benign",
+            "rationale": "Flow shape matches a small blocked error response, not bulk data retrieval; no exfiltration signature."
+          }
+        ],
+        "hypothesis": "BLOCKED ATTACK (failed). The SQL injection at 02:14:07 was stopped by modSecurity before it reached the application/DB; the host runs no version inside any affected CVE range (including the SQLi CVE), no attacker SQL executed, and no data left the host.",
+        "sufficiency": "Sufficient to classify as a blocked/failed attack: three independent sources agree. (1) Version analysis covering every service the KB covers for this host - mysql 8.0.36, apache 2.4.58 and openssh 8.9p1 all sit outside every affected range, so the SQLi CVE does not apply. (2) Host logs - modSecurity explicitly BLOCKED the request with a 403, and the only DB query is the benign application query, i.e. the attack did nothing. (3) Packet flow - a 96ms single request/response of 1840 bytes with no exfil indicators, consistent with an error page. Limitations: I could not inspect the WAF ruleset config or raw HTTP bodies, and get_related_alerts had no history for this asset (an empty lookup, which establishes nothing - not cited as a factor). The sensor's 'critical' severity_label is its opinion about the signature, not evidence the injection executed."
+      },
+      "attempt": 2,
+      "reason": "(no stated reason)"
+    },
+    {
+      "seq": 33,
+      "t": 260.022,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "submit_assessment",
       "status": "accepted",
       "result": {
         "status": "accepted",
-        "hypothesis": "The SQL injection attempt against SRV-WEB-01 FAILED. The host is patched (running versions outside all affected CVE ranges) and the injected requests were blocked at the WAF with 403 responses, with no successful query execution, no process spawn, and no data exfiltration.",
+        "hypothesis": "BLOCKED ATTACK (failed). The SQL injection at 02:14:07 was stopped by modSecurity before it reached the application/DB; the host runs no version inside any affected CVE range (including the SQLi CVE), no attacker SQL executed, and no data left the host.",
         "factors": [
           {
+            "citation": "get_asset_info: SRV-WEB-01 runs apache 2.4.58, mysql 8.0.36, openssh 8.9p1. get_vulnerabilities(mysql): CVE-2023-21980 (sql_injection, UNION payload arbitrary read) affects >=5.7.0,<5.7.30 - 8.0.36 is not in the 5.7.x branch and is above the 5.7.30 fix; CVE-2022-21444 affects >=8.0.0,<8.0.30 - 8.0.36 is above the 8.0.30 fix. get_vulnerabilities(apache): CVE-2021-41773 affects >=2.4.49,<=2.4.50 - 2.4.58 is above the 2.4.51 fix. get_vulnerabilities(openssh): CVE-2024-6387 affects >=9.0p1,<9.8p1 - 8.9p1 is below 9.0p1, outside the range. All three services' running versions are outside ALL affected ranges listed.",
             "factor": "version_patched",
-            "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36 and apache 2.4.58. get_vulnerabilities(mysql): CVE-2023-21980 (sql_injection) affects >=5.7.0,<5.7.30 and CVE-2022-21444 affects >=8.0.0,<8.0.30. 8.0.36 is above the 8.0.30 fix and off the 5.7.x line entirely, so it is outside BOTH ranges. get_vulnerabilities(apache): CVE-2021-41773 affects >=2.4.49,<=2.4.50; running 2.4.58 > 2.4.50, outside the range.",
-            "rationale": "The only sql_injection CVE in the knowledge base (CVE-2023-21980, CVSS 9.8) does not apply to the running 8.0.36 - the host is on the far side of every affected range. The web tier likewise runs above the only Apache range. There is no applicable vulnerable component for this injection."
+            "rationale": "Explicit version-range comparison across every service this host runs that the KB covers (apache, mysql, openssh): each running version falls on the patched/outside side of every affected range, so none of the listed CVEs - including the SQL-injection one the signature probes - applies to this host."
           },
           {
+            "citation": "get_server_logs SRV-WEB-01 01:44-02:44Z: modsecurity '[id \"942100\"] SQL Injection Attack Detected via libinjection - request BLOCKED, returned 403'; apache/access 'GET /catalog?id=17%20UNION%20SELECT%201,2,3-- HTTP/1.1\" 403 199' at 02:14:07 and 'OR 1=1--' -> 403 at 02:14:22; only mysql/general entry is the benign 'SELECT name,price FROM catalog WHERE id=17'. No attacker SQL executed, no rows returned, no process spawned. Wider 02:00-06:00Z window adds only a deploy publickey SSH login from internal 10.20.0.9 and a routine root cron rotate-logs.sh.",
             "factor": "logs_clean",
-            "citation": "get_server_logs (SRV-WEB-01, 01:30-03:00Z): modsecurity 02:14:07 '[id \"942100\"] SQL Injection Attack Detected via libinjection - request BLOCKED, returned 403 to 203.0.113.45'; apache/access 02:14:07 'GET /catalog?id=17%20UNION%20SELECT%201,2,3-- HTTP/1.1\" 403 199' and 02:14:22 '...OR%201=1-- 403 199'. The only db_query logged is the benign 'SELECT name,price FROM catalog WHERE id=17' matching the earlier legitimate 200 request; 02:15:40 is a routine aborted-connection Note; 02:18:02 is internal sshd key auth from 10.20.0.9.",
-            "rationale": "Host-side evidence shows the injection was actively BLOCKED by modsecurity and every injected request returned HTTP 403. No injected SQL text reached the database, no rows were returned from a malicious query, and there is no process spawn or account creation in the window. The attempt is visible but demonstrably failed."
+            "rationale": "The injection attempts are visible in the logs but demonstrably failed - WAF-blocked with 403 responses and no attacker-controlled query reaching MySQL; no post-exploitation activity in the widened window."
           },
           {
+            "citation": "get_packet_metadata ALERT-1001: bytes_to_server 412, bytes_to_client 1840, duration 96ms, single request/response pair, exfil_indicators false, payload_entropy 4.1, notes 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob, no anomalous flag combinations.'",
             "factor": "packet_benign",
-            "citation": "get_packet_metadata: 412 bytes_to_server, 1840 bytes_to_client, 96ms, single request/response pair, exfil_indicators=false, payload_entropy 4.1; notes 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob.'",
-            "rationale": "The flow is a single small request/response consistent with a 403 error page. There is no large outbound transfer, no encoded blob, and the exfil flag is false - independently confirming no data left the host."
+            "rationale": "Flow shape matches a small blocked error response, not bulk data retrieval; no exfiltration signature."
           }
         ],
-        "sufficiency": "Evidence is sufficient and mutually consistent across four independent sources: (1) version comparison shows the host runs software outside all affected CVE ranges, (2) host logs show the WAF explicitly blocked the injection and returned 403 to both attempts, with no malicious DB query executing, (3) packet metadata shows a small error-page-sized response with no exfil, and (4) no post-exploitation artifacts (process spawn, account creation, outbound transfer) appear. The falsifying check was performed: I looked for any sign the injection executed or was only partially blocked (a passed 200, injected SQL in the DB log, exfil) and found none - the only DB query was the benign parameterised SELECT for a prior legitimate request. What I could not establish: get_related_alerts returned no_data (no other alerts on this asset), so I have no corroboration from history - I do not cite it as a factor. The absence of related alerts does not change the reading given the direct block evidence.",
-        "disconfirming_evidence_checked": "My leading hypothesis is that the attack failed, so the falsifier would be any sign of successful execution or post-exploitation: an injected SQL statement reaching the database, a WAF-passed 200 response to the injection, a spawned process, a new account, or outbound data transfer. I searched for exactly these in get_server_logs for 01:30-03:00Z: the only DB query was the benign 'SELECT name,price FROM catalog WHERE id=17' (matching the legitimate 200 request at 02:13:51), every injected request returned 403, and the sole other events were a routine aborted-connection Note and internal sshd key auth from 10.20.0.9 - none tied to attacker IP 203.0.113.45. get_packet_metadata independently ruled out exfiltration. No disconfirming evidence was found; the attempt is demonstrably blocked."
+        "sufficiency": "Sufficient to classify as a blocked/failed attack: three independent sources agree. (1) Version analysis covering every service the KB covers for this host - mysql 8.0.36, apache 2.4.58 and openssh 8.9p1 all sit outside every affected range, so the SQLi CVE does not apply. (2) Host logs - modSecurity explicitly BLOCKED the request with a 403, and the only DB query is the benign application query, i.e. the attack did nothing. (3) Packet flow - a 96ms single request/response of 1840 bytes with no exfil indicators, consistent with an error page. Limitations: I could not inspect the WAF ruleset config or raw HTTP bodies, and get_related_alerts had no history for this asset (an empty lookup, which establishes nothing - not cited as a factor). The sensor's 'critical' severity_label is its opinion about the signature, not evidence the injection executed.",
+        "disconfirming_evidence_checked": "My leading hypothesis was that the attack FAILED. The falsifying check was whether there was post-exploitation activity I had not looked at: attacker-controlled SQL reaching the database, outbound data transfer, or follow-on actions. I widened the log window to 02:00-06:00Z and found only the benign application query 'SELECT name,price FROM catalog WHERE id=17', an 'Aborted connection' note (client closed, no rows returned), a legitimate SSH publickey login for 'deploy' from internal 10.20.0.9 (not the attacker IP 203.0.113.45), and a routine root cron rotate-logs.sh. Packet metadata showed no outbound transfer and exfil_indicators false. get_related_alerts returned no_data (no other alerts), so nothing corroborates an intrusion - I did not treat that empty lookup as a factor. No sign of success was found."
       }
     },
     {
-      "seq": 26,
-      "t": 140.731,
+      "seq": 34,
+      "t": 260.022,
       "kind": "state_change",
       "case_id": "CASE-1001",
       "state": "DETERMINE_OUTCOME",
       "note": "Confidence computed in Python from declared factors."
     },
     {
-      "seq": 27,
-      "t": 140.731,
+      "seq": 35,
+      "t": 260.022,
       "kind": "scoring",
       "case_id": "CASE-1001",
       "base": 0.5,
@@ -446,22 +620,22 @@
           "factor": "version_patched",
           "label": "Running version outside all affected ranges (patched)",
           "delta": -0.3,
-          "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36 and apache 2.4.58. get_vulnerabilities(mysql): CVE-2023-21980 (sql_injection) affects >=5.7.0,<5.7.30 and CVE-2022-21444 affects >=8.0.0,<8.0.30. 8.0.36 is above the 8.0.30 fix and off the 5.7.x line entirely, so it is outside BOTH ranges. get_vulnerabilities(apache): CVE-2021-41773 affects >=2.4.49,<=2.4.50; running 2.4.58 > 2.4.50, outside the range.",
-          "rationale": "The only sql_injection CVE in the knowledge base (CVE-2023-21980, CVSS 9.8) does not apply to the running 8.0.36 - the host is on the far side of every affected range. The web tier likewise runs above the only Apache range. There is no applicable vulnerable component for this injection."
+          "citation": "get_asset_info: SRV-WEB-01 runs apache 2.4.58, mysql 8.0.36, openssh 8.9p1. get_vulnerabilities(mysql): CVE-2023-21980 (sql_injection, UNION payload arbitrary read) affects >=5.7.0,<5.7.30 - 8.0.36 is not in the 5.7.x branch and is above the 5.7.30 fix; CVE-2022-21444 affects >=8.0.0,<8.0.30 - 8.0.36 is above the 8.0.30 fix. get_vulnerabilities(apache): CVE-2021-41773 affects >=2.4.49,<=2.4.50 - 2.4.58 is above the 2.4.51 fix. get_vulnerabilities(openssh): CVE-2024-6387 affects >=9.0p1,<9.8p1 - 8.9p1 is below 9.0p1, outside the range. All three services' running versions are outside ALL affected ranges listed.",
+          "rationale": "Explicit version-range comparison across every service this host runs that the KB covers (apache, mysql, openssh): each running version falls on the patched/outside side of every affected range, so none of the listed CVEs - including the SQL-injection one the signature probes - applies to this host."
         },
         {
           "factor": "logs_clean",
           "label": "Server logs clean across the relevant window",
           "delta": -0.25,
-          "citation": "get_server_logs (SRV-WEB-01, 01:30-03:00Z): modsecurity 02:14:07 '[id \"942100\"] SQL Injection Attack Detected via libinjection - request BLOCKED, returned 403 to 203.0.113.45'; apache/access 02:14:07 'GET /catalog?id=17%20UNION%20SELECT%201,2,3-- HTTP/1.1\" 403 199' and 02:14:22 '...OR%201=1-- 403 199'. The only db_query logged is the benign 'SELECT name,price FROM catalog WHERE id=17' matching the earlier legitimate 200 request; 02:15:40 is a routine aborted-connection Note; 02:18:02 is internal sshd key auth from 10.20.0.9.",
-          "rationale": "Host-side evidence shows the injection was actively BLOCKED by modsecurity and every injected request returned HTTP 403. No injected SQL text reached the database, no rows were returned from a malicious query, and there is no process spawn or account creation in the window. The attempt is visible but demonstrably failed."
+          "citation": "get_server_logs SRV-WEB-01 01:44-02:44Z: modsecurity '[id \"942100\"] SQL Injection Attack Detected via libinjection - request BLOCKED, returned 403'; apache/access 'GET /catalog?id=17%20UNION%20SELECT%201,2,3-- HTTP/1.1\" 403 199' at 02:14:07 and 'OR 1=1--' -> 403 at 02:14:22; only mysql/general entry is the benign 'SELECT name,price FROM catalog WHERE id=17'. No attacker SQL executed, no rows returned, no process spawned. Wider 02:00-06:00Z window adds only a deploy publickey SSH login from internal 10.20.0.9 and a routine root cron rotate-logs.sh.",
+          "rationale": "The injection attempts are visible in the logs but demonstrably failed - WAF-blocked with 403 responses and no attacker-controlled query reaching MySQL; no post-exploitation activity in the widened window."
         },
         {
           "factor": "packet_benign",
           "label": "Packet metadata benign",
           "delta": -0.1,
-          "citation": "get_packet_metadata: 412 bytes_to_server, 1840 bytes_to_client, 96ms, single request/response pair, exfil_indicators=false, payload_entropy 4.1; notes 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob.'",
-          "rationale": "The flow is a single small request/response consistent with a 403 error page. There is no large outbound transfer, no encoded blob, and the exfil flag is false - independently confirming no data left the host."
+          "citation": "get_packet_metadata ALERT-1001: bytes_to_server 412, bytes_to_client 1840, duration 96ms, single request/response pair, exfil_indicators false, payload_entropy 4.1, notes 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob, no anomalous flag combinations.'",
+          "rationale": "Flow shape matches a small blocked error response, not bulk data retrieval; no exfiltration signature."
         }
       ],
       "ignored_factors": [],
@@ -470,17 +644,17 @@
       "ceiling_note": ""
     },
     {
-      "seq": 28,
-      "t": 140.733,
+      "seq": 36,
+      "t": 260.023,
       "kind": "conclusion",
       "case_id": "CASE-1001",
       "label": "initial",
       "outcome": "FAILED",
       "confidence": 0.95,
       "score": 0.05,
-      "hypothesis": "The SQL injection attempt against SRV-WEB-01 FAILED. The host is patched (running versions outside all affected CVE ranges) and the injected requests were blocked at the WAF with 403 responses, with no successful query execution, no process spawn, and no data exfiltration.",
-      "sufficiency": "Evidence is sufficient and mutually consistent across four independent sources: (1) version comparison shows the host runs software outside all affected CVE ranges, (2) host logs show the WAF explicitly blocked the injection and returned 403 to both attempts, with no malicious DB query executing, (3) packet metadata shows a small error-page-sized response with no exfil, and (4) no post-exploitation artifacts (process spawn, account creation, outbound transfer) appear. The falsifying check was performed: I looked for any sign the injection executed or was only partially blocked (a passed 200, injected SQL in the DB log, exfil) and found none - the only DB query was the benign parameterised SELECT for a prior legitimate request. What I could not establish: get_related_alerts returned no_data (no other alerts on this asset), so I have no corroboration from history - I do not cite it as a factor. The absence of related alerts does not change the reading given the direct block evidence.",
-      "disconfirming_evidence_checked": "My leading hypothesis is that the attack failed, so the falsifier would be any sign of successful execution or post-exploitation: an injected SQL statement reaching the database, a WAF-passed 200 response to the injection, a spawned process, a new account, or outbound data transfer. I searched for exactly these in get_server_logs for 01:30-03:00Z: the only DB query was the benign 'SELECT name,price FROM catalog WHERE id=17' (matching the legitimate 200 request at 02:13:51), every injected request returned 403, and the sole other events were a routine aborted-connection Note and internal sshd key auth from 10.20.0.9 - none tied to attacker IP 203.0.113.45. get_packet_metadata independently ruled out exfiltration. No disconfirming evidence was found; the attempt is demonstrably blocked.",
+      "hypothesis": "BLOCKED ATTACK (failed). The SQL injection at 02:14:07 was stopped by modSecurity before it reached the application/DB; the host runs no version inside any affected CVE range (including the SQLi CVE), no attacker SQL executed, and no data left the host.",
+      "sufficiency": "Sufficient to classify as a blocked/failed attack: three independent sources agree. (1) Version analysis covering every service the KB covers for this host - mysql 8.0.36, apache 2.4.58 and openssh 8.9p1 all sit outside every affected range, so the SQLi CVE does not apply. (2) Host logs - modSecurity explicitly BLOCKED the request with a 403, and the only DB query is the benign application query, i.e. the attack did nothing. (3) Packet flow - a 96ms single request/response of 1840 bytes with no exfil indicators, consistent with an error page. Limitations: I could not inspect the WAF ruleset config or raw HTTP bodies, and get_related_alerts had no history for this asset (an empty lookup, which establishes nothing - not cited as a factor). The sensor's 'critical' severity_label is its opinion about the signature, not evidence the injection executed.",
+      "disconfirming_evidence_checked": "My leading hypothesis was that the attack FAILED. The falsifying check was whether there was post-exploitation activity I had not looked at: attacker-controlled SQL reaching the database, outbound data transfer, or follow-on actions. I widened the log window to 02:00-06:00Z and found only the benign application query 'SELECT name,price FROM catalog WHERE id=17', an 'Aborted connection' note (client closed, no rows returned), a legitimate SSH publickey login for 'deploy' from internal 10.20.0.9 (not the attacker IP 203.0.113.45), and a routine root cron rotate-logs.sh. Packet metadata showed no outbound transfer and exfil_indicators false. get_related_alerts returned no_data (no other alerts), so nothing corroborates an intrusion - I did not treat that empty lookup as a factor. No sign of success was found.",
       "scoring": {
         "base": 0.5,
         "raw_sum": -0.15,
@@ -492,22 +666,22 @@
             "factor": "version_patched",
             "label": "Running version outside all affected ranges (patched)",
             "delta": -0.3,
-            "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36 and apache 2.4.58. get_vulnerabilities(mysql): CVE-2023-21980 (sql_injection) affects >=5.7.0,<5.7.30 and CVE-2022-21444 affects >=8.0.0,<8.0.30. 8.0.36 is above the 8.0.30 fix and off the 5.7.x line entirely, so it is outside BOTH ranges. get_vulnerabilities(apache): CVE-2021-41773 affects >=2.4.49,<=2.4.50; running 2.4.58 > 2.4.50, outside the range.",
-            "rationale": "The only sql_injection CVE in the knowledge base (CVE-2023-21980, CVSS 9.8) does not apply to the running 8.0.36 - the host is on the far side of every affected range. The web tier likewise runs above the only Apache range. There is no applicable vulnerable component for this injection."
+            "citation": "get_asset_info: SRV-WEB-01 runs apache 2.4.58, mysql 8.0.36, openssh 8.9p1. get_vulnerabilities(mysql): CVE-2023-21980 (sql_injection, UNION payload arbitrary read) affects >=5.7.0,<5.7.30 - 8.0.36 is not in the 5.7.x branch and is above the 5.7.30 fix; CVE-2022-21444 affects >=8.0.0,<8.0.30 - 8.0.36 is above the 8.0.30 fix. get_vulnerabilities(apache): CVE-2021-41773 affects >=2.4.49,<=2.4.50 - 2.4.58 is above the 2.4.51 fix. get_vulnerabilities(openssh): CVE-2024-6387 affects >=9.0p1,<9.8p1 - 8.9p1 is below 9.0p1, outside the range. All three services' running versions are outside ALL affected ranges listed.",
+            "rationale": "Explicit version-range comparison across every service this host runs that the KB covers (apache, mysql, openssh): each running version falls on the patched/outside side of every affected range, so none of the listed CVEs - including the SQL-injection one the signature probes - applies to this host."
           },
           {
             "factor": "logs_clean",
             "label": "Server logs clean across the relevant window",
             "delta": -0.25,
-            "citation": "get_server_logs (SRV-WEB-01, 01:30-03:00Z): modsecurity 02:14:07 '[id \"942100\"] SQL Injection Attack Detected via libinjection - request BLOCKED, returned 403 to 203.0.113.45'; apache/access 02:14:07 'GET /catalog?id=17%20UNION%20SELECT%201,2,3-- HTTP/1.1\" 403 199' and 02:14:22 '...OR%201=1-- 403 199'. The only db_query logged is the benign 'SELECT name,price FROM catalog WHERE id=17' matching the earlier legitimate 200 request; 02:15:40 is a routine aborted-connection Note; 02:18:02 is internal sshd key auth from 10.20.0.9.",
-            "rationale": "Host-side evidence shows the injection was actively BLOCKED by modsecurity and every injected request returned HTTP 403. No injected SQL text reached the database, no rows were returned from a malicious query, and there is no process spawn or account creation in the window. The attempt is visible but demonstrably failed."
+            "citation": "get_server_logs SRV-WEB-01 01:44-02:44Z: modsecurity '[id \"942100\"] SQL Injection Attack Detected via libinjection - request BLOCKED, returned 403'; apache/access 'GET /catalog?id=17%20UNION%20SELECT%201,2,3-- HTTP/1.1\" 403 199' at 02:14:07 and 'OR 1=1--' -> 403 at 02:14:22; only mysql/general entry is the benign 'SELECT name,price FROM catalog WHERE id=17'. No attacker SQL executed, no rows returned, no process spawned. Wider 02:00-06:00Z window adds only a deploy publickey SSH login from internal 10.20.0.9 and a routine root cron rotate-logs.sh.",
+            "rationale": "The injection attempts are visible in the logs but demonstrably failed - WAF-blocked with 403 responses and no attacker-controlled query reaching MySQL; no post-exploitation activity in the widened window."
           },
           {
             "factor": "packet_benign",
             "label": "Packet metadata benign",
             "delta": -0.1,
-            "citation": "get_packet_metadata: 412 bytes_to_server, 1840 bytes_to_client, 96ms, single request/response pair, exfil_indicators=false, payload_entropy 4.1; notes 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob.'",
-            "rationale": "The flow is a single small request/response consistent with a 403 error page. There is no large outbound transfer, no encoded blob, and the exfil flag is false - independently confirming no data left the host."
+            "citation": "get_packet_metadata ALERT-1001: bytes_to_server 412, bytes_to_client 1840, duration 96ms, single request/response pair, exfil_indicators false, payload_entropy 4.1, notes 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob, no anomalous flag combinations.'",
+            "rationale": "Flow shape matches a small blocked error response, not bulk data retrieval; no exfiltration signature."
           }
         ],
         "ignored_factors": [],
@@ -515,27 +689,27 @@
         "degraded_sources": [],
         "ceiling_note": ""
       },
-      "at": "2026-09-12T11:25:39Z"
+      "at": "2026-09-12T11:46:26Z"
     },
     {
-      "seq": 29,
-      "t": 140.733,
+      "seq": 37,
+      "t": 260.023,
       "kind": "state_change",
       "case_id": "CASE-1001",
       "state": "ACT",
       "note": "Policy: none - Outcome FAILED does not justify an action."
     },
     {
-      "seq": 30,
-      "t": 157.927,
+      "seq": 38,
+      "t": 281.918,
       "kind": "thought",
       "case_id": "CASE-1001",
-      "text": "The scoring result is FAILED, and section 7.3 maps FAILED to no action. The standing policy rationale agrees. So I take no mutation action, and record current firewall state once.",
+      "text": "Policy section 7.3 maps FAILED to no action, so I will take no mutation action and just record the current firewall state.",
       "turn": 1
     },
     {
-      "seq": 31,
-      "t": 157.927,
+      "seq": 39,
+      "t": 281.919,
       "kind": "tool_call",
       "case_id": "CASE-1001",
       "tool": "check_firewall_state",
@@ -543,11 +717,11 @@
         "ip": "203.0.113.45"
       },
       "attempt": 1,
-      "reason": "Policy for FAILED outcome is no action; recording the current firewall state for 203.0.113.45 to confirm it remains unblocked and to document the pre-existing baseline."
+      "reason": "Outcome FAILED (score 0.05) and standing policy is none; recording the current on-disk firewall state to confirm no block exists for this IP rather than assuming one."
     },
     {
-      "seq": 32,
-      "t": 157.928,
+      "seq": 40,
+      "t": 281.919,
       "kind": "tool_result",
       "case_id": "CASE-1001",
       "tool": "check_firewall_state",
@@ -562,24 +736,24 @@
       }
     },
     {
-      "seq": 33,
-      "t": 178.921,
+      "seq": 41,
+      "t": 303.299,
       "kind": "sufficiency",
       "case_id": "CASE-1001",
-      "text": "**Action taken: none.**\n\n**Why:** The deterministic scoring returned `outcome = FAILED` with `score = 0.05`. Under section 7.3, a FAILED outcome maps to *no action* \u2014 it is not a confirmed malicious verdict, it is a failure of the investigation/scoring to substantiate the alert. The standing policy for this case (\"none... Outcome FAILED does not justify an action\") agrees.\n\nI did **not** apply a precautionary block. The precautionary path in the policy is reserved for INCONCLUSIVE outcomes on critical assets; FAILED is not INCONCLUSIVE, and firing a containment action on a non-substantiated alert would be over-reach.\n\n**Verification (read from disk, not assumed):**\n- IP: `203.0.113.45`\n- `blocked`: **false**\n- `record`: null\n- `total_blocked`: 0\n- Source file: `fixtures/run/firewall_state.json`\n\nThe firewall state read back from disk confirms no DROP rule exists for 203.0.113.45, which is the correct and expected end state given a FAILED outcome. No mutation was warranted, so none was performed, and nothing needed to be rolled back.\n\n**Disposition:** Case closed with no firewall change. If the underlying alert on SRV-WEB-01 (high criticality) is thought to have merit despite the FAILED score, that is a detection-engineering/analyst-review question \u2014 the scoring failure itself is the signal to examine, not an IP to block.",
+      "text": "**Summary \u2014 CASE-1001 / ALERT-1001 (203.0.113.45 \u2192 SRV-WEB-01)**\n\n**Action taken: none.**\n\n**Why:** The deterministic scoring returned `outcome = FAILED` with score 0.05 (confidence 0.95). Per the standing action policy (section 7.3), FAILED \u2192 no action, and the case rationale confirms: \"Outcome FAILED does not justify an action.\" The asset's high criticality is irrelevant here \u2014 the critical-asset precautionary clause in the policy applies only to INCONCLUSIVE outcomes, not FAILED. A FAILED outcome means the alert did not meet the bar for a confirmed verdict, so there is nothing to contain. Note the score direction reinforces this: 0.05 is far below the 0.75 success threshold.\n\n**Verification (read from disk, not assumed):** `check_firewall_state` for 203.0.113.45 returned `blocked: false`, `record: null`, `total_blocked: 0`, read from `fixtures/run/firewall_state.json`. The firewall contains no DROP rule for this IP, which is the correct end state for a no-action case.\n\n**No further action required.** No block was placed, so none needed verification. The IP remains unblocked, consistent with policy. If a subsequent alert on this IP scores SUCCEEDED \u2265 0.75 or comes back INCONCLUSIVE while targeting this critical asset, that would trigger a block (the latter as a precautionary containment under uncertainty, not a verdict) \u2014 but neither condition is met by the current result.",
       "turn": 2
     },
     {
-      "seq": 34,
-      "t": 178.921,
+      "seq": 42,
+      "t": 303.299,
       "kind": "state_change",
       "case_id": "CASE-1001",
       "state": "VERIFY",
       "note": "Re-reading firewall state from disk."
     },
     {
-      "seq": 35,
-      "t": 178.922,
+      "seq": 43,
+      "t": 303.299,
       "kind": "verification",
       "case_id": "CASE-1001",
       "ip": "203.0.113.45",
@@ -609,9 +783,9 @@
           "outcome": "FAILED",
           "confidence": 0.95,
           "score": 0.05,
-          "hypothesis": "The SQL injection attempt against SRV-WEB-01 FAILED. The host is patched (running versions outside all affected CVE ranges) and the injected requests were blocked at the WAF with 403 responses, with no successful query execution, no process spawn, and no data exfiltration.",
-          "sufficiency": "Evidence is sufficient and mutually consistent across four independent sources: (1) version comparison shows the host runs software outside all affected CVE ranges, (2) host logs show the WAF explicitly blocked the injection and returned 403 to both attempts, with no malicious DB query executing, (3) packet metadata shows a small error-page-sized response with no exfil, and (4) no post-exploitation artifacts (process spawn, account creation, outbound transfer) appear. The falsifying check was performed: I looked for any sign the injection executed or was only partially blocked (a passed 200, injected SQL in the DB log, exfil) and found none - the only DB query was the benign parameterised SELECT for a prior legitimate request. What I could not establish: get_related_alerts returned no_data (no other alerts on this asset), so I have no corroboration from history - I do not cite it as a factor. The absence of related alerts does not change the reading given the direct block evidence.",
-          "disconfirming_evidence_checked": "My leading hypothesis is that the attack failed, so the falsifier would be any sign of successful execution or post-exploitation: an injected SQL statement reaching the database, a WAF-passed 200 response to the injection, a spawned process, a new account, or outbound data transfer. I searched for exactly these in get_server_logs for 01:30-03:00Z: the only DB query was the benign 'SELECT name,price FROM catalog WHERE id=17' (matching the legitimate 200 request at 02:13:51), every injected request returned 403, and the sole other events were a routine aborted-connection Note and internal sshd key auth from 10.20.0.9 - none tied to attacker IP 203.0.113.45. get_packet_metadata independently ruled out exfiltration. No disconfirming evidence was found; the attempt is demonstrably blocked.",
+          "hypothesis": "BLOCKED ATTACK (failed). The SQL injection at 02:14:07 was stopped by modSecurity before it reached the application/DB; the host runs no version inside any affected CVE range (including the SQLi CVE), no attacker SQL executed, and no data left the host.",
+          "sufficiency": "Sufficient to classify as a blocked/failed attack: three independent sources agree. (1) Version analysis covering every service the KB covers for this host - mysql 8.0.36, apache 2.4.58 and openssh 8.9p1 all sit outside every affected range, so the SQLi CVE does not apply. (2) Host logs - modSecurity explicitly BLOCKED the request with a 403, and the only DB query is the benign application query, i.e. the attack did nothing. (3) Packet flow - a 96ms single request/response of 1840 bytes with no exfil indicators, consistent with an error page. Limitations: I could not inspect the WAF ruleset config or raw HTTP bodies, and get_related_alerts had no history for this asset (an empty lookup, which establishes nothing - not cited as a factor). The sensor's 'critical' severity_label is its opinion about the signature, not evidence the injection executed.",
+          "disconfirming_evidence_checked": "My leading hypothesis was that the attack FAILED. The falsifying check was whether there was post-exploitation activity I had not looked at: attacker-controlled SQL reaching the database, outbound data transfer, or follow-on actions. I widened the log window to 02:00-06:00Z and found only the benign application query 'SELECT name,price FROM catalog WHERE id=17', an 'Aborted connection' note (client closed, no rows returned), a legitimate SSH publickey login for 'deploy' from internal 10.20.0.9 (not the attacker IP 203.0.113.45), and a routine root cron rotate-logs.sh. Packet metadata showed no outbound transfer and exfil_indicators false. get_related_alerts returned no_data (no other alerts), so nothing corroborates an intrusion - I did not treat that empty lookup as a factor. No sign of success was found.",
           "scoring": {
             "base": 0.5,
             "raw_sum": -0.15,
@@ -623,22 +797,22 @@
                 "factor": "version_patched",
                 "label": "Running version outside all affected ranges (patched)",
                 "delta": -0.3,
-                "citation": "get_asset_info: SRV-WEB-01 runs mysql 8.0.36 and apache 2.4.58. get_vulnerabilities(mysql): CVE-2023-21980 (sql_injection) affects >=5.7.0,<5.7.30 and CVE-2022-21444 affects >=8.0.0,<8.0.30. 8.0.36 is above the 8.0.30 fix and off the 5.7.x line entirely, so it is outside BOTH ranges. get_vulnerabilities(apache): CVE-2021-41773 affects >=2.4.49,<=2.4.50; running 2.4.58 > 2.4.50, outside the range.",
-                "rationale": "The only sql_injection CVE in the knowledge base (CVE-2023-21980, CVSS 9.8) does not apply to the running 8.0.36 - the host is on the far side of every affected range. The web tier likewise runs above the only Apache range. There is no applicable vulnerable component for this injection."
+                "citation": "get_asset_info: SRV-WEB-01 runs apache 2.4.58, mysql 8.0.36, openssh 8.9p1. get_vulnerabilities(mysql): CVE-2023-21980 (sql_injection, UNION payload arbitrary read) affects >=5.7.0,<5.7.30 - 8.0.36 is not in the 5.7.x branch and is above the 5.7.30 fix; CVE-2022-21444 affects >=8.0.0,<8.0.30 - 8.0.36 is above the 8.0.30 fix. get_vulnerabilities(apache): CVE-2021-41773 affects >=2.4.49,<=2.4.50 - 2.4.58 is above the 2.4.51 fix. get_vulnerabilities(openssh): CVE-2024-6387 affects >=9.0p1,<9.8p1 - 8.9p1 is below 9.0p1, outside the range. All three services' running versions are outside ALL affected ranges listed.",
+                "rationale": "Explicit version-range comparison across every service this host runs that the KB covers (apache, mysql, openssh): each running version falls on the patched/outside side of every affected range, so none of the listed CVEs - including the SQL-injection one the signature probes - applies to this host."
               },
               {
                 "factor": "logs_clean",
                 "label": "Server logs clean across the relevant window",
                 "delta": -0.25,
-                "citation": "get_server_logs (SRV-WEB-01, 01:30-03:00Z): modsecurity 02:14:07 '[id \"942100\"] SQL Injection Attack Detected via libinjection - request BLOCKED, returned 403 to 203.0.113.45'; apache/access 02:14:07 'GET /catalog?id=17%20UNION%20SELECT%201,2,3-- HTTP/1.1\" 403 199' and 02:14:22 '...OR%201=1-- 403 199'. The only db_query logged is the benign 'SELECT name,price FROM catalog WHERE id=17' matching the earlier legitimate 200 request; 02:15:40 is a routine aborted-connection Note; 02:18:02 is internal sshd key auth from 10.20.0.9.",
-                "rationale": "Host-side evidence shows the injection was actively BLOCKED by modsecurity and every injected request returned HTTP 403. No injected SQL text reached the database, no rows were returned from a malicious query, and there is no process spawn or account creation in the window. The attempt is visible but demonstrably failed."
+                "citation": "get_server_logs SRV-WEB-01 01:44-02:44Z: modsecurity '[id \"942100\"] SQL Injection Attack Detected via libinjection - request BLOCKED, returned 403'; apache/access 'GET /catalog?id=17%20UNION%20SELECT%201,2,3-- HTTP/1.1\" 403 199' at 02:14:07 and 'OR 1=1--' -> 403 at 02:14:22; only mysql/general entry is the benign 'SELECT name,price FROM catalog WHERE id=17'. No attacker SQL executed, no rows returned, no process spawned. Wider 02:00-06:00Z window adds only a deploy publickey SSH login from internal 10.20.0.9 and a routine root cron rotate-logs.sh.",
+                "rationale": "The injection attempts are visible in the logs but demonstrably failed - WAF-blocked with 403 responses and no attacker-controlled query reaching MySQL; no post-exploitation activity in the widened window."
               },
               {
                 "factor": "packet_benign",
                 "label": "Packet metadata benign",
                 "delta": -0.1,
-                "citation": "get_packet_metadata: 412 bytes_to_server, 1840 bytes_to_client, 96ms, single request/response pair, exfil_indicators=false, payload_entropy 4.1; notes 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob.'",
-                "rationale": "The flow is a single small request/response consistent with a 403 error page. There is no large outbound transfer, no encoded blob, and the exfil flag is false - independently confirming no data left the host."
+                "citation": "get_packet_metadata ALERT-1001: bytes_to_server 412, bytes_to_client 1840, duration 96ms, single request/response pair, exfil_indicators false, payload_entropy 4.1, notes 'Response size consistent with a 403 error page. No sustained outbound transfer, no encoded blob, no anomalous flag combinations.'",
+                "rationale": "Flow shape matches a small blocked error response, not bulk data retrieval; no exfiltration signature."
               }
             ],
             "ignored_factors": [],
@@ -646,7 +820,7 @@
             "degraded_sources": [],
             "ceiling_note": ""
           },
-          "at": "2026-09-12T11:25:39Z"
+          "at": "2026-09-12T11:46:26Z"
         }
       ],
       "actions": [],

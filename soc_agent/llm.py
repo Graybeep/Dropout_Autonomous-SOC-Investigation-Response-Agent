@@ -139,12 +139,33 @@ def _pace() -> None:
     _last_call = time.monotonic()
 
 
+# A 400 normally means the request itself is wrong, and replaying it would fail
+# identically - so 400s are not retried. The exception is a gateway that could
+# not READ the body: that is a transport failure wearing a 400, and it is worth
+# one more attempt. Seen live as
+# {"type":"bad_request","message":"Could not read the request body."} on a
+# 23 KB payload, so not a size limit.
+_TRANSIENT_400 = (
+    "could not read the request body",
+    "failed to read request body",
+    "request body",
+    "connection reset",
+    "timeout",
+)
+
+
+def _is_transient_400(detail: str) -> bool:
+    low = detail.lower()
+    return any(marker in low for marker in _TRANSIENT_400)
+
+
 def _post(url: str, headers: dict[str, str], body: dict[str, Any],
           timeout: int = 120) -> dict[str, Any]:
     """POST with backoff on rate limits and transient server errors.
 
-    Retries 429 and 5xx; never retries a 4xx that reflects a bad request, since
-    replaying it would just fail identically.
+    Retries 429 and 5xx, plus the narrow class of 400s that describe a failure
+    to read the request rather than a problem with its contents. A validation
+    400 is never retried - replaying it would just fail identically.
     """
     data = json.dumps(body).encode("utf-8")
     last: Exception | None = None
@@ -158,7 +179,9 @@ def _post(url: str, headers: dict[str, str], body: dict[str, Any],
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", "replace")[:1200]
             last = LLMError(f"HTTP {exc.code} from {url}: {detail}")
-            if exc.code not in (408, 429, 500, 502, 503, 504):
+            retryable = exc.code in (408, 429, 500, 502, 503, 504) or (
+                exc.code == 400 and _is_transient_400(detail))
+            if not retryable:
                 raise last from exc
             if attempt == config.RETRY_MAX:
                 break

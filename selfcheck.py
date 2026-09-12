@@ -37,6 +37,16 @@ def section(title: str) -> None:
 
 
 def offline_selfcheck() -> int:
+    # This suite resets fixtures/run repeatedly. If a live run holds it, bail
+    # out instead of trampling it - running selfcheck during run_all.py has
+    # twice corrupted a live scenario (Toknow P-014, P-017). Never pass
+    # force=True here: that defeats the guard this exists to respect.
+    try:
+        control.reset_sandbox()
+    except sandbox.SandboxBusy as exc:
+        print(f"REFUSING TO RUN: {exc}")
+        return 2
+
     ctx = {"case_id": "CASE-SELFCHECK", "alert_id": "ALERT-2001",
            "asset_id": "SRV-DB-02"}
 
@@ -236,7 +246,7 @@ def offline_selfcheck() -> int:
 
     # -- version_patched is universal, and needs universal coverage --------
     section("version_patched coverage")
-    control.reset_sandbox(force=True)
+    control.reset_sandbox()
     tr_v = trace_mod.Trace(case_id="CASE-COV", scenario="cov")
     bus_v = ToolBus(tr_v, {"case_id": "CASE-COV", "alert_id": "ALERT-3001",
                            "asset_id": "SRV-APP-03"})
@@ -268,6 +278,20 @@ def offline_selfcheck() -> int:
                      "rationale": "r"}]})
     check("version_in_range is existential and NOT subject to the check",
           exi["status"] == "accepted")
+
+
+    # -- transport: which failures are worth retrying ---------------------
+    section("transient vs permanent HTTP failures")
+    from soc_agent import llm as _llm
+    check("a body-read 400 is treated as transient",
+          _llm._is_transient_400("Could not read the request body."))
+    check("a validation 400 is NOT retried",
+          not _llm._is_transient_400(
+              "The model rejected this request. a parameter is invalid"))
+    check("an unknown-model 400 is NOT retried",
+          not _llm._is_transient_400("The requested model does not exist."))
+    check("insufficient-credits is NOT treated as a body-read failure",
+          not _llm._is_transient_400("Insufficient credits. Please top up."))
 
     # -- action policy ---------------------------------------------------
     section("action policy (section 7.3)")
