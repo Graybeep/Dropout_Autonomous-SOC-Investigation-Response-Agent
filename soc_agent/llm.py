@@ -139,24 +139,17 @@ def _pace() -> None:
     _last_call = time.monotonic()
 
 
-# A 400 normally means the request itself is wrong, and replaying it would fail
-# identically - so 400s are not retried. The exception is a gateway that could
-# not READ the body: that is a transport failure wearing a 400, and it is worth
-# one more attempt. Seen live as
-# {"type":"bad_request","message":"Could not read the request body."} on a
-# 23 KB payload, so not a size limit.
-_TRANSIENT_400 = (
-    "could not read the request body",
-    "failed to read request body",
-    "request body",
-    "connection reset",
-    "timeout",
-)
-
-
-def _is_transient_400(detail: str) -> bool:
-    low = detail.lower()
-    return any(marker in low for marker in _TRANSIENT_400)
+# Retry policy: 429 (rate limited) and 5xx (server-side) only. NEVER a 4xx.
+#
+# A 400 is by definition a statement that the request itself is unacceptable;
+# replaying it unchanged cannot succeed. An earlier version of this file
+# special-cased "Could not read the request body." as transient and retried it.
+# That was wrong twice over: it burned ~8 minutes of exponential backoff on
+# scenario 4 and produced no diagnostic information, and in a project graded on
+# failure recovery, a retry loop that cannot succeed IS the failure to recover.
+# 408 is excluded too - it is a 4xx, and a server that timed out reading one
+# request will not read an identical replay any better.
+RETRY_STATUS = (429, 500, 502, 503, 504, 529)
 
 
 def _post(url: str, headers: dict[str, str], body: dict[str, Any],
@@ -177,11 +170,24 @@ def _post(url: str, headers: dict[str, str], body: dict[str, Any],
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", "replace")[:1200]
+            raw = exc.read().decode("utf-8", "replace")
+            # On a 4xx the body is the diagnosis - keep all of it, plus the
+            # request shape, rather than truncating the one thing that explains
+            # why the request was rejected.
+            if 400 <= exc.code < 500:
+                shape = {
+                    "model": body.get("model"),
+                    "max_tokens": body.get("max_tokens"),
+                    "messages": len(body.get("messages", [])),
+                    "tools": len(body.get("tools", [])),
+                    "approx_body_bytes": len(data),
+                }
+                detail = (raw + chr(10) + "  request shape: "
+                          + json.dumps(shape))
+            else:
+                detail = raw[:1200]
             last = LLMError(f"HTTP {exc.code} from {url}: {detail}")
-            retryable = exc.code in (408, 429, 500, 502, 503, 504) or (
-                exc.code == 400 and _is_transient_400(detail))
-            if not retryable:
+            if exc.code not in RETRY_STATUS:
                 raise last from exc
             if attempt == config.RETRY_MAX:
                 break

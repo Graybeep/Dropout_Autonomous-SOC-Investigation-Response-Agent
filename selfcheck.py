@@ -281,18 +281,20 @@ def offline_selfcheck() -> int:
 
 
     # -- transport: which failures are worth retrying ---------------------
-    section("transient vs permanent HTTP failures")
+    section("retry policy")
     from soc_agent import llm as _llm
-    check("a body-read 400 is treated as transient",
-          _llm._is_transient_400("Could not read the request body."))
-    check("a validation 400 is NOT retried",
-          not _llm._is_transient_400(
-              "The model rejected this request. a parameter is invalid"))
-    check("an unknown-model 400 is NOT retried",
-          not _llm._is_transient_400("The requested model does not exist."))
-    check("insufficient-credits is NOT treated as a body-read failure",
-          not _llm._is_transient_400("Insufficient credits. Please top up."))
-
+    check("429 is retried (the one 4xx that means try again)",
+          429 in _llm.RETRY_STATUS)
+    check("5xx are retried",
+          all(c in _llm.RETRY_STATUS for c in (500, 502, 503, 504, 529)))
+    check("400 is NEVER retried - replaying it cannot succeed",
+          400 not in _llm.RETRY_STATUS)
+    check("408 is NEVER retried despite being a timeout",
+          408 not in _llm.RETRY_STATUS)
+    check("429 is the ONLY retryable 4xx",
+          {c for c in _llm.RETRY_STATUS if 400 <= c < 500} == {429})
+    check("the transient-400 special case is gone",
+          not hasattr(_llm, "_is_transient_400")),
 
     # -- the other two negatives are universal too -------------------------
     section("negative-factor scope guards")
@@ -414,6 +416,33 @@ def offline_selfcheck() -> int:
                      "rationale": "r"}]})
     check("logs_consistent stays exempt in correlated cases",
           pos["status"] == "accepted")
+
+    # -- the refuse/resubmit cycle is bounded ------------------------------
+    section("bounded refusal loop")
+    control.reset_sandbox()
+    tr_i = trace_mod.Trace(case_id="CASE-IMP", scenario="imp")
+    bus_i = ToolBus(tr_i, {"case_id": "CASE-1001", "alert_id": "ALERT-1001",
+                           "asset_id": "SRV-WEB-01"})
+    doomed = {"hypothesis": "h", "sufficiency": "s", "factors": [
+        {"factor": "related_alert_corroborates", "citation": "none recorded",
+         "rationale": "r"}]}
+    outcomes = [bus_i.invoke("submit_assessment", dict(doomed))["status"]
+                for _ in range(config.MAX_ASSESSMENT_REJECTIONS + 1)]
+    check("the first N resubmissions are refused",
+          outcomes[:config.MAX_ASSESSMENT_REJECTIONS]
+          == ["rejected"] * config.MAX_ASSESSMENT_REJECTIONS)
+    check("the loop terminates at the bound instead of arguing forever",
+          outcomes[-1] == "accepted")
+    check("the impasse is recorded, not silently swallowed",
+          bus_i.impasse is not None
+          and "related_alert_corroborates" in bus_i.impasse["dropped_factors"])
+    check("the unresolved objection is kept on the record",
+          bool(bus_i.impasse.get("unresolved")))
+    check("an impasse that drops everything scores the bare base",
+          confidence.score(bus_i.assessment["factors"]).score == confidence.BASE)
+    check("the impasse surfaces in the trace as its own step",
+          any(s["kind"] == trace_mod.ERROR and s.get("status") == "impasse"
+              for s in tr_i.steps))
 
     # -- action policy ---------------------------------------------------
     section("action policy (section 7.3)")

@@ -103,6 +103,26 @@ def render(case: Case, tr: trace_mod.Trace, scenario_title: str = "") -> str:
         A("*(no tool calls recorded)*")
     A("")
 
+    impasses = [s for s in steps if s["kind"] == trace_mod.ERROR
+                and s.get("status") == "impasse"]
+    if impasses:
+        A("### Impasse")
+        A("")
+        for s in impasses:
+            r = s.get("result") or {}
+            A(f"- {s.get('detail','')}")
+            if r.get("dropped_factors"):
+                A(f"  - Factors dropped: "
+                  f"{', '.join('`'+f+'`' for f in r['dropped_factors'])}")
+            for u in r.get("unresolved", []):
+                A(f"  - *Unresolved objection:* {u}")
+        A("")
+        A("*The conclusion below was scored on what survived. The objections "
+          "above were not resolved - they are recorded rather than argued "
+          "further, because an unbounded refuse/resubmit cycle grows the "
+          "conversation without adding evidence.*")
+        A("")
+
     sufficiency = [s for s in steps if s["kind"] == trace_mod.SUFFICIENCY]
     if sufficiency:
         A("### Sufficiency assessments")

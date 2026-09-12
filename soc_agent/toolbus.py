@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import re
 import traceback
 from typing import Any
 
@@ -28,6 +29,7 @@ class ToolBus:
         self.degraded_sources: list[str] = []
         self.attempts: dict[str, int] = {}
         self.assessment: dict[str, Any] | None = None
+        self.impasse: dict[str, Any] | None = None
         # Tools that returned a usable result. Used to enforce factor
         # preconditions when the agent submits its assessment.
         self.ok_tools: set[str] = set()
@@ -42,6 +44,7 @@ class ToolBus:
         # timestamps and any stored verdict. Once these are known, "the
         # relevant window" for logs_clean is no longer this alert's alone.
         self.related_alerts: list[dict[str, Any]] = []
+        self.rejections = 0
 
     # -- introspection used by the harness and the report -------------------
     def called(self, name: str) -> bool:
@@ -76,7 +79,7 @@ class ToolBus:
         # Guardrail 3, structurally: a factor may not be declared from a
         # source that was never successfully read.
         if name == "submit_assessment":
-            from . import confidence
+            from . import config, confidence
             declared = [f.get("factor", "") for f in args.get("factors", [])]
             problems = confidence.check_preconditions(declared, self.ok_tools)
             from . import config, sandbox
@@ -91,10 +94,60 @@ class ToolBus:
                 declared, case_alert, self.packet_alerts, self.log_windows,
                 alert_rec.get("timestamp"), self.related_alerts)
             if problems:
-                result = {"status": "rejected", "problems": problems,
-                          "detail": "Assessment not accepted. Fix these and resubmit."}
+                self.rejections += 1
+                if self.rejections <= config.MAX_ASSESSMENT_REJECTIONS:
+                    result = {
+                        "status": "rejected", "problems": problems,
+                        "attempt": self.rejections,
+                        "remaining_attempts":
+                            config.MAX_ASSESSMENT_REJECTIONS - self.rejections,
+                        "detail": "Assessment not accepted. Fix these and resubmit.",
+                    }
+                    self.trace.add(trace_mod.TOOL_RESULT, tool=name,
+                                   status="rejected", result=result)
+                    return result
+
+                # Impasse. Stop arguing: drop every factor the guards named,
+                # accept what survives, and put the unresolved objections on the
+                # record. Looping further would only grow the conversation.
+                named = set()
+                for prob in problems:
+                    named.update(re.findall(r"factor '([a-z_]+)'", prob))
+                kept = [f for f in args.get("factors", [])
+                        if f.get("factor") not in named]
+                args = {**args, "factors": kept}
+                self.impasse = {
+                    "after_attempts": self.rejections,
+                    "dropped_factors": sorted(named),
+                    "unresolved": problems,
+                }
+                self.trace.add(
+                    trace_mod.ERROR, tool=name, status="impasse",
+                    detail=(f"Assessment refused {self.rejections} times. Dropping "
+                            f"{', '.join(sorted(named)) or 'no'} factor(s) the guards "
+                            f"rejected and scoring what remains; the objections are "
+                            f"recorded rather than argued further."),
+                    result=self.impasse)
+
+                # Terminal by construction. Accepting here - rather than
+                # re-dispatching - is deliberate: submit_assessment refuses an
+                # empty factor list, so if the guards rejected everything the
+                # agent declared, re-dispatching would refuse again and the loop
+                # would run to the turn cap. An impasse scores what survives
+                # (possibly nothing, i.e. the 0.50 base -> INCONCLUSIVE), which
+                # is the honest outcome when nothing the agent claimed can stand.
+                result = {
+                    "status": "accepted",
+                    "hypothesis": args.get("hypothesis", ""),
+                    "factors": kept,
+                    "sufficiency": args.get("sufficiency", ""),
+                    "disconfirming_evidence_checked":
+                        args.get("disconfirming_evidence_checked", ""),
+                    "impasse": self.impasse,
+                }
+                self.assessment = result
                 self.trace.add(trace_mod.TOOL_RESULT, tool=name,
-                               status="rejected", result=result)
+                               status="accepted", result=result)
                 return result
 
         # The model occasionally emits tool arguments that are not valid JSON;

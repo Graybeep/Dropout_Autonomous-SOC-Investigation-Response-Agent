@@ -62,5 +62,11 @@ MIN_INTERVAL = float(os.environ.get("SOC_MIN_INTERVAL", "3.0"))
 RETRY_MAX = int(os.environ.get("SOC_RETRY_MAX", "5"))
 RETRY_BASE = float(os.environ.get("SOC_RETRY_BASE", "15.0"))
 
+# How many times an assessment may be refused before the bus stops arguing and
+# forces an impasse. An unbounded refuse -> resubmit cycle grows the
+# conversation on every round and is the path by which a guard becomes a
+# context blowout. See Toknow K-4.
+MAX_ASSESSMENT_REJECTIONS = int(os.environ.get("SOC_MAX_REJECTIONS", "3"))
+
 # Hard ceiling on agent loop turns, so a confused model cannot spin forever.
 MAX_TURNS_PER_PHASE = int(os.environ.get("SOC_MAX_TURNS", "14"))
