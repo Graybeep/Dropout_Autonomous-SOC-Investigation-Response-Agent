@@ -1566,3 +1566,130 @@ scenario whose behaviour the guard can change, and the expectation is that case
 A's reconsideration now either declares `logs_consistent` or drops the log factor
 rather than declaring `logs_clean`. Either path reaches `SUCCEEDED`; the factor
 set must be read before the demo rather than during it.
+
+
+---
+
+## Part 16 - Closing out point 3, and two defects found doing it
+
+### K-1 - run_all.py was never the memory problem (measured)
+
+Point 1 was right to demand a measurement rather than an attribution. Sampled RSS
+every 2s across a live scenario: **start 3 MB, peak 32 MB, flat** - against a
+15.3 GB machine at 96% load. The OS kills were genuinely collateral from
+unrelated desktop applications, but that is now measured rather than claimed.
+
+### K-2 - The transient-400 retry was itself a failure-recovery defect
+
+Point 3 was correct. `RETRY_STATUS` is now `(429, 500, 502, 503, 504, 529)`; 429
+is the one retryable 4xx because it explicitly means try again, and 408 is
+excluded. The fix paid off within minutes - a `402 Insufficient credits` failed
+immediately with a clear message instead of ~8 minutes of pointless backoff.
+
+4xx responses now log the full body plus request shape (model, max_tokens,
+message count, tool count, body bytes) rather than a 1200-char slice. **The S4
+400 did not recur across four subsequent full runs**, so candidate (a) - guard
+(b) inflating reconsideration context - remains untested rather than ruled out.
+Stated as untested.
+
+### K-3 - The sandbox lock had a race, found by repeating my own mistake
+
+Verification run B died after scenario 1 with exit 0 and no table. Cause: I ran
+`selfcheck.py` concurrently - the P-017 mistake a second time - **and the guard
+built to prevent exactly that did not stop me**.
+
+`reset_sandbox()` does `rmtree` on `fixtures/run`, which is where the lock lived.
+The lock therefore deleted itself between scenarios, leaving an unlocked window
+in which a concurrent process saw no lock and proceeded. **A lock cannot live in
+the directory it protects.** It now sits at `ROOT/.soc_run.lock`, survives its
+own process's reset, and blocks a second process - verified cross-process.
+
+Three strikes on the same behaviour (P-014, P-017, K-3). The behavioural fix is
+chaining both runs into one command, so there is no window in which running
+something alongside is even possible.
+
+### K-4 - Guard (b) is a fourth family, with three properties worth stating
+
+`check_sibling_verdict_conflict` is split out, being the first guard whose input
+is an **agent conclusion** rather than bookkeeping:
+
+- **order-dependent** - fires only if the sibling concluded first; reverse the
+  order and it is silent
+- **error-propagating** - a sibling that wrongly concluded `SUCCEEDED` constrains
+  this case, inheriting the earlier mistake rather than catching it
+- **SUCCEEDED only** - an `INCONCLUSIVE` sibling does not fire it, *including one
+  that triggered a precautionary block*, because containment under uncertainty is
+  explicitly not a finding of breach (7.3). Verified: `SUCCEEDED` fires;
+  `INCONCLUSIVE`, `FAILED` and unconcluded do not.
+
+Four families ablate independently: preconditions **9**, coverage **2**,
+negative-scope **7**, sibling-verdict **2**, restored **0**.
+
+### K-5 - The refuse/resubmit cycle is bounded
+
+After `MAX_ASSESSMENT_REJECTIONS` (3) the bus stops arguing: it drops every
+factor the guards named, accepts what survives, and records the impasse. Terminal
+by construction - accepting directly rather than re-dispatching, because
+`submit_assessment` refuses an empty factor list and re-dispatching would loop to
+the turn cap. An impasse that drops everything scores the bare 0.50 base, the
+honest outcome when nothing claimed can stand. Reports gained an Impasse section
+so it cannot vanish into a low score.
+
+### K-6 - Point 3 discharged: two consecutive green full runs
+
+Both **51/51**, exit 0, chained in one command with nothing run alongside.
+
+| # | Checks |
+|---|---|
+| 1 | 8/8 |
+| 2 | 7/7 |
+| 3 | 11/11 |
+| 4 | 6/6 |
+| 5 | 9/9 |
+| 6 | 10/10 |
+
+Model is `ling-3.0-flash-fin-free`, not DeepSeek - DeepSeek became credit
+exhausted mid-session (429 Insufficient credits, while the token quota stood at
+99M of 100M, so a per-model limit rather than the account). The guards are
+structural and model-independent, but the traces say Ling.
+
+### K-7 - S5 case A takes the logs_consistent path (read, not assumed)
+
+Point 6. The live trace shows case A reconsidering to `SUCCEEDED` **0.95** via
+`version_in_range + logs_consistent + related_alert_corroborates +
+exfil_indicators` - the wider-margin path, not the 0.80 drop path.
+
+`compliance.py` now asserts **both** honest paths clear 0.75 (0.80 and 0.95), so
+the scenario is no longer sign-flippable, plus a floor on the thinner path's
+margin so a future factor change cannot erode it silently.
+
+**Known limitation found while reading it:** case A declares `exfil_indicators`
+citing **ALERT-5002's** packet record - a sibling's flow. The provenance guard
+requires the case to have *read* its own alert's flow (it did); it does not
+require the *citation* to be that flow. I had described it as the latter. No
+outcome impact - 1.30 and 1.15 both clamp to 0.95. Recorded rather than patched:
+a fifth guard here is unbudgeted risk against a passing suite, and there is
+genuine tension with the campaign framing, which tells the agent to reason about
+the asset rather than the single packet.
+
+### K-8 - Point 7: DEMO.md claims only what the artefacts contain
+
+Checked which refusal scopes actually appear in the committed traces:
+
+| demonstrated live | scenarios |
+|---|---|
+| service coverage | 1, 3, 4, 5 |
+| log window | 6 |
+| precondition | 2, 3, 4, 5, 6 |
+
+**Not present in any trace:** related-alert window, sibling verdict, packet
+provenance. They are verified by `selfcheck.py` and did not need to fire, because
+the agent declared an acceptable factor set first time.
+
+`DEMO.md` says exactly that, and instructs saying *structurally verified, not
+exercised in this run* rather than implying a trace shows them. Asserting a scope
+in the script that is absent from the artefact is precisely the failure point 7
+exists to prevent.
+
+Final: **99/99** behavioural, **22/22** guardrail, six scenarios green on 51
+assertions across two consecutive runs.

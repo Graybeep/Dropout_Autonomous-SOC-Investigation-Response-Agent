@@ -230,6 +230,27 @@ def main() -> int:
            "4: S5's injected exploitation rows all post-date case A's alert",
            f"{len(late)}/{len(_EE)} after {a_ts}")
 
+    # Point 6: S5 case A is no longer sign-flippable. Whichever honest path the
+    # agent takes after reconsidering, it clears the 0.75 threshold - so the
+    # scenario no longer turns on one factor's sign. Measured, not assumed: the
+    # live trace takes the logs_consistent path at 0.95.
+    drop_path = confidence.score([
+        {"factor": f, "citation": "c", "rationale": "r"}
+        for f in ("version_in_range", "packet_benign", "related_alert_corroborates")])
+    keep_path = confidence.score([
+        {"factor": f, "citation": "c", "rationale": "r"}
+        for f in ("version_in_range", "logs_consistent", "packet_benign",
+                  "related_alert_corroborates")])
+    record(drop_path.score >= 0.75 and keep_path.score >= 0.75,
+           "4: S5 case A clears 0.75 on BOTH honest paths (not sign-flippable)",
+           f"drop-the-log-factor {drop_path.score:.2f} (+{drop_path.score-0.75:.2f}), "
+           f"logs_consistent {keep_path.score:.2f} (+{keep_path.score-0.75:.2f})")
+    # The drop path is the thinner of the two; record its margin so a future
+    # factor change that erodes it is visible rather than silent.
+    record(drop_path.score - 0.75 >= 0.05,
+           "4: the thinner S5 path keeps at least a 0.05 margin",
+           f"margin {drop_path.score-0.75:+.2f}")
+
     # Section 4 - exactly six scenarios, no seventh.
     record(len(SCENARIOS) == 6, "4: exactly six scenarios",
            f"found {len(SCENARIOS)}")

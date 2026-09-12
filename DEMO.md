@@ -311,3 +311,47 @@ the first two lines — the refusal is the payload, the setup is not.
 > after checking *some*. The tool never decides whether MySQL 8.0.36 falls inside
 > a range — that comparison is the agent's, and it's the entire point of the
 > design.
+
+---
+
+## The guard families — what the artefacts actually show
+
+Four guard families now exist. **Three are demonstrated live in the committed
+traces; three are verified offline only.** Say it that way — claiming a scope the
+artefact does not contain is the one thing that turns this set piece against you.
+
+**Demonstrated in `traces/` and visible in the reports:**
+
+| scope | refuses | seen in |
+|---|---|---|
+| service coverage | `version_patched` claimed from a subset of the host's KB-covered services | scenarios 1, 3, 4, 5 |
+| log window | `logs_clean` claimed from a window not containing the alert | scenario 6 |
+| precondition | any factor drawn from a source that never returned `ok` | scenarios 2–6 |
+
+**Verified by `selfcheck.py` but NOT present in any trace:** the related-alert
+window, the sibling-verdict conflict, and packet provenance. They did not need to
+fire — the agent declared an acceptable factor set first time. If asked, say
+exactly that: *structurally verified, not exercised in this run.* Do not imply a
+trace shows them.
+
+The one-sentence framing covers all of them regardless:
+
+> Every one of these refuses the **form** of a claim, never its content. The
+> positives are existential and need one witness; the negatives are universal
+> and need a stated scope. The bus never decides what the evidence means.
+
+### If asked about Scenario 5 specifically
+
+> Case A reconsiders and reaches `SUCCEEDED` at 0.95 by declaring
+> `logs_consistent`. It is worth knowing it clears the threshold on the other
+> honest path too — dropping the log factor lands 0.80 — so the case no longer
+> turns on one factor's sign, which is what made it the flakiest scenario
+> earlier. `compliance.py` asserts both paths clear.
+
+**Known limitation, if pressed on the packet factor:** in the current S5 trace
+case A declares `exfil_indicators` citing ALERT-5002's packet record — a sibling
+alert's flow. The provenance guard requires the case to have *read* its own
+alert's flow, which it did; it does not require the *citation* to be that flow.
+No outcome impact (1.30 and 1.15 both clamp to 0.95). Recorded rather than
+patched, because a fifth guard at this stage is unbudgeted risk against a
+passing suite.
