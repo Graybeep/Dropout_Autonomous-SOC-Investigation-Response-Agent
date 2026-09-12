@@ -1300,3 +1300,75 @@ backups.
 
 README and DEMO.md brought current. Remaining effort belongs in rehearsal, not
 in code.
+
+---
+
+## Part 14 — Naming the S5 failure, and taking it off the live path
+
+Two corrections to how the project's own stability was being described. Neither
+changes any code.
+
+### H-1 — "One config line away" is retired as a stability answer
+
+Earlier entries (P-015, Part 6) offered model escalation as the remedy for
+Scenario 5's flake. That framing is withdrawn for the demo. It invites the
+obvious follow-up — *so why didn't you flip it?* — whose honest answer is that
+changing the model invalidates a passing 84/84 suite with no hours left to
+re-verify. That is a resource excuse wearing a robustness costume, and it
+contradicts everything the rest of the suite demonstrates.
+
+The phrase remains accurate in D-002, where it describes the **provider
+abstraction** — a genuine architectural property. It is no longer offered as an
+answer to "how stable is it".
+
+### H-2 — The failure has a name, so use the name
+
+Carrying "green on two consecutive runs" and "failed once in six" in the same
+breath reads as cherry-picking the moment a listener hears both. Stated properly,
+the way the ablation numbers were stated:
+
+**Five of six clean on a full run. The failure was Scenario 5 case A. Here is
+exactly what it did.**
+
+The failing run's declared factors:
+
+| factor | Δ |
+|---|---|
+| `version_in_range` | +0.25 |
+| `logs_clean` | **−0.25** |
+| `packet_benign` | −0.10 |
+| `related_alert_corroborates` | +0.15 |
+| | **0.55** against a 0.75 threshold |
+
+**The factor it declined to declare was `logs_consistent`.** It had re-read the
+logs during reconsideration — verified in the trace at the time — and the result
+contained all three injected exploitation entries: a `UNION SELECT` that
+executed, 38,402 rows returned, 1.7 MB egress to the same source IP. It saw them
+and kept `logs_clean` anyway.
+
+Swapping that one factor, changing nothing else, gives **0.95 `SUCCEEDED`**. A
+0.50 swing on a single sign. No other case in the suite turns on one.
+
+Why it was defensible in isolation: case A is the 05:02 port scan; the
+exploitation is timestamped 07:14 and belongs to the sibling alert — "clean for
+my window". What it missed is that both alerts are one source against one asset.
+That is what the `RELATED_CASE` prompt addition now says.
+
+*Provenance note:* the failing trace itself was overwritten by the re-run before
+being committed, so it is not recoverable from git. The account above rests on
+`/tmp/live2.log` (the three FAIL lines) and the factor-by-factor diagnosis
+recorded in P-015 while the trace was still on disk. Said plainly rather than
+implying a trace exists to hand over.
+
+### H-3 — Scenario 5 is off the live path entirely
+
+`DEMO.md` now fixes the live slot to Scenario **1, 2 or 6** and says why:
+
+- **S1** clamps to 0.05 against the floor,
+- **S2** clamps to 0.95 against the ceiling,
+- **S6** is forced `INCONCLUSIVE` by the degraded-evidence clamp no matter what
+  the agent finds.
+
+None of the three can be moved by a single judgement call. Scenario 5 runs from
+its saved, passing trace — which is what §10 prescribes anyway. The flake risk
+only ever existed if it was volunteered into the live run.

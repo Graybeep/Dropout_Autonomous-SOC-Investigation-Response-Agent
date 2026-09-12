@@ -24,6 +24,22 @@ Have a second terminal ready in the project root.
 python run_all.py 1
 ```
 
+**The live slot is Scenario 1, 2 or 6 — never 3, 4 or 5.** This is a deliberate
+choice, not a preference. Section 10 of the spec says demo from saved replay with
+one live run to prove the loop is real; the live run should therefore be a
+scenario whose outcome is structurally pinned rather than one that turns on a
+judgement call:
+
+| | why it is safe live |
+|---|---|
+| **S1** | `FAILED` at 0.05 — clamped hard against the floor |
+| **S2** | `SUCCEEDED` at 0.95 — clamped hard against the ceiling |
+| **S6** | forced `INCONCLUSIVE` by the degraded-evidence clamp regardless of what the agent finds |
+
+Scenario 5 case A is the one case in the suite whose verdict moves on a single
+factor's sign. It runs from its saved trace, which passed. Do not put it in the
+live slot.
+
 While it runs, say what it is doing: the agent is being handed ten tool schemas
 and is choosing its own calls. Nothing about the order is scripted.
 
@@ -178,8 +194,34 @@ tool rejected the submission, and it resubmitted correctly. That exchange is in
 the trace.
 
 **"Why this model / why not Claude?"**
-See `Toknow/DECISIONS.md` D-002. The architecture is Claude-native tool use; the
-gateway is one config line, and swapping back is `SOC_BASE_URL` + `SOC_MODEL`.
+See `Toknow/DECISIONS.md` D-002. The architecture is Claude-native tool use. The
+account is on a free plan with zero credits, so every Claude model returns
+"Insufficient credits" — verified by probing each one, not assumed. DeepSeek
+v4.1 Flash is the strongest model this key can actually reach: 1M context,
+reasoning-capable.
+
+**"How stable is it, really?"** — answer this with the number, not a hedge.
+
+> Five of six clean on a full run, twice consecutively at the current bar. The
+> one failure was Scenario 5 case A, and I know exactly what happened: the agent
+> re-read the logs, saw all three injected exploitation entries — a UNION SELECT
+> that executed, 38,402 rows returned, 1.7 MB egress — and still declined to
+> swap `logs_clean` for `logs_consistent`. It added the corroboration factor and
+> landed at 0.55 against a 0.75 threshold. That one swap is worth 0.50 and takes
+> it to 0.95.
+
+Then the *why*, which is the interesting half:
+
+> Its reasoning was defensible in isolation. Case A is the 05:02 port scan; the
+> exploitation is timestamped 07:14 and belongs to the sibling alert. "Clean for
+> my window." What it missed is that both alerts are one source against one
+> asset. That is now addressed in the `RELATED_CASE` prompt — judge whether THIS
+> asset was compromised by THIS source, not whether one packet did damage alone.
+
+Do not offer "a stronger model would fix it." It is a resource excuse dressed as
+a robustness story, and it invites "so why didn't you?" — to which the honest
+answer is that changing the model invalidates a passing 84/84 suite with no time
+to re-verify it. Better not to raise it.
 
 ---
 
@@ -240,3 +282,32 @@ Do not volunteer this; it belongs after the set piece, if asked.
 Same shape for the fixtures: injecting a row that implies successful attacker
 activity into a scenario required to start `INCONCLUSIVE` makes `compliance.py`
 fail. Verified for both Scenario 3 and Scenario 5 case A.
+
+### The set piece, as spoken (181 words, ~83s deliberate / ~72s normal)
+
+Timed. Budget is 90s, leaving room for the two follow-ups. If it runs long, cut
+the first two lines — the refusal is the payload, the setup is not.
+
+> This is Scenario 1. A critical-severity SQL injection alert against SRV-WEB-01.
+>
+> Watch what the agent does with that severity label: nothing. It goes and checks.
+>
+> Steps four and five, it pulls the CVE ranges for MySQL and Apache. Step seven,
+> related alerts, no data. Then at step eight it submits its assessment, claiming
+> the host is patched.
+>
+> **And the tool refuses it.**
+>
+> Read the refusal: it claims SRV-WEB-01 is outside ALL affected ranges, but it
+> hasn't looked up OpenSSH — a third service this host runs that the knowledge
+> base covers.
+>
+> Step nine is `get_vulnerabilities` on openssh. Step ten, it resubmits, and that
+> one is accepted. FAILED, confidence 0.95, no action taken.
+>
+> Now — the obvious question is whether the tool just decided the verdict. It
+> didn't. It refused the **form** of the claim, not its content. The agent said
+> "outside all ranges" having checked two of three services. You can't say *all*
+> after checking *some*. The tool never decides whether MySQL 8.0.36 falls inside
+> a range — that comparison is the agent's, and it's the entire point of the
+> design.
