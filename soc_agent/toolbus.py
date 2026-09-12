@@ -38,6 +38,10 @@ class ToolBus:
         # Scope tracking for the universal/provenance guards on the negatives.
         self.packet_alerts: set[str] = set()
         self.log_windows: list[str | None] = []
+        # Related alerts this case has actually been told about, with their
+        # timestamps and any stored verdict. Once these are known, "the
+        # relevant window" for logs_clean is no longer this alert's alone.
+        self.related_alerts: list[dict[str, Any]] = []
 
     # -- introspection used by the harness and the report -------------------
     def called(self, name: str) -> bool:
@@ -85,7 +89,7 @@ class ToolBus:
             alert_rec = sandbox.read_json(config.ALERTS).get(case_alert) or {}
             problems += confidence.check_negative_scope(
                 declared, case_alert, self.packet_alerts, self.log_windows,
-                alert_rec.get("timestamp"))
+                alert_rec.get("timestamp"), self.related_alerts)
             if problems:
                 result = {"status": "rejected", "problems": problems,
                           "detail": "Assessment not accepted. Fix these and resubmit."}
@@ -189,6 +193,19 @@ class ToolBus:
             elif name == "get_server_logs":
                 tr_ = result.get("time_range")
                 self.log_windows.append(None if tr_ in (None, "all") else tr_)
+            elif name == "get_related_alerts":
+                for rel in result.get("related_alerts") or []:
+                    al = rel.get("alert") or {}
+                    sc = rel.get("stored_conclusion") or {}
+                    if not al.get("id"):
+                        continue
+                    if any(r["id"] == al["id"] for r in self.related_alerts):
+                        continue
+                    self.related_alerts.append({
+                        "id": al["id"], "timestamp": al.get("timestamp"),
+                        "case_id": rel.get("case_id"),
+                        "outcome": sc.get("outcome"),
+                    })
 
         if name == "submit_assessment" and result.get("status") == "accepted":
             self.assessment = result

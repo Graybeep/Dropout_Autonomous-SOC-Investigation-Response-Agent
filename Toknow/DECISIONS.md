@@ -1372,3 +1372,79 @@ implying a trace exists to hand over.
 None of the three can be moved by a single judgement call. Scenario 5 runs from
 its saved, passing trace — which is what §10 prescribes anyway. The flake risk
 only ever existed if it was volunteered into the live run.
+
+---
+
+## Part 15 — logs_clean scope in correlated cases (live verification PENDING)
+
+### J-1 — Precheck: timestamps are already available
+
+`get_related_alerts` returns the full alert record, `timestamp` included, so the
+guard needs no second lookup per related alert. Cheaper than estimated.
+
+### J-2 — The specified guard alone would NOT have caught the observed failure
+
+Checked before building. The passing S5 trace shows case A's reconsideration
+calling `get_server_logs(SRV-WEB-04)` with **no `time_range`** — the whole log.
+P-015 records that the failing run's query *"result contained all three injected
+exploitation entries"*. So coverage was already complete in the failure. Widening
+the required window refuses nothing there.
+
+The observed failure was a **judgement** failure, not a scope failure: the agent
+read the 07:14 rows and decided they belonged to the sibling alert.
+
+So two halves were built, not one:
+
+**(a) Coverage widening** (as specified). Once `get_related_alerts` has returned,
+`logs_clean` requires the queried window union to span the earliest related-alert
+timestamp too. Catches "declared clean from a 05:02-only window while a 07:14
+sibling is known".
+
+**(b) Cross-case contradiction** (the half that bites). If a related alert on the
+same asset carries a stored conclusion of `SUCCEEDED`, and its timestamp falls
+inside the window actually read, `logs_clean` is refused — it contradicts a
+verdict the agent retrieved itself. This is the `CONTRADICTIONS` table extended
+across cases.
+
+Neither reads log content. (a) compares timestamps to a window; (b) compares a
+declared factor against a stored outcome. D-001 holds: the agent still decides
+what the logs show.
+
+### J-3 — Blast radius measured, not assumed
+
+Only `SRV-WEB-04` has sibling alerts. `get_related_alerts` returns `no_data` for
+CASE-1001, CASE-3001 and CASE-5001's initial pass — verified by calling it — so
+S1 and S3 keep declaring `logs_clean` untouched, and S5 case A's
+`initial_outcome=INCONCLUSIVE` assertion is unaffected. The guard engages only in
+case A's *reconsideration*, which is exactly where the flake lived.
+
+### J-4 — Offline evidence complete; live evidence NOT
+
+- **91/91** behavioural checks (7 new, covering both halves plus the
+  "unchanged before `get_related_alerts` returns" control and
+  `logs_consistent` staying exempt).
+- Ablation: `check_negative_scope` no-op now fails **7** distinct checks, up
+  from 3. `check_preconditions` 4, `check_version_patched_coverage` 2, restored 0.
+- **17/17** guardrail checks.
+
+**Live verification did not happen.** Three consecutive runs — two full suites
+and one single scenario — were killed by the OS for low memory. The machine was
+at 97% load with ~0.3 GB free of 15.3 GB, consumed by unrelated desktop
+applications; `run_all.py` is a thin HTTP-bound script and was collateral.
+
+Recorded as PENDING rather than claimed. The required evidence is the two
+consecutive green full runs specified in the review; neither has been obtained.
+
+**State left deliberately:**
+- `traces/` and `reports/` restored to the last fully-verified set, so the viewer
+  and the rehearsed set piece still reflect a real, complete, passing run.
+- `DEMO.md` untouched — the review's precondition for editing it was two green
+  runs, and that precondition is not met.
+- The stale lock from the killed run was cleared by its own pid-liveness check,
+  which is the P-014 guard working under a genuine crash rather than a simulated
+  one.
+
+**To resume:** free memory, then `python run_all.py` twice. If S5 case A's
+reconsideration now refuses a `logs_clean` that previously passed, that is the
+guard working as designed — but it changes what case A declares, and the factor
+set must be re-read before the demo, not during.

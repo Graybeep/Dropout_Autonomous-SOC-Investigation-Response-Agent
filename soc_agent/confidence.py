@@ -162,6 +162,7 @@ def check_negative_scope(
     packet_alerts: set[str] | list[str],
     log_windows: list[str | None],
     alert_ts: str | None,
+    related_alerts: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     """Scope guards for the remaining universal / provenance claims.
 
@@ -178,6 +179,7 @@ def check_negative_scope(
                      sibling alert's record borrowed from a related case.
     """
     problems: list[str] = []
+    related_alerts = list(related_alerts or [])
 
     if "packet_benign" in declared or "exfil_indicators" in declared:
         seen = set(packet_alerts)
@@ -192,15 +194,20 @@ def check_negative_scope(
             )
 
     if "logs_clean" in declared and alert_ts:
-        covered = any(w is None for w in log_windows)
-        for w in log_windows:
-            if not w or "/" not in w:
-                continue
-            start, end = (x.strip() for x in w.split("/", 1))
-            if start <= alert_ts <= end:
-                covered = True
-        if not covered:
-            shown = ", ".join(w for w in log_windows if w) or "none"
+        def _covered(ts: str) -> bool:
+            for w in log_windows:
+                if w is None:            # no time_range -> whole log
+                    return True
+                if "/" not in w:
+                    continue
+                start, end = (x.strip() for x in w.split("/", 1))
+                if start <= ts <= end:
+                    return True
+            return False
+
+        shown = ", ".join(w or "(whole log)" for w in log_windows) or "none"
+
+        if not _covered(alert_ts):
             problems.append(
                 f"factor 'logs_clean' asserts the logs are clean across the "
                 f"relevant window, but no log query you made covers the alert "
@@ -208,6 +215,38 @@ def check_negative_scope(
                 f"get_server_logs over a window that contains the alert, or omit "
                 f"time_range to read the whole log, before claiming it is clean."
             )
+
+        # (a) Once related alerts are known, "the relevant window" is no longer
+        # this alert's window alone - the asset's story spans its siblings too.
+        for rel in related_alerts:
+            rts = rel.get("timestamp")
+            if rts and not _covered(rts):
+                problems.append(
+                    f"factor 'logs_clean' asserts this asset's logs are clean, "
+                    f"but get_related_alerts told you about {rel.get('id')} at "
+                    f"{rts} on the same asset, and no log query you made covers "
+                    f"that time (windows queried: {shown}). Widen the window to "
+                    f"span the related alert, or omit time_range, before calling "
+                    f"the asset clean."
+                )
+
+        # (b) A sibling case that already concluded SUCCEEDED on this asset is a
+        # stored verdict, not an opinion. Declaring the same asset's logs clean
+        # over a window containing that alert contradicts evidence you have read.
+        # This is the CONTRADICTIONS table extended across cases; it inspects a
+        # stored outcome, never log content.
+        for rel in related_alerts:
+            rts, outcome = rel.get("timestamp"), rel.get("outcome")
+            if outcome == SUCCEEDED and rts and _covered(rts):
+                problems.append(
+                    f"factor 'logs_clean' cannot stand: case {rel.get('case_id')} "
+                    f"has already concluded {outcome} for alert {rel.get('id')} "
+                    f"at {rts} on this same asset, and the window you read covers "
+                    f"that time. 'No successful attacker activity' contradicts a "
+                    f"stored verdict you retrieved yourself. Either declare "
+                    f"logs_consistent, or drop the log factor - you cannot call "
+                    f"the asset clean over a period another case found it breached."
+                )
     return problems
 
 

@@ -349,6 +349,72 @@ def offline_selfcheck() -> int:
     check("logs_consistent is existential and needs no window proof",
           pos["status"] == "accepted")
 
+
+    # -- logs_clean scope widens once siblings are known -------------------
+    section("logs_clean in correlated cases")
+    from scenarios.definitions import ALERT_5002 as _A5002, EXPLOIT_ENTRIES as _EE
+
+    def _s5_bus(window, sibling_outcome, call_related=True):
+        control.reset_sandbox()
+        control.inject_alert(_A5002, {"asset_id": "SRV-WEB-04", "entries": _EE})
+        cases = sandbox.read_json(config.CASES)
+        cases["CASE-5002"] = {"case_id": "CASE-5002", "alert_id": "ALERT-5002",
+                              "asset_id": "SRV-WEB-04", "src_ip": "192.0.2.66",
+                              "status": "CONCLUDED", "outcome": sibling_outcome,
+                              "confidence": 0.95, "summary": "s",
+                              "concluded_at": "x"}
+        sandbox.write_json(config.CASES, cases)
+        tr_s = trace_mod.Trace(case_id="CASE-5001", scenario="s5")
+        b = ToolBus(tr_s, {"case_id": "CASE-5001", "alert_id": "ALERT-5001",
+                           "asset_id": "SRV-WEB-04"})
+        a = {"asset_id": "SRV-WEB-04", "reason": "x"}
+        if window:
+            a["time_range"] = window
+        b.invoke("get_server_logs", a)
+        if call_related:
+            b.invoke("get_related_alerts", {"asset_id": "SRV-WEB-04", "reason": "x"})
+        return b.invoke("submit_assessment", {
+            "hypothesis": "h", "sufficiency": "s",
+            "factors": [{"factor": "logs_clean", "citation": "c",
+                         "rationale": "r"}]})
+
+    narrow = _s5_bus("2026-09-11T04:30:00Z/2026-09-11T05:30:00Z", "INCONCLUSIVE")
+    check("logs_clean refused when the window misses a known sibling alert",
+          narrow["status"] == "rejected")
+    check("that refusal names the sibling alert",
+          "ALERT-5002" in " ".join(narrow.get("problems", [])))
+
+    wide = _s5_bus(None, "INCONCLUSIVE")
+    check("logs_clean accepted when the window spans the sibling too",
+          wide["status"] == "accepted")
+
+    breached = _s5_bus(None, "SUCCEEDED")
+    check("logs_clean refused when a sibling case already concluded SUCCEEDED",
+          breached["status"] == "rejected")
+    check("that refusal cites the sibling's stored verdict",
+          "CASE-5002" in " ".join(breached.get("problems", [])))
+
+    unrelated = _s5_bus(None, "SUCCEEDED", call_related=False)
+    check("behaviour unchanged before get_related_alerts has returned",
+          unrelated["status"] == "accepted")
+
+    # The positive twin stays existential.
+    control.reset_sandbox()
+    control.inject_alert(_A5002, {"asset_id": "SRV-WEB-04", "entries": _EE})
+    tr_x = trace_mod.Trace(case_id="CASE-5001", scenario="s5")
+    bx = ToolBus(tr_x, {"case_id": "CASE-5001", "alert_id": "ALERT-5001",
+                        "asset_id": "SRV-WEB-04"})
+    bx.invoke("get_server_logs", {
+        "asset_id": "SRV-WEB-04",
+        "time_range": "2026-09-11T04:30:00Z/2026-09-11T05:30:00Z", "reason": "x"})
+    bx.invoke("get_related_alerts", {"asset_id": "SRV-WEB-04", "reason": "x"})
+    pos = bx.invoke("submit_assessment", {
+        "hypothesis": "h", "sufficiency": "s",
+        "factors": [{"factor": "logs_consistent", "citation": "c",
+                     "rationale": "r"}]})
+    check("logs_consistent stays exempt in correlated cases",
+          pos["status"] == "accepted")
+
     # -- action policy ---------------------------------------------------
     section("action policy (section 7.3)")
     check("SUCCEEDED -> block",
