@@ -465,3 +465,56 @@ into a verdict does not.
   path is one config line.
 - **`nemotron-3.5-lightning-free` is unusable** for this workload — it returned
   responses with no `choices` key when handed tool schemas.
+
+---
+
+## Part 4 — Viewer verification
+
+The Chrome extension was not connected in this environment, so the viewer was
+verified by driving **headless Chrome directly** (`--headless=new --screenshot`
+and `--dump-dom`) against the local server, and reading the resulting images.
+Four real defects were found that no amount of JS syntax checking would have
+caught:
+
+### V-001 — The viewer opened as a blank page
+The default state was `reveal(0)` — zero steps visible, ready for **Play**. But
+hidden steps still occupy layout, so a judge opening the page saw a header, a
+summary card, and then several thousand pixels of nothing. It looked broken.
+
+**Fix:** load reveals the whole trace; **Play** restarts the animation from the
+top. The demo affordance is preserved without the page looking dead on arrival.
+
+### V-002 — Raw markdown in the agent's prose
+The model writes `**bold**`, `` `code` `` and `## headings` in its reasoning.
+The viewer escaped and printed them literally, so the most-read text in the
+trace was full of asterisks and backticks.
+
+**Fix:** a four-line `md()` that renders bold, inline code and headings —
+applied **after** escaping, so nothing in a tool result can become markup.
+
+### V-003 — `submit_assessment` drowned the timeline
+Its call signature carries the full hypothesis, every citation, the sufficiency
+text and the disconfirmation text — wrapping over four dense lines. All of it is
+already rendered properly by the scoring and conclusion cards a few steps later.
+
+**Fix:** show only the factor names for that one tool, and suppress the
+`Why:` line for it (it has no `reason` parameter by design).
+
+### V-004 — The reconsideration trigger was printed twice
+The control plane logs the trigger as an `EVENT`, and `reconsider()` logs it
+again on the fork card. Both rendered, with identical text.
+
+**Fix:** `paint()` skips an `event` step when the next step is a `reconsider`
+carrying the same detail.
+
+### Also added
+`viewer.html#3` deep-links straight to a scenario, so a demo can jump to one
+without touching the dropdown — and so headless screenshots could target each
+scenario in the first place.
+
+**Verified visually:** scenarios 1, 3 and 6 end to end — the state-machine
+phases, tool calls with their stated reasons, `no_data` and `unavailable` pills,
+the scoring table with coloured deltas and citations, the amber degraded-evidence
+ceiling note, the purple reconsideration fork with prior/new side by side, and
+the precautionary block with its disk verification. The renderer was also run
+over **all 335 trace steps** across all six traces with zero failures.
