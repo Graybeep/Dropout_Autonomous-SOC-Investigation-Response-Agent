@@ -180,3 +180,48 @@ the trace.
 **"Why this model / why not Claude?"**
 See `Toknow/DECISIONS.md` D-002. The architecture is Claude-native tool use; the
 gateway is one config line, and swapping back is `SOC_BASE_URL` + `SOC_MODEL`.
+
+---
+
+## Rehearsed set piece — the guard refusal (know this cold)
+
+**Where:** `reports/CASE-1001.md`, section 2, steps **8–10**. Scenario 1.
+Do not go looking for this live; it is here because it is the strongest single
+artefact for the autonomy and verification criteria.
+
+The agent submitted its assessment claiming `version_patched`. The bus refused:
+
+> **Refused:** factor `version_patched` claims SRV-WEB-01 is outside ALL
+> affected ranges, but you have not looked up **openssh** — service(s) this host
+> runs that the CVE knowledge base covers.
+
+The very next step is `get_vulnerabilities(service_name='openssh')`, then a
+corrected resubmission that is accepted. Both the refusal and the correction are
+steps in the evidence chain.
+
+### The one sentence, if asked "isn't the bus deciding the verdict?"
+
+> No — the bus refused the **form** of the claim, not its content. The agent said
+> the host was outside *all* CVE ranges having looked up only two of its three
+> services; you cannot say "all" after checking "some". The bus never decides
+> whether MySQL 8.0.36 falls inside a range — that comparison is the agent's, and
+> it is the whole point of §5.1.
+
+### Two follow-ups to have ready
+
+**"Doesn't naming the missing service hand it the answer?"**
+It names which *source* is unread, never what that source will say. The agent
+still had to fetch OpenSSH's CVE ranges and decide 8.9p1 was outside them. And
+the hint is disclosed in the report rather than hidden, which is why the chain
+reads honestly.
+
+**"Why not just check the signature's service?"**
+That would be a hardcoded signature→service mapping — Python encoding detection
+knowledge, which is the D-001 violation. Exhaustive coverage encodes none: it is
+a statement about universal versus existential claims. `version_in_range` is
+existential and deliberately exempt.
+
+### Backup artefact
+`reports/CASE-3001.md` has a precondition refusal (`related_alert_corroborates`
+claimed from a lookup that returned no data) with the same shape, if Scenario 1
+is not the one on screen.

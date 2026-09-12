@@ -24,8 +24,38 @@ from soc_agent import config, control, llm, report, sandbox, trace as trace_mod
 from scenarios.definitions import SCENARIOS
 
 
+def _scoped(tr, phase: str = "any", case_id: str | None = None):
+    """Steps narrowed to a case and, optionally, to before its first conclusion."""
+    steps = [s for s in tr.steps
+             if case_id is None or s.get("case_id") == case_id]
+    if phase == "pre_conclusion":
+        for i, s in enumerate(steps):
+            if s["kind"] == "conclusion":
+                return steps[:i]
+    return steps
+
+
+def _calls(tr, tool: str, phase: str = "any", case_id: str | None = None) -> int:
+    return sum(1 for s in _scoped(tr, phase, case_id)
+               if s["kind"] == "tool_call" and s.get("tool") == tool)
+
+
+def _gathered_after_reconsider(tr, case_id: str | None = None) -> int:
+    """Tool calls made AFTER a reconsideration trigger.
+
+    Section 6.1: re-entering at HYPOTHESIZE is only meaningful if the agent
+    actually gathers something new. Re-scoring the evidence it already had is
+    the weak-adaptation failure the design exists to prevent.
+    """
+    steps = _scoped(tr, "any", case_id)
+    for i, s in enumerate(steps):
+        if s["kind"] == "reconsider":
+            return sum(1 for t in steps[i + 1:] if t["kind"] == "tool_call")
+    return 0
+
+
 def _tool_args_called(tr, tool: str, key: str, value: str,
-                      phase: str = "any") -> bool:
+                      phase: str = "any", case_id: str | None = None) -> bool:
     """Was `tool` called with `key`=`value`? Order within the phase is irrelevant.
 
     phase="pre_conclusion" restricts the search to steps before the FIRST
@@ -34,12 +64,7 @@ def _tool_args_called(tr, tool: str, key: str, value: str,
     had already concluded `FAILED` from tomcat alone. A whole-trace search
     passes that trace; a pre-conclusion search fails it, which is the point.
     """
-    steps = tr.steps
-    if phase == "pre_conclusion":
-        for i, s in enumerate(steps):
-            if s["kind"] == "conclusion":
-                steps = steps[:i]
-                break
+    steps = _scoped(tr, phase, case_id)
     return any(s["kind"] == "tool_call" and s.get("tool") == tool
                and str((s.get("args") or {}).get(key, "")).lower() == value.lower()
                for s in steps)
@@ -82,9 +107,25 @@ def _check(scenario, result, tr=None) -> list[tuple[bool, str]]:
         for spec in exp.expected_tool_args:
             tool, key, value = spec[0], spec[1], spec[2]
             phase = spec[3] if len(spec) > 3 else "any"
+            cid = spec[4] if len(spec) > 4 else None
             when = " before concluding" if phase == "pre_conclusion" else ""
-            checks.append((_tool_args_called(tr, tool, key, value, phase),
-                           f"{tool}({key}={value!r}) was called{when}"))
+            where = f" in {cid}" if cid else ""
+            checks.append((_tool_args_called(tr, tool, key, value, phase, cid),
+                           f"{tool}({key}={value!r}) was called{when}{where}"))
+
+        # Minimum call counts, phase-scoped. Scenario 6's retry is only a retry
+        # if both attempts happen before it concludes.
+        for tool, count, phase in exp.min_calls:
+            got = _calls(tr, tool, phase)
+            when = " before concluding" if phase == "pre_conclusion" else ""
+            checks.append((got >= count,
+                           f"{tool} called >={count}x{when} (got {got})"))
+
+        if exp.gather_after_reconsider:
+            got = _gathered_after_reconsider(tr, case.case_id)
+            checks.append((got > 0,
+                           f"gathered NEW evidence after reconsidering "
+                           f"({got} tool calls, not a bare re-score)"))
 
     # Assert the reasoning path, not only the final number: the first
     # conclusion and the findings that had to be established.

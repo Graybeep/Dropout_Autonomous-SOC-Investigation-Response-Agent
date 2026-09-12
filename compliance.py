@@ -167,6 +167,32 @@ def main() -> int:
            f"version_in_range alone scores {lone.score} -> {lone.outcome}; "
            f"scenarios 3 and 5 assert initial_outcome=INCONCLUSIVE to catch it")
 
+    # Scenarios 3 and 5A must START inconclusive. That is only sound if
+    # `logs_clean` is the ONLY honest reading of their seeded T0 logs. A single
+    # row implying the attack DID something lets the agent declare
+    # logs_consistent (-> 1.00 -> SUCCEEDED at T0) and the scenario has nothing
+    # left to flip to at T1. The assertion in run_all catches that after the
+    # fact; this stops a fixture edit introducing it in the first place.
+    logs = json.loads((ROOT / "fixtures/seed/server_logs.json").read_text(encoding="utf-8"))
+    SUCCESS_MARKERS = ("rows_sent:", "mysqldump", "curl -t", "create user",
+                       "grant all", "bytes sent", "union select")
+    BENIGN_MARKERS = ("403", "500", "error", "denied", "refused", "rejected",
+                      "0 rows", "blocked", "baseline", "aborted")
+    for asset, why in (("SRV-APP-03", "Scenario 3 T0"),
+                       ("SRV-WEB-04", "Scenario 5 case A T0")):
+        bad = []
+        for e in logs.get(asset, []):
+            raw = e["raw"].lower()
+            if any(m in raw for m in SUCCESS_MARKERS):
+                bad.append(e["raw"][:70])
+            elif e.get("event_type") == "auth_success" and not any(
+                    m in raw for m in BENIGN_MARKERS):
+                bad.append(e["raw"][:70])
+        record(not bad,
+               f"4: {why} logs imply no successful attacker activity "
+               f"(logs_clean is the only honest reading)",
+               "; ".join(bad))
+
     # Section 4 - exactly six scenarios, no seventh.
     record(len(SCENARIOS) == 6, "4: exactly six scenarios",
            f"found {len(SCENARIOS)}")

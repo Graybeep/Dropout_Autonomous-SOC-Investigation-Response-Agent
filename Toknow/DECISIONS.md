@@ -1133,3 +1133,94 @@ alert's flow; whether that flow shows exfiltration remains its judgement.
 found by reading traces and citations, never by the pass/fail table. The
 assertions have caught genuine regressions since, but they cannot see a factor
 that is defensible in isolation and wrong in its accounting.
+
+---
+
+## Part 12 — Post-verification follow-up
+
+Five further points, each verified before acting. Two found real problems.
+
+### F-1 — The fixture half was NOT sound (fixed)
+
+The assertion catches a T0 `SUCCEEDED`; it does not prevent one. Checked whether
+`logs_clean` is genuinely the only honest T0 reading:
+
+- **Scenario 5 case A: sound.** Every seeded row is `Access denied` /
+  `connection refused` / a benign GET. Nothing to read as success.
+- **Scenario 3: NOT sound.** The last T0 row was
+  `01:12:15 sshd: Accepted password for svc_app from 10.20.3.33` — a *successful*
+  authentication five minutes after the failed injection. An agent could honestly
+  read that as post-exploitation, declare `logs_consistent`, and reach
+  `0.50 + 0.25 + 0.25 = 1.00 -> SUCCEEDED` at T0. An earlier trace shows the agent
+  explicitly flagging that very line as something it needed to resolve.
+
+`svc_app` is load-bearing for T1 (the lateral movement reuses it), so the row
+could not simply be deleted. It is now unambiguous instead:
+
+> `sshd: Accepted publickey for svc_app from 10.20.0.9 port 44120 - scheduled
+> report-generation job, matches 30-day baseline for this account`
+
+Same account, now clearly routine at T0, which makes the T1 lateral movement the
+anomaly it was always meant to be.
+
+Recorded as an S1-style automated invariant: `compliance.py` fails if any T0 row
+for those two assets contains a success marker (`Rows_sent:`, `mysqldump`,
+`curl -T`, `CREATE USER`, `GRANT`, `bytes sent`, `UNION SELECT`) or an
+unannotated `auth_success`. **Adversarially verified** — injecting a
+`Rows_sent: 4211` row makes the check FAIL, then the fixture is restored.
+
+### F-2 — Phase-blindness audit (two gaps closed)
+
+Every assertion over trace *contents* has P-016's failure mode: the right call at
+the wrong time. Re-scoped all of them, and measured against real traces:
+
+| assertion | result |
+|---|---|
+| S6 `get_server_logs` retry — both attempts pre-conclusion? | **2 of 2** pre-conclusion. Genuine retry, now asserted as `min_calls=[("get_server_logs", 2, "pre_conclusion")]` |
+| S5 `get_related_alerts` pre-conclusion **in case B**? | True — now scoped to `CASE-5002` explicitly, so the correlation cannot be retrospective |
+| S3/S5 — did the T1 flip include NEW tool calls? | S3: **16**, S5: **10**. Asserted via `gather_after_reconsider` |
+
+Negative control on the last one: scenario 2, which has no reconsideration,
+scores **0** — confirming the check is not vacuously positive.
+
+### F-3 — Guards proven load-bearing, not merely wired
+
+`15/15 guardrail passing` only says the guards exist. Monkeypatched each to
+return `[]` and measured which checks break:
+
+| guard no-op'd | failing checks |
+|---|---|
+| `check_preconditions` | 4 |
+| `check_version_patched_coverage` | 2 |
+| `check_negative_scope` | 3 |
+| *(restored)* | **0** |
+
+Each guard maps to its own distinct covering tests. A refactor that silently
+no-ops any one of them now fails loudly.
+
+(First attempt at this used regex source-patching and mis-attributed the failures
+across two guards — the numbers above come from runtime monkeypatching, which is
+precise. Worth recording because the imprecise version looked plausible.)
+
+### F-4 — Superseded rationale: clean, and the real mechanism documented
+
+Audited the codebase for anything crediting the window guard with forcing
+re-gathering. Nothing did. The prompt line telling the agent not to carry forward
+a stale "logs clean" reading is about its *reasoning* and is complementary, not
+duplicative.
+
+But the real mechanism was documented nowhere near where it lives, so a comment
+now sits on the fresh-`ToolBus` line in `reconsider()` explaining that the empty
+`ok_tools` is what makes §6.1's "gather, don't re-score" structural. Proven, not
+asserted: a second bus declaring `logs_clean` without re-calling
+`get_server_logs` is **rejected**.
+
+### F-5 — Rehearsal artefact fixed in advance
+
+`DEMO.md` now pins the exact set piece — `reports/CASE-1001.md` section 2, steps
+8–10 — with the refusal, the `get_vulnerabilities(openssh)` that follows it, the
+accepted resubmission, the one-sentence answer to "isn't the bus deciding the
+verdict?", two follow-ups, and a backup artefact in `CASE-3001.md`. Nothing to
+find live.
+
+Offline after this round: **84/84** behavioural, **17/17** guardrail.

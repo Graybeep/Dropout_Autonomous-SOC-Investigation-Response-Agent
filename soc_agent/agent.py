@@ -420,6 +420,12 @@ def reconsider(inv: Investigation, event: dict[str, Any]) -> Conclusion | None:
         return None
 
     # ---- Everything else re-enters at HYPOTHESIZE (6.1) ------------------
+    # The fresh ToolBus is load-bearing, not bookkeeping. Its `ok_tools` starts
+    # empty, so the factor preconditions force the agent to RE-CALL every
+    # source before it may declare any finding on it - it cannot carry a stale
+    # "logs were clean" reading across the reconsideration boundary. This, not
+    # the logs_clean window guard, is what makes 6.1's "gather, don't re-score"
+    # structural rather than merely requested in the prompt.
     inv.bus = inv._new_bus()
     opening = prompts.reconsider_framing(
         case.case_id, kind, event.get("detail", ""), prior_summary)

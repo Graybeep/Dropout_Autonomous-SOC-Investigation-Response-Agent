@@ -34,6 +34,10 @@ class Expectation:
     expected_tool_args: list[tuple[str, str, str]] = field(default_factory=list)
     initial_outcome: str | None = None
     required_factors: list[str] = field(default_factory=list)
+    # (tool, minimum count, phase) - a retry split across the reconsideration
+    # boundary is not the retry behaviour section 4.6 specifies.
+    min_calls: list[tuple[str, int, str]] = field(default_factory=list)
+    gather_after_reconsider: bool = False
 
 
 @dataclass
@@ -220,6 +224,7 @@ SCENARIOS: dict[str, Scenario] = {
                                 ("get_asset_info", "asset_id", "SRV-DB-09")],
             initial_outcome="INCONCLUSIVE",
             required_factors=["version_in_range"],
+            gather_after_reconsider=True,
             final_status="CONCLUDED",
             notes="Highest-value adaptation demo: must GATHER after the injection."),
     ),
@@ -246,8 +251,10 @@ SCENARIOS: dict[str, Scenario] = {
         expect=Expectation(
             outcome="SUCCEEDED", action_fired=True, reconsideration_fired=True,
             expected_tools=["get_related_alerts", "submit_assessment"],
-            expected_tool_args=[("get_related_alerts", "asset_id", "SRV-WEB-04")],
+            expected_tool_args=[("get_related_alerts", "asset_id", "SRV-WEB-04",
+                                 "pre_conclusion", "CASE-5002")],
             initial_outcome="INCONCLUSIVE",
+            gather_after_reconsider=True,
             final_status="CONCLUDED",
             notes="Two cases, one trace. Case A shows a reconsideration entry."),
     ),
@@ -264,6 +271,7 @@ SCENARIOS: dict[str, Scenario] = {
             expected_tools=["get_server_logs", "get_packet_metadata",
                             "submit_assessment", "block_ip"],
             expected_tool_args=[("get_packet_metadata", "alert_id", "ALERT-6001")],
+            min_calls=[("get_server_logs", 2, "pre_conclusion")],
             required_factors=["version_in_range"],
             final_status="CONCLUDED", precautionary=True,
             notes="Degraded clamp must be cited as the reason for the ceiling."),
