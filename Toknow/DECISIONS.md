@@ -728,3 +728,82 @@ three was diagnosed to a root cause and fixed — none were left as "flaky":
 ~13 minutes for six scenarios (roughly 90-110 model calls), the large majority
 of which is deliberate request pacing and 429 backoff on the free tier rather
 than model latency. `SOC_MIN_INTERVAL` can be lowered on a paid key.
+
+---
+
+## Part 8 — Model upgrade: what the account actually allows
+
+### D-007 — Switched to `deepseek-v4.1-flash-free`
+**Status:** decided, after verifying entitlements rather than assuming them
+
+Asked to move to a stronger model, the first step was establishing what this key
+can actually reach. `GET /v1/me` is definitive:
+
+```
+plan      free
+credit    0.00 IDR ($0.00)
+quota     99,437,623 / 100,000,000 tokens   resets daily 00:00 UTC
+usage     303 requests today, 543 this month, 90.4% success rate
+```
+
+**The plan is free with zero credits.** The daily token quota is generous — all
+of this project's runs together consumed ~1.1M of 100M — but it only covers
+free-tier models.
+
+Note the trap: the `models` array returned by `/v1/me`, and `/v1/models`, are a
+**catalogue, not an entitlement list**. Both cheerfully list `claude-opus-5` and
+`claude-sonnet-5`. Probing each with a 1-token request is the only reliable test.
+
+Every paid model returns `402`/`429 Insufficient credits` — including all five
+Claude models (`claude-sonnet-5`, `claude-opus-5`, `claude-opus-4.8`,
+`claude-opus-4.7`, `claude-fable-5/5.1`). CLAUDE.md §2's actual intent therefore
+remains unreachable, through no choice of the build. If the balance is topped up
+it is a one-line change: `SOC_MODEL=claude-sonnet-5`.
+
+Of the six models carrying a `-free` suffix, only **three** are usable:
+
+| Model | Context | Reasoning | Tool calls | Status |
+|---|---|---|---|---|
+| **deepseek-v4.1-flash-free** | **1,000,000** | **yes** | yes | **selected** |
+| ling-3.0-flash-fin-free | 262,000 | no | yes | previous default |
+| nemotron-3.5-lightning-free | 261,996 | no | yes | usable |
+| glm-5.3-free | — | — | — | 429 insufficient credits |
+| qwen3.8-flash-free | — | — | — | 403 not in plan |
+| muse-spark-1.3-contributor-free | — | — | — | 403 not in plan |
+
+DeepSeek v4.1 Flash is the strongest available on objective metadata: a reasoning
+model with a 1M context against Ling's 262k non-reasoning finance-tuned flash.
+
+### Result: 6/6, and identical verdicts to Ling
+
+| # | Ling 3.0 (run C) | DeepSeek v4.1 |
+|---|---|---|
+| 1 | `FAILED` (0.05) | `FAILED` (0.05) |
+| 2 | `SUCCEEDED` (0.95) | `SUCCEEDED` (0.95) |
+| 3 | `INCONCLUSIVE` (0.40) → `SUCCEEDED` (0.95) | identical |
+| 4 | `SUCCEEDED` (0.95) | identical |
+| 5A | `INCONCLUSIVE` (0.40) → `SUCCEEDED` (0.95) | identical |
+| 5B | `SUCCEEDED` (0.95) | identical |
+| 6 | `INCONCLUSIVE` (0.65, raw 0.90) | identical |
+
+**All seven cases landed on byte-identical outcomes and scores across two
+different models from different families.** That is the strongest evidence yet
+that §7.2 does what it was built for: the model's judgement varies, the
+arithmetic turning judgement into a verdict does not.
+
+Where the stronger model shows is in *efficiency*, not verdicts:
+
+| | Ling 3.0 | DeepSeek v4.1 |
+|---|---|---|
+| rejected assessments (self-corrections needed) | 7 | **2** |
+| scenario 3 tool calls | 39 | **25** |
+| tool-argument errors | 0 | 0 |
+| wall clock, six scenarios | **13 min** | 32 min |
+
+DeepSeek needed a third fewer self-corrections and was substantially more direct
+on the hardest scenario. It is ~2.5x slower in wall clock, being a reasoning
+model — irrelevant for the demo, which replays saved traces.
+
+**Kept as the default** (`SOC_MODEL=deepseek-v4.1-flash-free`): scenario 5 case A
+is the one thin margin in the suite, and fewer wasted turns plus reasoning
+support is worth more than run speed.
