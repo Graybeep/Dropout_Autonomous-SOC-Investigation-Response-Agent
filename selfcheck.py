@@ -18,10 +18,13 @@ is discarded.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from soc_agent import (agent, confidence, config, control, report, sandbox,
                        schemas, tools, trace as trace_mod)
 from soc_agent.toolbus import ToolBus
+
+ROOT = Path(__file__).resolve().parent
 
 PASS, FAIL = "PASS", "FAIL"
 _results: list[tuple[str, str, str]] = []
@@ -509,6 +512,33 @@ def offline_selfcheck() -> int:
           tools.check_firewall_state(ctx, "198.51.100.88")["blocked"] is False)
     check("skip is recorded in the trace",
           any(s["kind"] == trace_mod.ACTION and s.get("skipped") for s in tr2.steps))
+
+    # -- scoring/ reviewer copies -----------------------------------------
+    # scoring/src/*.py are byte copies of files that live elsewhere in the
+    # repo, handed to an external reviewer to read. A copy that drifts from
+    # its original is worse than no copy at all: the reviewer audits code the
+    # agent does not run. Nothing stops an edit to the original from leaving
+    # the copy behind, so the drift is caught here rather than trusted.
+    section("scoring/ reviewer copies match their originals")
+    for rel, original in [("src/agent.py", "soc_agent/agent.py"),
+                          ("src/toolbus.py", "soc_agent/toolbus.py"),
+                          ("src/confidence.py", "soc_agent/confidence.py"),
+                          ("src/run_all.py", "run_all.py"),
+                          ("src/definitions.py", "scenarios/definitions.py")]:
+        copy, src = ROOT / "scoring" / rel, ROOT / original
+        if not copy.exists():
+            check(f"scoring/{rel} present", False, "missing")
+            continue
+        same = copy.read_bytes() == src.read_bytes()
+        check(f"scoring/{rel} is current with {original}", same,
+              "" if same else "STALE - re-copy it")
+
+    # The trace copy is deliberately NOT byte-checked: a live run rewrites
+    # traces/scenario_3.json, so the snapshot is expected to diverge. It is
+    # pinned by the run recorded in scoring/README.md instead.
+    snap = ROOT / "scoring" / "trace_scenario_3.json"
+    check("scoring/trace_scenario_3.json present and parses",
+          snap.exists() and bool(json.loads(snap.read_text(encoding="utf-8")).get("steps")))
 
     # -- report ----------------------------------------------------------
     section("report rendering (section 9)")

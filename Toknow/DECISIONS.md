@@ -1901,3 +1901,63 @@ Stripping tags with no replacement gives 52/52. Worth recording because both
 intermediate results looked like real defects and would have justified "fixing"
 a viewer that was never broken - the same plausible-wrong-answer failure mode
 already logged four times in this project, now five.
+
+---
+
+## Part 19 — scoring/ audit pack (reviewer-facing)
+
+**N-1. Why the folder exists.** A reviewer asked for four artefacts to check
+claims instead of taking them on faith: a full trace (not the cleanest), the
+agent loop source, the guard/ToolBus source, and the harness plus assertion
+file. Built as `scoring/` with a README that answers each question inline.
+
+**N-2. Which trace, and why that one.** Measured refusal density across all six
+before choosing, rather than picking by feel: S1 11 calls/1 refusal, S2 11/2,
+S3 34/3 + reconsideration, S4 12/2, S5 32/2 + 2 cases, S6 13/1. Shipped S3 —
+the least flattering on refusal count, which is the metric the reviewer wanted
+to audit. Shipping S1 would have been the flattering choice and would have made
+the refusal question unanswerable.
+
+**P-020. Copied source can drift from the original it claims to be.** `scoring/src/`
+holds byte copies of files that live elsewhere. Nothing stops an edit to an
+original from leaving the copy stale, and a stale copy is worse than no copy:
+the reviewer audits code the agent does not run. Added five equality checks to
+`selfcheck.py` (99 -> 105 including the trace-present check) and proved they
+fire by appending a line to `scoring/src/toolbus.py`: 104/105, "STALE - re-copy
+it". Restored, 105/105. The trace copy is deliberately NOT byte-checked — a
+live run rewrites `traces/scenario_3.json`, so divergence there is expected, not
+drift; it is pinned by the run named in the README instead.
+
+**N-3. The luck-vs-reasoning question, answered with a real trace.** The ask was
+whether a badly-reasoning trajectory that lands on the right factor by luck
+actually fails the assertions. Rather than construct a strawman, pulled the real
+P-016 trajectory out of `git show ee50c21:traces/scenario_3.json`: correct final
+outcome (SUCCEEDED) reached with a wrong T0 verdict (FAILED where the spec says
+INCONCLUSIVE) and only `tomcat` looked up before concluding, on a SQLi alert
+against a host running mysql 5.7.28 which IS in range.
+`scoring/test_luck_vs_reasoning.py` replays it through `run_all._check` itself,
+no mocking. Result: the old bar passes it 4/4; the current bar fails it on two —
+the phase-scoped `get_vulnerabilities(service_name='mysql')` *before concluding*
+(a whole-trace search does NOT catch it, since the call did eventually happen)
+and `initial_outcome == INCONCLUSIVE`.
+
+**N-4. Reported the assertion that does NOT catch it.** `required factors
+established` passes the bad trajectory. Factor presence alone does not separate
+luck from reasoning; phase scoping and pinned intermediate states do. Said so in
+the README rather than listing only the two that landed.
+
+**N-5. Counted the cheap assertions instead of hand-waving.** First draft of the
+README said "a substantial share of the suite" is coarse. Replaced with a census
+computed from the six shipped traces: 51 live assertions, 30 coarse (58%), 21
+path-pinning (41%); scenario 4 is weakest at one path-pinning check. The census
+runs in the same script so the reviewer can reproduce it. 58% is not a
+flattering number and is stated as the number to discount the pass count by.
+
+**N-6. Made the "guards never read content" claim grep-checkable.** The claim
+was going to be "search for citation, it appears in no guard body" — but
+`confidence.py` returns two hits (a docstring at :286, a pass-through into the
+report inside `score()` at :312). A reviewer running that grep would have found
+them and reasonably concluded the claim was evasive. Rewrote it to name both
+hits and why neither is a guard. Also disambiguated the two pass counts in
+circulation: 51 is the live harness, 105 is offline `selfcheck.py`; they are not
+additive.
