@@ -1874,3 +1874,30 @@ correctly had **no `.env`**. It also revealed `docs/viewer.png` existed locally
 but was uncommitted - the README's lead image would have 404'd for anyone
 cloning. That is exactly the class of failure a cold-start rehearsal exists to
 find, and no amount of local testing would have shown it.
+
+### M-7 - Item 1 completed properly: demand-resolution sweep
+
+The first pass on item 1 checked the CSS rules and stopped there. The instruction
+was to *"check every long-text card at demo resolution, not just that one"*, and
+that was not done - a gap only found by re-auditing the block rather than
+trusting the earlier report.
+
+Done now: every text block over 400 characters, across all six scenarios, at
+**1920x1080** and **1366x768**, compared against the trace source to its final
+character via the rendered DOM.
+
+**52 / 52 intact at both resolutions. No clipping anywhere.**
+
+Two false alarms along the way, both mine:
+
+1. A first comparison reported 6/7 "clipping". The failing block contained
+   `**bold**` and backticked text, which `md()` converts to `<strong>` and
+   `<code>` - my matcher compared against raw markdown and missed.
+2. Correcting that, tags were stripped by replacing them with a *space*, which
+   split contiguous phrases like `` `192.0.2.66`. The case `` and still reported
+   a false positive.
+
+Stripping tags with no replacement gives 52/52. Worth recording because both
+intermediate results looked like real defects and would have justified "fixing"
+a viewer that was never broken - the same plausible-wrong-answer failure mode
+already logged four times in this project, now five.
