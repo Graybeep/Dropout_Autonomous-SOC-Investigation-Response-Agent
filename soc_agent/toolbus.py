@@ -31,6 +31,10 @@ class ToolBus:
         # Tools that returned a usable result. Used to enforce factor
         # preconditions when the agent submits its assessment.
         self.ok_tools: set[str] = set()
+        # Tracked so a universal claim (version_patched) can be checked for
+        # universal coverage. See confidence.check_version_patched_coverage.
+        self.asset_services: dict[str, list[str]] = {}
+        self.services_checked: set[str] = set()
 
     # -- introspection used by the harness and the report -------------------
     def called(self, name: str) -> bool:
@@ -66,9 +70,14 @@ class ToolBus:
         # source that was never successfully read.
         if name == "submit_assessment":
             from . import confidence
-            problems = confidence.check_preconditions(
-                [f.get("factor", "") for f in args.get("factors", [])],
-                self.ok_tools)
+            declared = [f.get("factor", "") for f in args.get("factors", [])]
+            problems = confidence.check_preconditions(declared, self.ok_tools)
+            if "version_patched" in declared:
+                from . import config, sandbox
+                kb = [k for k in sandbox.read_json(config.CVE_KB)
+                      if not k.startswith("_")]
+                problems += confidence.check_version_patched_coverage(
+                    self.asset_services, self.services_checked, kb)
             if problems:
                 result = {"status": "rejected", "problems": problems,
                           "detail": "Assessment not accepted. Fix these and resubmit."}
@@ -158,6 +167,13 @@ class ToolBus:
 
         if result.get("status") == "ok":
             self.ok_tools.add(name)
+            if name == "get_asset_info":
+                a = result.get("asset", {})
+                if a.get("asset_id"):
+                    self.asset_services[a["asset_id"]] = list(
+                        (a.get("service_versions") or {}).keys())
+            elif name == "get_vulnerabilities":
+                self.services_checked.add(str(result.get("service", "")).lower())
 
         if name == "submit_assessment" and result.get("status") == "accepted":
             self.assessment = result

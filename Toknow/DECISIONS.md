@@ -807,3 +807,62 @@ model — irrelevant for the demo, which replays saved traces.
 **Kept as the default** (`SOC_MODEL=deepseek-v4.1-flash-free`): scenario 5 case A
 is the one thin margin in the suite, and fewer wasted turns plus reasoning
 support is worth more than run speed.
+
+---
+
+## Part 9 — Second DeepSeek run, and a universal claim without universal coverage
+
+Second full run on DeepSeek: **6/6, 16 minutes** (half the first run's 32). Six
+of seven cases matched the first run exactly. One did not, and it passed for the
+wrong reason.
+
+### P-016 — `version_patched` asserted from one service out of three
+**Severity:** factually wrong finding; scenario passed anyway, masking it
+
+Scenario 3's **initial** conclusion came back `FAILED (0.05)` rather than the
+specified `INCONCLUSIVE`. The final outcome was still `SUCCEEDED`, so the
+harness passed it — the assertion only covers the final outcome.
+
+The agent had declared `version_patched` (−0.30) citing **tomcat only**:
+
+> "SRV-APP-03 runs tomcat 9.0.50. CVE-2020-1938 affects >=9.0.0,<9.0.31 …
+> 9.0.50 is above the 9.0.31 fix and outside the affected range, so this host is
+> NOT vulnerable to the only Tomcat CVE on record."
+
+Every word of that is true. But the host also runs **mysql 5.7.28**, which is
+inside CVE-2023-21980 (`>=5.7.0,<5.7.30`) — the SQL-injection CVE matching the
+signature that opened the case. The trace confirms only one lookup before
+concluding: `get_vulnerabilities(tomcat)`. It never compared the MySQL version at
+all, on a SQL-injection alert.
+
+**The structural insight.** `version_patched` means *"running version outside
+**ALL** affected ranges"* — a **universal** claim. `version_in_range` means *"falls
+inside **a** CVE's range"* — an **existential** one. A universal claim cannot be
+established from a single service when the host runs several the KB covers; an
+existential claim can be established from exactly one.
+
+That asymmetry is checkable without judging any evidence:
+
+- the bus records which services each asset runs (from `get_asset_info`) and
+  which services were looked up (from `get_vulnerabilities`);
+- `version_patched` is refused while any KB-covered service the host runs has
+  not been looked up, naming the missing ones;
+- `version_in_range` is deliberately **exempt**.
+
+This stays on the right side of D-001. It does not decide whether a version is
+in range — that remains the agent's judgement, and the whole point of §5.1. It
+only refuses a claim about *all* services from someone who looked at *one*.
+
+Verified against the exact live sequence: tomcat-only → **rejected** naming
+`mysql, openssh`; after both lookups → **accepted**; `version_in_range` from a
+single service → **accepted**. Four regression checks added (74/74 offline).
+
+**Cost worth noting:** Scenario 1's host runs apache, mysql and openssh, all
+KB-covered, so claiming `version_patched` there now requires three lookups where
+the agent previously made two. That is the correct bar — "patched" should be
+expensive to assert — but it is added friction on the one scenario that depends
+on that factor.
+
+**Lesson, again:** a green scenario is not proof the reasoning was sound. P-010
+was the same shape, and both were found by reading traces rather than by the
+pass/fail table.

@@ -233,6 +233,42 @@ def offline_selfcheck() -> int:
     check("misspelled parameter error says to correct, not drop",
           "rather than" in typo.get("hint", ""))
 
+
+    # -- version_patched is universal, and needs universal coverage --------
+    section("version_patched coverage")
+    control.reset_sandbox(force=True)
+    tr_v = trace_mod.Trace(case_id="CASE-COV", scenario="cov")
+    bus_v = ToolBus(tr_v, {"case_id": "CASE-COV", "alert_id": "ALERT-3001",
+                           "asset_id": "SRV-APP-03"})
+    bus_v.invoke("get_asset_info", {"asset_id": "SRV-APP-03", "reason": "x"})
+    bus_v.invoke("get_vulnerabilities", {"service_name": "tomcat", "reason": "x"})
+    partial = bus_v.invoke("submit_assessment", {
+        "hypothesis": "h", "sufficiency": "s",
+        "factors": [{"factor": "version_patched", "citation": "tomcat only",
+                     "rationale": "r"}]})
+    check("version_patched refused when a KB-covered service is unchecked",
+          partial["status"] == "rejected")
+    check("the refusal names the unchecked services",
+          "mysql" in " ".join(partial.get("problems", [])))
+    bus_v.invoke("get_vulnerabilities", {"service_name": "mysql", "reason": "x"})
+    bus_v.invoke("get_vulnerabilities", {"service_name": "openssh", "reason": "x"})
+    full = bus_v.invoke("submit_assessment", {
+        "hypothesis": "h", "sufficiency": "s",
+        "factors": [{"factor": "version_patched", "citation": "all three",
+                     "rationale": "r"}]})
+    check("version_patched accepted once every covered service is checked",
+          full["status"] == "accepted")
+    bus_x = ToolBus(tr_v, {"case_id": "CASE-COV2", "alert_id": "ALERT-3001",
+                           "asset_id": "SRV-APP-03"})
+    bus_x.invoke("get_asset_info", {"asset_id": "SRV-APP-03", "reason": "x"})
+    bus_x.invoke("get_vulnerabilities", {"service_name": "mysql", "reason": "x"})
+    exi = bus_x.invoke("submit_assessment", {
+        "hypothesis": "h", "sufficiency": "s",
+        "factors": [{"factor": "version_in_range", "citation": "mysql in range",
+                     "rationale": "r"}]})
+    check("version_in_range is existential and NOT subject to the check",
+          exi["status"] == "accepted")
+
     # -- action policy ---------------------------------------------------
     section("action policy (section 7.3)")
     check("SUCCEEDED -> block",

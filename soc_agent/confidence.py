@@ -121,6 +121,41 @@ def check_preconditions(factor_names: list[str],
     return problems
 
 
+def check_version_patched_coverage(
+    asset_services: dict[str, list[str]],
+    services_checked: set[str] | list[str],
+    kb_services: set[str] | list[str],
+) -> list[str]:
+    """`version_patched` is a UNIVERSAL claim; it needs universal coverage.
+
+    "Running version outside ALL affected ranges" cannot be asserted from one
+    service when the host runs several that the CVE KB covers. `version_in_range`
+    is existential - a single CVE in range establishes it - so it is NOT subject
+    to this check.
+
+    Added after a live run where the agent checked only tomcat 9.0.50 (correctly
+    outside its CVE), declared the host patched, and never compared the same
+    host's mysql 5.7.28 against CVE-2023-21980 - the SQL-injection CVE matching
+    the alert that opened the case.
+    """
+    checked = {s.lower() for s in services_checked}
+    kb = {s.lower() for s in kb_services}
+    problems: list[str] = []
+    for asset_id, services in asset_services.items():
+        covered = {s.lower() for s in services} & kb
+        missing = sorted(covered - checked)
+        if missing:
+            problems.append(
+                f"factor 'version_patched' claims {asset_id} is outside ALL "
+                f"affected ranges, but you have not looked up "
+                f"{', '.join(missing)} - service(s) this host runs that the CVE "
+                f"knowledge base covers. Call get_vulnerabilities for each of "
+                f"them and compare the running version before claiming the host "
+                f"is patched."
+            )
+    return problems
+
+
 def score(
     factors: list[dict[str, Any]],
     degraded_sources: list[str] | None = None,
