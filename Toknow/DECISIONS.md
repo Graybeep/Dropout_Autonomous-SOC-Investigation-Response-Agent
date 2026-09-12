@@ -1041,3 +1041,44 @@ content. The agent still decides which versions are in range, what the logs
 show, and what any of it means.
 
 Offline after this round: **84/84** behavioural, **15/15** guardrail.
+
+### Validation run: 6/6 against a stricter bar, and both new guards fired
+
+| # | Checks (was) | Result |
+|---|---|---|
+| 1 | **8/8** (6) | PASS |
+| 2 | 7/7 | PASS |
+| 3 | **10/10** (6) | PASS |
+| 4 | 6/6 | PASS |
+| 5 | **8/8** (6) | PASS |
+| 6 | **9/9** (7) | PASS |
+
+48 assertions, up from 38, with the additions landing exactly where the review
+aimed them. Scenario 3 now asserts, and passed:
+
+```
+[PASS] get_vulnerabilities(service_name='mysql') was called before concluding
+[PASS] get_asset_info(asset_id='SRV-DB-09') was called
+[PASS] initial outcome 'INCONCLUSIVE' == 'INCONCLUSIVE'
+[PASS] required factors established (missing: none)
+```
+
+**Both new guards fired live, and the agent recovered from each.**
+
+- *Scenario 1, coverage guard:* `version_patched` on SRV-WEB-01 refused while a
+  KB-covered service was unenumerated. The agent completed the coverage and
+  reached `FAILED` legitimately.
+- *Scenario 3, packet provenance:* the agent tried to declare `exfil_indicators`
+  for CASE-3001 **while holding ALERT-2001's packet record** — a different
+  scenario's alert. Precisely the borrowed-flow bug R-2 predicted, caught on its
+  first live outing.
+
+The second is worth dwelling on, because a guard that forces a *wrong* answer
+would be worse than no guard. It did not. Refused, the agent read its own
+alert's flow and declared `packet_benign` (−0.10) — correct, since ALERT-3001's
+flow genuinely is benign (680 bytes, error page). It still reached
+`SUCCEEDED (0.95)`, via `version_in_range + logs_consistent +
+related_alert_corroborates − packet_benign`. The T1 exfiltration evidence lives
+in SRV-DB-09's **logs**, which is where the fixture put it — not in this alert's
+packet flow. The guard removed a factually unsupported +0.15 and the agent
+arrived at the same verdict through evidence it had actually read.
