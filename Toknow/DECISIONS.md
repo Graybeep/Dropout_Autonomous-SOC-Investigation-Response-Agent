@@ -912,3 +912,27 @@ body-read/transport pattern (`could not read the request body`, `connection
 reset`, `timeout`, …); validation 400s, unknown-model 400s and
 insufficient-credits errors are still raised immediately. Four regression checks
 assert exactly that split (78/78 offline).
+
+### Outcome after P-016 / P-017 / P-018
+
+Scenarios 5 and 6 re-run to complete the set; all six now come from post-guard
+code. Every case on its specified trajectory:
+
+| # | Case | Trajectory | Action |
+|---|---|---|---|
+| 1 | CASE-1001 | `FAILED` (0.05) | none |
+| 2 | CASE-2001 | `SUCCEEDED` (0.95) | block_ip |
+| 3 | CASE-3001 | `INCONCLUSIVE` (0.40) → `SUCCEEDED` (0.95) | block_ip |
+| 4 | CASE-4001 | `SUCCEEDED` (0.95) | block_ip → unblock_ip |
+| 5 | CASE-5001 | `INCONCLUSIVE` (0.40) → `SUCCEEDED` (0.95) | block_ip |
+| 5 | CASE-5002 | `SUCCEEDED` (0.95) | block_ip |
+| 6 | CASE-6001 | `INCONCLUSIVE` (0.65, raw 0.90) | block_ip **precautionary** |
+
+**The coverage guard did what it was built for.** Scenario 3's initial verdict is
+back to the specified `INCONCLUSIVE (0.40)` with `version_in_range` — the correct
+finding, since mysql 5.7.28 *is* inside CVE-2023-21980. The trace shows it looked
+up **tomcat and mysql**, where the failing run stopped at tomcat alone. The guard
+did not tell it what to conclude; it refused a universal claim made from partial
+coverage, and the agent went and completed the coverage.
+
+Offline: 78/78 behavioural, 12/12 guardrail.

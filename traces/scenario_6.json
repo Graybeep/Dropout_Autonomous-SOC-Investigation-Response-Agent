@@ -26,7 +26,7 @@
     },
     {
       "seq": 3,
-      "t": 0.002,
+      "t": 0.001,
       "kind": "state_change",
       "case_id": "CASE-6001",
       "state": "HYPOTHESIZE",
@@ -34,7 +34,7 @@
     },
     {
       "seq": 4,
-      "t": 0.002,
+      "t": 0.001,
       "kind": "state_change",
       "case_id": "CASE-6001",
       "state": "GATHER_EVIDENCE",
@@ -42,15 +42,15 @@
     },
     {
       "seq": 5,
-      "t": 7.358,
+      "t": 46.258,
       "kind": "thought",
       "case_id": "CASE-6001",
-      "text": "I'll start by reading the raw alert to understand the claim.",
+      "text": "I'll start by reading the alert record to form a hypothesis.",
       "turn": 1
     },
     {
       "seq": 6,
-      "t": 7.358,
+      "t": 46.258,
       "kind": "tool_call",
       "case_id": "CASE-6001",
       "tool": "get_alert",
@@ -58,11 +58,11 @@
         "alert_id": "ALERT-6001"
       },
       "attempt": 1,
-      "reason": "Need the signature, src/dst, target asset and severity label to form the initial hypothesis about what attack was attempted and what success would look like."
+      "reason": "Read the raw NIDS record to learn the signature, source/destination, target asset, and the sensor's severity label, so I can form a specific hypothesis about what would have to be true for this attack to have succeeded."
     },
     {
       "seq": 7,
-      "t": 7.36,
+      "t": 46.26,
       "kind": "tool_result",
       "case_id": "CASE-6001",
       "tool": "get_alert",
@@ -86,15 +86,15 @@
     },
     {
       "seq": 8,
-      "t": 19.28,
+      "t": 71.489,
       "kind": "sufficiency",
       "case_id": "CASE-6001",
-      "text": "Interesting: the signature is a web-server SQLi signature, but dst_port is 3306 (MySQL) \u2014 so the sensor may have mislabeled the service. Let me form the hypothesis.\n\n**Hypothesis**: A SQL injection using `UNION SELECT` was sent from 203.0.113.150 to SRV-DB-05 on MySQL port 3306. For this to have SUCCEEDED, I need: (a) SRV-DB-05 runs a MySQL version inside a CVE's affected range (or an app-level SQLi that's actually exploitable), (b) host logs showing the malicious query actually executed / rows returned / data modified, (c) packet metadata showing meaningful data returned outbound.\n\n**Falsification**: patched version outside all ranges; logs showing the query errored/denied/returned zero rows; packet flow that's a tiny error-only exchange.\n\nLet me gather the independent sources in parallel.",
+      "text": "The alert is a SQL injection attempt (UNION SELECT) against SRV-DB-05 on port 3306 (MySQL). The \"high\" label is the sensor's opinion only.\n\n**Hypothesis:** For this attack to have SUCCEEDED, three things must hold:\n1. SRV-DB-05 must be running a MySQL version that is actually vulnerable (inside a CVE's affected range) \u2014 or at minimum the app endpoint must be injectable.\n2. Host logs must show the injected query actually executing / returning data.\n3. Packet metadata must show data flowing back out (exfil) rather than a small error response.\n\n**Falsifiers:** If the running version is outside all affected ranges \u2192 not vulnerable. If logs show the query erroring out or zero rows \u2192 failed. If packet metadata shows only a tiny error response \u2192 failed.\n\nLet me gather the independent facts in parallel.",
       "turn": 2
     },
     {
       "seq": 9,
-      "t": 19.28,
+      "t": 71.489,
       "kind": "tool_call",
       "case_id": "CASE-6001",
       "tool": "get_asset_info",
@@ -102,11 +102,11 @@
         "asset_id": "SRV-DB-05"
       },
       "attempt": 1,
-      "reason": "Need the actual running service versions on the target to compare against CVE affected ranges - this is the only way to determine real vulnerability rather than trusting the label."
+      "reason": "Need the actual running MySQL version on SRV-DB-05 to compare against CVE affected ranges. This is the first half of the vulnerability join."
     },
     {
       "seq": 10,
-      "t": 19.282,
+      "t": 71.492,
       "kind": "tool_result",
       "case_id": "CASE-6001",
       "tool": "get_asset_info",
@@ -130,7 +130,7 @@
     },
     {
       "seq": 11,
-      "t": 19.283,
+      "t": 71.492,
       "kind": "tool_call",
       "case_id": "CASE-6001",
       "tool": "get_vulnerabilities",
@@ -138,11 +138,11 @@
         "service_name": "mysql"
       },
       "attempt": 1,
-      "reason": "To get the affected_versions ranges for MySQL CVEs so I can compare against whatever version SRV-DB-05 actually runs."
+      "reason": "Get the CVE affected_versions ranges for MySQL so I can compare the running version against them myself - the KB does not know what the host runs."
     },
     {
       "seq": 12,
-      "t": 19.284,
+      "t": 71.493,
       "kind": "tool_result",
       "case_id": "CASE-6001",
       "tool": "get_vulnerabilities",
@@ -173,7 +173,7 @@
     },
     {
       "seq": 13,
-      "t": 19.284,
+      "t": 71.493,
       "kind": "tool_call",
       "case_id": "CASE-6001",
       "tool": "get_packet_metadata",
@@ -181,11 +181,11 @@
         "alert_id": "ALERT-6001"
       },
       "attempt": 1,
-      "reason": "To see bytes in each direction and exfil indicators - distinguishes an error page/tiny rejection from a large result set actually being returned."
+      "reason": "Check bytes in each direction and the exfil_indicators flag to tell an injection that returned an error page from one that shipped data out."
     },
     {
       "seq": 14,
-      "t": 19.286,
+      "t": 71.495,
       "kind": "tool_result",
       "case_id": "CASE-6001",
       "tool": "get_packet_metadata",
@@ -210,26 +210,26 @@
     },
     {
       "seq": 15,
-      "t": 19.286,
+      "t": 71.495,
       "kind": "tool_call",
       "case_id": "CASE-6001",
       "tool": "get_server_logs",
       "args": {
         "asset_id": "SRV-DB-05",
-        "time_range": "2026-09-11T06:00:00Z/2026-09-11T07:00:00Z"
+        "time_range": "2026-09-11T05:45:00Z/2026-09-11T06:45:00Z"
       },
       "attempt": 1,
-      "reason": "Primary source on whether the injected query actually executed on the host - rows returned, process spawns, auth events."
+      "reason": "Look for the actual injected query in host-side logs - whether it executed, returned rows, or errored out. Primary evidence of whether the attack did anything."
     },
     {
       "seq": 16,
-      "t": 19.286,
+      "t": 71.495,
       "kind": "tool_failure",
       "case_id": "CASE-6001",
       "tool": "get_server_logs",
       "args": {
         "asset_id": "SRV-DB-05",
-        "time_range": "2026-09-11T06:00:00Z/2026-09-11T07:00:00Z"
+        "time_range": "2026-09-11T05:45:00Z/2026-09-11T06:45:00Z"
       },
       "attempt": 1,
       "result": {
@@ -241,7 +241,7 @@
     },
     {
       "seq": 17,
-      "t": 19.286,
+      "t": 71.495,
       "kind": "tool_call",
       "case_id": "CASE-6001",
       "tool": "get_related_alerts",
@@ -249,11 +249,11 @@
         "asset_id": "SRV-DB-05"
       },
       "attempt": 1,
-      "reason": "To check whether this asset has a history (prior attacks, prior conclusions) that changes how I read this alert."
+      "reason": "Check whether this asset has a history of other alerts/conclusions that changes how I read this one."
     },
     {
       "seq": 18,
-      "t": 19.288,
+      "t": 71.496,
       "kind": "tool_result",
       "case_id": "CASE-6001",
       "tool": "get_related_alerts",
@@ -266,34 +266,34 @@
     },
     {
       "seq": 19,
-      "t": 25.488,
+      "t": 98.088,
       "kind": "sufficiency",
       "case_id": "CASE-6001",
-      "text": "Key facts so far:\n\n- **Version check**: SRV-DB-05 runs `mysql 5.7.22`. CVE-2023-21980 affects `>=5.7.0,<5.7.30` and is an `sql_injection` class permitting \"arbitrary read of arbitrary tables by an unauthenticated remote attacker\". **5.7.22 is inside that range** \u2192 this host IS vulnerable to the exact attack class in the alert. CVE-2022-21444 affects `>=8.0.0,<8.0.30` \u2014 5.7.22 is not in that range, but it's a DoS class anyway and irrelevant here.\n- **Packets**: 2,680 bytes out, **3,284,119 bytes (3.1 MB) returned to an external host** over 52s, entropy 7.9, `exfil_indicators: true`, off-hours. That is a very strong exfiltration signal, not an error page.\n- **Server logs**: `unavailable` \u2014 a tool failure, NOT absence of evidence. I must retry once as instructed.\n- **Related alerts**: `no_data` \u2014 this asset has no corroborating history; I must not cite a corroborating factor for an empty lookup.\n\nLet me retry the log query.",
+      "text": "Key results so far:\n\n**Version join \u2014 SRV-DB-05 runs MySQL 5.7.22:**\n- CVE-2023-21980 affects `>=5.7.0,<5.7.30` \u2192 **5.7.22 IS inside this range**. This CVE is exactly `sql_injection` with \"arbitrary read of arbitrary tables by an unauthenticated remote attacker\" \u2014 a perfect match for a UNION SELECT injection.\n- CVE-2022-21444 affects `>=8.0.0,<8.0.30` \u2192 5.7.22 is outside (different major line, and it's DoS-only anyway).\n- So the host **IS vulnerable** to the SQL-injection CVE. The last patch date was 2024-06-02, but 5.7.30 shipped well before that \u2014 yet the running version is still 5.7.22, so the patch clearly did not address this. The version fact stands on its own.\n\n**Packet metadata \u2014 strong exfil signal:** 2,680 bytes in, **3,284,119 bytes back out** over 52 seconds, entropy 7.9, `exfil_indicators: true`, anomalies `mysql_response_size_outlier` and `sustained_egress_off_hours`. This is not an error page \u2014 3.1 MB returned to an external host.\n\n**Server logs \u2014 TOOL FAILURE** (collector timeout, attempt 1). Per discipline, this is a gap, not evidence of absence. I must retry once.\n\n**Related alerts \u2014 genuine `no_data`**: no other alerts on this asset. That establishes nothing corroborating, so I will not cite `related_alert_corroborates`.\n\nLet me retry the log query (alternate narrower window) \u2014 this is the one remaining source that speaks to whether the query actually executed.",
       "turn": 3
     },
     {
       "seq": 20,
-      "t": 25.488,
+      "t": 98.088,
       "kind": "tool_call",
       "case_id": "CASE-6001",
       "tool": "get_server_logs",
       "args": {
         "asset_id": "SRV-DB-05",
-        "time_range": "2026-09-11T06:00:00Z/2026-09-11T07:00:00Z"
+        "time_range": "2026-09-11T06:00:00Z/2026-09-11T06:30:00Z"
       },
       "attempt": 2,
-      "reason": "Retry of the failed call (attempt 2). Host logs are the decisive source for whether the injected UNION query actually executed and returned rows, versus being rejected. Per the rules, a failed query is a gap in evidence, not proof of absence."
+      "reason": "Retry after the collector timeout (attempt 2) - host logs are the only source that can confirm whether the injected UNION query actually executed and returned rows, vs errored/blocked. A failure here is a gap I must carry, not proof of absence."
     },
     {
       "seq": 21,
-      "t": 25.488,
+      "t": 98.088,
       "kind": "tool_failure",
       "case_id": "CASE-6001",
       "tool": "get_server_logs",
       "args": {
         "asset_id": "SRV-DB-05",
-        "time_range": "2026-09-11T06:00:00Z/2026-09-11T07:00:00Z"
+        "time_range": "2026-09-11T06:00:00Z/2026-09-11T06:30:00Z"
       },
       "attempt": 2,
       "result": {
@@ -305,15 +305,15 @@
     },
     {
       "seq": 22,
-      "t": 32.655,
+      "t": 124.827,
       "kind": "sufficiency",
       "case_id": "CASE-6001",
-      "text": "The log collector has failed twice \u2014 a genuine evidence gap I must carry forward, not read as \"logs were clean\". I will not declare `logs_clean` (I cannot see the logs) nor `logs_consistent` (I have no host-side confirmation of execution).\n\nLet me do the disconfirming check for my leading hypothesis (attack succeeded): \"is there any sign this was blocked or errored out?\" The best remaining source is the packet metadata directionality/volume, which I already have, plus verifying whether the attacker IP is currently blocked (which could indicate a response that contained it).",
+      "text": "Second attempt also failed \u2014 confirmed tool failure, not \"logs were clean.\" I will carry this as an explicit limitation.\n\n**Falsification check.** My leading hypothesis is that the attack succeeded (data was exfiltrated from a vulnerable host). What would falsify it?\n\n- *\"Was it blocked or did it error?\"* \u2014 The only host-side source that could show an error/403/zero-rows is `get_server_logs`, and it is unavailable after two attempts. I could not falsify via logs. However, packet metadata is the alternate source: an error response cannot be 3.1 MB egress with entropy 7.9 and an explicit `exfil_indicators: true`. An errored/blocked injection returning a short DB error would be small bytes-to-client. So the volumetric evidence directly contradicts the \"it failed\" hypothesis on the flow-level.\n- *\"Is there an alternate benign explanation for 3.1 MB outbound?\"* \u2014 Off-hours sustained egress to an external IP with a `mysql_response_size_outlier` anomaly on a billing/payments database is not explained by normal traffic; nothing in inventory suggests a legitimate bulk export at 06:18.\n- *Firewall state* \u2014 not yet checked. Let me verify whether the source IP is blocked, which would bear on whether this was permitted.",
       "turn": 4
     },
     {
       "seq": 23,
-      "t": 32.655,
+      "t": 124.828,
       "kind": "tool_call",
       "case_id": "CASE-6001",
       "tool": "check_firewall_state",
@@ -321,11 +321,11 @@
         "ip": "203.0.113.150"
       },
       "attempt": 1,
-      "reason": "Disconfirming check: if this attacker IP is already blocked, the 3.1MB egress may have been cut short or the host may have been containing the attack - it helps establish whether anything stopped the flow."
+      "reason": "Determine whether the source IP was blocked during/after the incident - if it was never blocked the 3.1 MB egress was actually permitted, supporting the breach reading; if it shows as blocked I need to know when."
     },
     {
       "seq": 24,
-      "t": 32.658,
+      "t": 124.83,
       "kind": "tool_result",
       "case_id": "CASE-6001",
       "tool": "check_firewall_state",
@@ -341,67 +341,67 @@
     },
     {
       "seq": 25,
-      "t": 48.966,
+      "t": 165.211,
       "kind": "sufficiency",
       "case_id": "CASE-6001",
-      "text": "The attacker IP is **not blocked** \u2014 nothing contained this flow. The 3.1 MB egress completed with no mitigation in place.\n\n**Disconfirming evidence I looked for:**\n- *Was the attack blocked or errored out?* No \u2014 no firewall block on 203.0.113.150, and the packet flow shows 3.1 MB successfully returned, which is the opposite of an error/rejection.\n- *Was the host patched?* No \u2014 running 5.7.22, inside CVE-2023-21980's affected range `>=5.7.0,<5.7.30`.\n- *Is there post-exploitation that I haven't looked at?* I checked related alerts (none) \u2014 no corroborating history, but also no prior containment.\n\n**What I could not establish:** host-side confirmation of query execution. `get_server_logs` failed twice with a collector timeout. So I cannot declare `logs_consistent` (no host evidence of executed queries) and I must not declare `logs_clean` (no host evidence at all \u2014 absence of logs \u2260 clean logs). The version comparison and packet metadata stand on their own independently.\n\nI have enough to classify: vulnerable version + volumetric exfiltration-shaped flow + no block in place.",
+      "text": "The source IP `203.0.113.150` is **not blocked** \u2014 no block was ever put in place. So the 3.1 MB of egress was permitted, with nothing stopping it.\n\n**Evidence summary:**\n\n| Class | Established? | Basis |\n|---|---|---|\n| `version_in_range` | YES | mysql 5.7.22 falls inside CVE-2023-21980's `>=5.7.0,<5.7.30`; that CVE is `sql_injection` with arbitrary table read by unauth remote attacker |\n| `version_patched` | NO (opposite \u2014 must not declare) | \u2014 |\n| `exfil_indicators` | YES | 2,680 B in vs 3,284,119 B out, entropy 7.9, `exfil_indicators: true`, `mysql_response_size_outlier`, `sustained_egress_off_hours` |\n| `logs_consistent` | NOT ESTABLISHED | log collector unavailable on both attempts \u2014 gap, not absence |\n| `logs_clean` | NO (cannot claim) | logs never returned |\n| `packet_benign` | NO (opposite) | \u2014 |\n| `related_alert_corroborates` | NO | `no_data` \u2014 establishes nothing, must not cite |\n\nThe version-in-range fact and the volumetric exfil fact are two independent sources agreeing on a successful SQL-injection breach against a critical billing/payments database. I have enough to classify; logs remain an unclosed gap that I will state as a limitation rather than spin.",
       "turn": 5
     },
     {
       "seq": 26,
-      "t": 48.966,
+      "t": 165.211,
       "kind": "tool_call",
       "case_id": "CASE-6001",
       "tool": "submit_assessment",
       "args": {
-        "hypothesis": "The UNION-based SQL injection from 203.0.113.150 against SRV-DB-05 (MySQL 5.7.22 on port 3306) SUCCEEDED and resulted in exfiltration of roughly 3.1 MB from the billing/payments database. The host runs a version inside CVE-2023-21980's affected range, the CVE's attack class is exactly sql_injection with unauthenticated arbitrary table reads, the flow returned 3.1 MB to the external host (vs 2.7 KB request), and no firewall block was in place to contain it.",
+        "hypothesis": "The UNION SELECT SQL injection from 203.0.113.150 against SRV-DB-05 succeeded: the host runs a MySQL version inside CVE-2023-21980's affected range (a sql_injection CVE permitting arbitrary table read by an unauthenticated remote attacker), and the flow returned 3.1 MB of high-entropy data to the external host with an explicit exfil_indicators flag \u2014 consistent with a successful arbitrary-read/injection, not a blocked attempt.",
         "factors": [
           {
             "factor": "version_in_range",
-            "citation": "get_asset_info: SRV-DB-05 runs mysql 5.7.22. get_vulnerabilities: CVE-2023-21980 affected_versions '>=5.7.0,<5.7.30', fixed_in 5.7.30, attack_class sql_injection, 'permits authentication bypass and arbitrary read of arbitrary tables by an unauthenticated remote attacker'. 5.7.22 is >=5.7.0 and <5.7.30, so it IS inside the affected range.",
-            "rationale": "The running version falls inside the affected range of a CVE whose attack class (sql_injection, UNION payload) matches the alert signature exactly. This host is genuinely vulnerable to the attempted attack class."
+            "citation": "get_asset_info: SRV-DB-05 runs mysql 5.7.22 (Ubuntu 20.04.6, critical, 'Billing and payments database'); get_vulnerabilities: CVE-2023-21980 affects '>=5.7.0,<5.7.30', fixed_in 5.7.30, cvss 9.8, attack_class 'sql_injection' \u2014 5.7.22 < 5.7.30 and >= 5.7.0, so this host IS inside the affected range. (CVE-2022-21444 affects >=8.0.0,<8.0.30 \u2014 5.7.22 is outside that range and it is DoS-only.)",
+            "rationale": "The target runs a MySQL version squarely inside the affected range of a SQL-injection CVE that matches the alert signature exactly (UNION payloads permitting arbitrary table read by an unauthenticated remote attacker). This is the vulnerability half of the join, established by comparing the running version against the CVE range myself."
           },
           {
             "factor": "exfil_indicators",
-            "citation": "get_packet_metadata ALERT-6001: bytes_to_server 2680, bytes_to_client 3284119, duration_ms 52140, exfil_indicators true, payload_entropy 7.9, anomalies ['mysql_response_size_outlier','sustained_egress_off_hours'], notes '3.1 MB returned to an external host over 52 seconds. Strong volumetric exfiltration signal.'",
-            "rationale": "A 2.7 KB request eliciting 3.1 MB of response is a result-set-sized transfer, not an error page or rejection. Combined with off-hours timing and high entropy, this is strong evidence data left the host."
+            "citation": "get_packet_metadata ALERT-6001: bytes_to_server 2680, bytes_to_client 3284119, duration_ms 52140, payload_entropy 7.9, exfil_indicators true, protocol_anomalies ['mysql_response_size_outlier','sustained_egress_off_hours'], notes '3.1 MB returned to an external host over 52 seconds. Strong volumetric exfiltration signal.'",
+            "rationale": "3.1 MB returned to an external host over 52 seconds in response to a 2.68 KB request is not an error page or a blocked attempt \u2014 it is bulk data leaving the host, with an explicit exfil indicator. This is the 'did anything actually leave' half of the correlation."
           }
         ],
-        "disconfirming_evidence_checked": "My hypothesis was that the attack succeeded. I looked for (a) signs of patching/blocking: get_asset_info shows mysql 5.7.22, inside CVE-2023-21980's range, and last_patch_date 2024-06-02 did not cover this flaw - the version comparison places the host on the VULNERABLE side, so no disconfirmation. (b) A block or error containing the flow: check_firewall_state for 203.0.113.150 returned blocked=false with total_blocked 0, so nothing stopped it; the packet metadata shows 3.1 MB successfully delivered, the opposite of an error/rejection. (c) Post-exploitation/corroborating history: get_related_alerts returned no_data, so there is no corroborating prior alert (I did not cite related_alert_corroborates). LIMITATION: get_server_logs failed twice with 'log collector timeout' (attempts 1 and 2). That is an evidence gap, not a finding - I have NO host-side confirmation that the injected query executed, and I therefore did not declare logs_consistent. Equally, the failed log query is not proof the logs are clean, so I did not declare logs_clean either. The version-in-range and packet-exfiltration findings rest on independent sources that did return data and do not depend on the log gap.",
-        "sufficiency": "Sufficient to classify: two independent sources (asset inventory vs. CVE knowledge base, and flow-level packet metadata) agree that (1) the target runs a MySQL version inside the affected range of a UNION-payload SQL-injection CVE, and (2) a 3.1 MB response left the host to an external IP with exfil indicators and no firewall block. What I still do not know: whether the host-side logs would show the specific injected queries and their row counts, because the log collector timed out on both attempts. That gap weakens the direct proof of query execution but does not overturn the version and packet evidence, which point to a successful breach rather than a blocked attempt."
+        "sufficiency": "Two independent sources agree on a successful breach: the host is provably inside the affected range of a SQL-injection CVE (version join done explicitly: 5.7.22 is inside >=5.7.0,<5.7.30), and the flow metadata shows 3.1 MB of high-entropy egress to an external host with exfil_indicators=true. The firewall check confirms 203.0.113.150 was never blocked, so the egress was permitted. Limitation I could not close: get_server_logs failed twice ('log collector timeout'), so I have NO host-side confirmation of the specific query executed or rows returned \u2014 I could not declare logs_consistent, and equally the failure is not evidence the logs were clean. related_alerts returned genuine no_data (no corroborating alert), so no corroboration factor is claimed. Classification rests on the version-in-range and exfil-indicator evidence classes only.",
+        "disconfirming_evidence_checked": "Falsifier for 'attack succeeded': sign that it was blocked or errored out. Host logs \u2014 the only source that could show an error/403/zero-rows \u2014 were unavailable on both attempts (collector timeout), so I could not use them to falsify. I instead checked the alternate source: an errored or blocked injection returns a short DB error, but packet metadata shows 3,284,119 bytes to the client with entropy 7.9 and exfil_indicators=true, which directly contradicts the 'it failed' reading. I also checked the firewall state: 203.0.113.150 is NOT blocked (blocked=false, record=null, total_blocked=0), so there was no control in place preventing the egress. Alternate benign explanation (legitimate bulk export at 06:18) is unsupported: the flow carries a mysql_response_size_outlier anomaly and off-hours sustained egress on a billing/payments DB with no inventory evidence of a legitimate export."
       },
       "attempt": 1,
       "reason": "(no stated reason)"
     },
     {
       "seq": 27,
-      "t": 48.966,
+      "t": 165.211,
       "kind": "tool_result",
       "case_id": "CASE-6001",
       "tool": "submit_assessment",
       "status": "accepted",
       "result": {
         "status": "accepted",
-        "hypothesis": "The UNION-based SQL injection from 203.0.113.150 against SRV-DB-05 (MySQL 5.7.22 on port 3306) SUCCEEDED and resulted in exfiltration of roughly 3.1 MB from the billing/payments database. The host runs a version inside CVE-2023-21980's affected range, the CVE's attack class is exactly sql_injection with unauthenticated arbitrary table reads, the flow returned 3.1 MB to the external host (vs 2.7 KB request), and no firewall block was in place to contain it.",
+        "hypothesis": "The UNION SELECT SQL injection from 203.0.113.150 against SRV-DB-05 succeeded: the host runs a MySQL version inside CVE-2023-21980's affected range (a sql_injection CVE permitting arbitrary table read by an unauthenticated remote attacker), and the flow returned 3.1 MB of high-entropy data to the external host with an explicit exfil_indicators flag \u2014 consistent with a successful arbitrary-read/injection, not a blocked attempt.",
         "factors": [
           {
             "factor": "version_in_range",
-            "citation": "get_asset_info: SRV-DB-05 runs mysql 5.7.22. get_vulnerabilities: CVE-2023-21980 affected_versions '>=5.7.0,<5.7.30', fixed_in 5.7.30, attack_class sql_injection, 'permits authentication bypass and arbitrary read of arbitrary tables by an unauthenticated remote attacker'. 5.7.22 is >=5.7.0 and <5.7.30, so it IS inside the affected range.",
-            "rationale": "The running version falls inside the affected range of a CVE whose attack class (sql_injection, UNION payload) matches the alert signature exactly. This host is genuinely vulnerable to the attempted attack class."
+            "citation": "get_asset_info: SRV-DB-05 runs mysql 5.7.22 (Ubuntu 20.04.6, critical, 'Billing and payments database'); get_vulnerabilities: CVE-2023-21980 affects '>=5.7.0,<5.7.30', fixed_in 5.7.30, cvss 9.8, attack_class 'sql_injection' \u2014 5.7.22 < 5.7.30 and >= 5.7.0, so this host IS inside the affected range. (CVE-2022-21444 affects >=8.0.0,<8.0.30 \u2014 5.7.22 is outside that range and it is DoS-only.)",
+            "rationale": "The target runs a MySQL version squarely inside the affected range of a SQL-injection CVE that matches the alert signature exactly (UNION payloads permitting arbitrary table read by an unauthenticated remote attacker). This is the vulnerability half of the join, established by comparing the running version against the CVE range myself."
           },
           {
             "factor": "exfil_indicators",
-            "citation": "get_packet_metadata ALERT-6001: bytes_to_server 2680, bytes_to_client 3284119, duration_ms 52140, exfil_indicators true, payload_entropy 7.9, anomalies ['mysql_response_size_outlier','sustained_egress_off_hours'], notes '3.1 MB returned to an external host over 52 seconds. Strong volumetric exfiltration signal.'",
-            "rationale": "A 2.7 KB request eliciting 3.1 MB of response is a result-set-sized transfer, not an error page or rejection. Combined with off-hours timing and high entropy, this is strong evidence data left the host."
+            "citation": "get_packet_metadata ALERT-6001: bytes_to_server 2680, bytes_to_client 3284119, duration_ms 52140, payload_entropy 7.9, exfil_indicators true, protocol_anomalies ['mysql_response_size_outlier','sustained_egress_off_hours'], notes '3.1 MB returned to an external host over 52 seconds. Strong volumetric exfiltration signal.'",
+            "rationale": "3.1 MB returned to an external host over 52 seconds in response to a 2.68 KB request is not an error page or a blocked attempt \u2014 it is bulk data leaving the host, with an explicit exfil indicator. This is the 'did anything actually leave' half of the correlation."
           }
         ],
-        "sufficiency": "Sufficient to classify: two independent sources (asset inventory vs. CVE knowledge base, and flow-level packet metadata) agree that (1) the target runs a MySQL version inside the affected range of a UNION-payload SQL-injection CVE, and (2) a 3.1 MB response left the host to an external IP with exfil indicators and no firewall block. What I still do not know: whether the host-side logs would show the specific injected queries and their row counts, because the log collector timed out on both attempts. That gap weakens the direct proof of query execution but does not overturn the version and packet evidence, which point to a successful breach rather than a blocked attempt.",
-        "disconfirming_evidence_checked": "My hypothesis was that the attack succeeded. I looked for (a) signs of patching/blocking: get_asset_info shows mysql 5.7.22, inside CVE-2023-21980's range, and last_patch_date 2024-06-02 did not cover this flaw - the version comparison places the host on the VULNERABLE side, so no disconfirmation. (b) A block or error containing the flow: check_firewall_state for 203.0.113.150 returned blocked=false with total_blocked 0, so nothing stopped it; the packet metadata shows 3.1 MB successfully delivered, the opposite of an error/rejection. (c) Post-exploitation/corroborating history: get_related_alerts returned no_data, so there is no corroborating prior alert (I did not cite related_alert_corroborates). LIMITATION: get_server_logs failed twice with 'log collector timeout' (attempts 1 and 2). That is an evidence gap, not a finding - I have NO host-side confirmation that the injected query executed, and I therefore did not declare logs_consistent. Equally, the failed log query is not proof the logs are clean, so I did not declare logs_clean either. The version-in-range and packet-exfiltration findings rest on independent sources that did return data and do not depend on the log gap."
+        "sufficiency": "Two independent sources agree on a successful breach: the host is provably inside the affected range of a SQL-injection CVE (version join done explicitly: 5.7.22 is inside >=5.7.0,<5.7.30), and the flow metadata shows 3.1 MB of high-entropy egress to an external host with exfil_indicators=true. The firewall check confirms 203.0.113.150 was never blocked, so the egress was permitted. Limitation I could not close: get_server_logs failed twice ('log collector timeout'), so I have NO host-side confirmation of the specific query executed or rows returned \u2014 I could not declare logs_consistent, and equally the failure is not evidence the logs were clean. related_alerts returned genuine no_data (no corroborating alert), so no corroboration factor is claimed. Classification rests on the version-in-range and exfil-indicator evidence classes only.",
+        "disconfirming_evidence_checked": "Falsifier for 'attack succeeded': sign that it was blocked or errored out. Host logs \u2014 the only source that could show an error/403/zero-rows \u2014 were unavailable on both attempts (collector timeout), so I could not use them to falsify. I instead checked the alternate source: an errored or blocked injection returns a short DB error, but packet metadata shows 3,284,119 bytes to the client with entropy 7.9 and exfil_indicators=true, which directly contradicts the 'it failed' reading. I also checked the firewall state: 203.0.113.150 is NOT blocked (blocked=false, record=null, total_blocked=0), so there was no control in place preventing the egress. Alternate benign explanation (legitimate bulk export at 06:18) is unsupported: the flow carries a mysql_response_size_outlier anomaly and off-hours sustained egress on a billing/payments DB with no inventory evidence of a legitimate export."
       }
     },
     {
       "seq": 28,
-      "t": 48.966,
+      "t": 165.212,
       "kind": "state_change",
       "case_id": "CASE-6001",
       "state": "DETERMINE_OUTCOME",
@@ -409,7 +409,7 @@
     },
     {
       "seq": 29,
-      "t": 48.966,
+      "t": 165.212,
       "kind": "scoring",
       "case_id": "CASE-6001",
       "base": 0.5,
@@ -422,15 +422,15 @@
           "factor": "version_in_range",
           "label": "Running version falls inside a CVE's affected range",
           "delta": 0.25,
-          "citation": "get_asset_info: SRV-DB-05 runs mysql 5.7.22. get_vulnerabilities: CVE-2023-21980 affected_versions '>=5.7.0,<5.7.30', fixed_in 5.7.30, attack_class sql_injection, 'permits authentication bypass and arbitrary read of arbitrary tables by an unauthenticated remote attacker'. 5.7.22 is >=5.7.0 and <5.7.30, so it IS inside the affected range.",
-          "rationale": "The running version falls inside the affected range of a CVE whose attack class (sql_injection, UNION payload) matches the alert signature exactly. This host is genuinely vulnerable to the attempted attack class."
+          "citation": "get_asset_info: SRV-DB-05 runs mysql 5.7.22 (Ubuntu 20.04.6, critical, 'Billing and payments database'); get_vulnerabilities: CVE-2023-21980 affects '>=5.7.0,<5.7.30', fixed_in 5.7.30, cvss 9.8, attack_class 'sql_injection' \u2014 5.7.22 < 5.7.30 and >= 5.7.0, so this host IS inside the affected range. (CVE-2022-21444 affects >=8.0.0,<8.0.30 \u2014 5.7.22 is outside that range and it is DoS-only.)",
+          "rationale": "The target runs a MySQL version squarely inside the affected range of a SQL-injection CVE that matches the alert signature exactly (UNION payloads permitting arbitrary table read by an unauthenticated remote attacker). This is the vulnerability half of the join, established by comparing the running version against the CVE range myself."
         },
         {
           "factor": "exfil_indicators",
           "label": "Packet metadata shows exfil / payload-anomaly indicators",
           "delta": 0.15,
-          "citation": "get_packet_metadata ALERT-6001: bytes_to_server 2680, bytes_to_client 3284119, duration_ms 52140, exfil_indicators true, payload_entropy 7.9, anomalies ['mysql_response_size_outlier','sustained_egress_off_hours'], notes '3.1 MB returned to an external host over 52 seconds. Strong volumetric exfiltration signal.'",
-          "rationale": "A 2.7 KB request eliciting 3.1 MB of response is a result-set-sized transfer, not an error page or rejection. Combined with off-hours timing and high entropy, this is strong evidence data left the host."
+          "citation": "get_packet_metadata ALERT-6001: bytes_to_server 2680, bytes_to_client 3284119, duration_ms 52140, payload_entropy 7.9, exfil_indicators true, protocol_anomalies ['mysql_response_size_outlier','sustained_egress_off_hours'], notes '3.1 MB returned to an external host over 52 seconds. Strong volumetric exfiltration signal.'",
+          "rationale": "3.1 MB returned to an external host over 52 seconds in response to a 2.68 KB request is not an error page or a blocked attempt \u2014 it is bulk data leaving the host, with an explicit exfil indicator. This is the 'did anything actually leave' half of the correlation."
         }
       ],
       "ignored_factors": [],
@@ -442,16 +442,16 @@
     },
     {
       "seq": 30,
-      "t": 48.968,
+      "t": 165.214,
       "kind": "conclusion",
       "case_id": "CASE-6001",
       "label": "initial",
       "outcome": "INCONCLUSIVE",
       "confidence": 0.65,
       "score": 0.65,
-      "hypothesis": "The UNION-based SQL injection from 203.0.113.150 against SRV-DB-05 (MySQL 5.7.22 on port 3306) SUCCEEDED and resulted in exfiltration of roughly 3.1 MB from the billing/payments database. The host runs a version inside CVE-2023-21980's affected range, the CVE's attack class is exactly sql_injection with unauthenticated arbitrary table reads, the flow returned 3.1 MB to the external host (vs 2.7 KB request), and no firewall block was in place to contain it.",
-      "sufficiency": "Sufficient to classify: two independent sources (asset inventory vs. CVE knowledge base, and flow-level packet metadata) agree that (1) the target runs a MySQL version inside the affected range of a UNION-payload SQL-injection CVE, and (2) a 3.1 MB response left the host to an external IP with exfil indicators and no firewall block. What I still do not know: whether the host-side logs would show the specific injected queries and their row counts, because the log collector timed out on both attempts. That gap weakens the direct proof of query execution but does not overturn the version and packet evidence, which point to a successful breach rather than a blocked attempt.",
-      "disconfirming_evidence_checked": "My hypothesis was that the attack succeeded. I looked for (a) signs of patching/blocking: get_asset_info shows mysql 5.7.22, inside CVE-2023-21980's range, and last_patch_date 2024-06-02 did not cover this flaw - the version comparison places the host on the VULNERABLE side, so no disconfirmation. (b) A block or error containing the flow: check_firewall_state for 203.0.113.150 returned blocked=false with total_blocked 0, so nothing stopped it; the packet metadata shows 3.1 MB successfully delivered, the opposite of an error/rejection. (c) Post-exploitation/corroborating history: get_related_alerts returned no_data, so there is no corroborating prior alert (I did not cite related_alert_corroborates). LIMITATION: get_server_logs failed twice with 'log collector timeout' (attempts 1 and 2). That is an evidence gap, not a finding - I have NO host-side confirmation that the injected query executed, and I therefore did not declare logs_consistent. Equally, the failed log query is not proof the logs are clean, so I did not declare logs_clean either. The version-in-range and packet-exfiltration findings rest on independent sources that did return data and do not depend on the log gap.",
+      "hypothesis": "The UNION SELECT SQL injection from 203.0.113.150 against SRV-DB-05 succeeded: the host runs a MySQL version inside CVE-2023-21980's affected range (a sql_injection CVE permitting arbitrary table read by an unauthenticated remote attacker), and the flow returned 3.1 MB of high-entropy data to the external host with an explicit exfil_indicators flag \u2014 consistent with a successful arbitrary-read/injection, not a blocked attempt.",
+      "sufficiency": "Two independent sources agree on a successful breach: the host is provably inside the affected range of a SQL-injection CVE (version join done explicitly: 5.7.22 is inside >=5.7.0,<5.7.30), and the flow metadata shows 3.1 MB of high-entropy egress to an external host with exfil_indicators=true. The firewall check confirms 203.0.113.150 was never blocked, so the egress was permitted. Limitation I could not close: get_server_logs failed twice ('log collector timeout'), so I have NO host-side confirmation of the specific query executed or rows returned \u2014 I could not declare logs_consistent, and equally the failure is not evidence the logs were clean. related_alerts returned genuine no_data (no corroborating alert), so no corroboration factor is claimed. Classification rests on the version-in-range and exfil-indicator evidence classes only.",
+      "disconfirming_evidence_checked": "Falsifier for 'attack succeeded': sign that it was blocked or errored out. Host logs \u2014 the only source that could show an error/403/zero-rows \u2014 were unavailable on both attempts (collector timeout), so I could not use them to falsify. I instead checked the alternate source: an errored or blocked injection returns a short DB error, but packet metadata shows 3,284,119 bytes to the client with entropy 7.9 and exfil_indicators=true, which directly contradicts the 'it failed' reading. I also checked the firewall state: 203.0.113.150 is NOT blocked (blocked=false, record=null, total_blocked=0), so there was no control in place preventing the egress. Alternate benign explanation (legitimate bulk export at 06:18) is unsupported: the flow carries a mysql_response_size_outlier anomaly and off-hours sustained egress on a billing/payments DB with no inventory evidence of a legitimate export.",
       "scoring": {
         "base": 0.5,
         "raw_sum": 0.9,
@@ -463,15 +463,15 @@
             "factor": "version_in_range",
             "label": "Running version falls inside a CVE's affected range",
             "delta": 0.25,
-            "citation": "get_asset_info: SRV-DB-05 runs mysql 5.7.22. get_vulnerabilities: CVE-2023-21980 affected_versions '>=5.7.0,<5.7.30', fixed_in 5.7.30, attack_class sql_injection, 'permits authentication bypass and arbitrary read of arbitrary tables by an unauthenticated remote attacker'. 5.7.22 is >=5.7.0 and <5.7.30, so it IS inside the affected range.",
-            "rationale": "The running version falls inside the affected range of a CVE whose attack class (sql_injection, UNION payload) matches the alert signature exactly. This host is genuinely vulnerable to the attempted attack class."
+            "citation": "get_asset_info: SRV-DB-05 runs mysql 5.7.22 (Ubuntu 20.04.6, critical, 'Billing and payments database'); get_vulnerabilities: CVE-2023-21980 affects '>=5.7.0,<5.7.30', fixed_in 5.7.30, cvss 9.8, attack_class 'sql_injection' \u2014 5.7.22 < 5.7.30 and >= 5.7.0, so this host IS inside the affected range. (CVE-2022-21444 affects >=8.0.0,<8.0.30 \u2014 5.7.22 is outside that range and it is DoS-only.)",
+            "rationale": "The target runs a MySQL version squarely inside the affected range of a SQL-injection CVE that matches the alert signature exactly (UNION payloads permitting arbitrary table read by an unauthenticated remote attacker). This is the vulnerability half of the join, established by comparing the running version against the CVE range myself."
           },
           {
             "factor": "exfil_indicators",
             "label": "Packet metadata shows exfil / payload-anomaly indicators",
             "delta": 0.15,
-            "citation": "get_packet_metadata ALERT-6001: bytes_to_server 2680, bytes_to_client 3284119, duration_ms 52140, exfil_indicators true, payload_entropy 7.9, anomalies ['mysql_response_size_outlier','sustained_egress_off_hours'], notes '3.1 MB returned to an external host over 52 seconds. Strong volumetric exfiltration signal.'",
-            "rationale": "A 2.7 KB request eliciting 3.1 MB of response is a result-set-sized transfer, not an error page or rejection. Combined with off-hours timing and high entropy, this is strong evidence data left the host."
+            "citation": "get_packet_metadata ALERT-6001: bytes_to_server 2680, bytes_to_client 3284119, duration_ms 52140, payload_entropy 7.9, exfil_indicators true, protocol_anomalies ['mysql_response_size_outlier','sustained_egress_off_hours'], notes '3.1 MB returned to an external host over 52 seconds. Strong volumetric exfiltration signal.'",
+            "rationale": "3.1 MB returned to an external host over 52 seconds in response to a 2.68 KB request is not an error page or a blocked attempt \u2014 it is bulk data leaving the host, with an explicit exfil indicator. This is the 'did anything actually leave' half of the correlation."
           }
         ],
         "ignored_factors": [],
@@ -481,11 +481,11 @@
         ],
         "ceiling_note": "Degraded-evidence clamp applied: get_server_logs returned unavailable/failed, so confidence is restricted to [0.35, 0.65]. Unclamped score was 0.90; reported score is 0.65. The missing source, not the evidence that was gathered, is what caps this conclusion."
       },
-      "at": "2026-09-12T11:38:41Z"
+      "at": "2026-09-12T12:26:47Z"
     },
     {
       "seq": 31,
-      "t": 48.968,
+      "t": 165.214,
       "kind": "state_change",
       "case_id": "CASE-6001",
       "state": "ACT",
@@ -493,29 +493,29 @@
     },
     {
       "seq": 32,
-      "t": 54.039,
+      "t": 189.939,
       "kind": "thought",
       "case_id": "CASE-6001",
-      "text": "I'll apply the policy: INCONCLUSIVE on a critical asset \u2192 precautionary block. Then verify from disk.",
+      "text": "I'll apply the policy: INCONCLUSIVE on a critical asset \u2192 precautionary block.",
       "turn": 1
     },
     {
       "seq": 33,
-      "t": 54.039,
+      "t": 189.939,
       "kind": "tool_call",
       "case_id": "CASE-6001",
       "tool": "block_ip",
       "args": {
         "ip": "203.0.113.150",
         "precautionary": true,
-        "reason": "Case CASE-6001 / ALERT-6001: deterministic scoring returned INCONCLUSIVE (score 0.65, confidence 0.65, clamped from unclamped 0.90 because get_server_logs was unavailable) against critical asset SRV-DB-05. Policy section 7.3: INCONCLUSIVE on a CRITICAL asset -> block_ip with precautionary=true. This block is containment under uncertainty, NOT a verdict that the attack succeeded; the conclusion is capped by a missing evidence source, not by exculpatory evidence."
+        "reason": "INCONCLUSIVE outcome (score 0.65, clamped from 0.90 due to unavailable server logs) on critical asset SRV-DB-05. Precautionary containment under uncertainty, not a verdict that the attack succeeded."
       },
       "attempt": 1,
-      "reason": "Case CASE-6001 / ALERT-6001: deterministic scoring returned INCONCLUSIVE (score 0.65, confidence 0.65, clamped from unclamped 0.90 because get_server_logs was unavailable) against critical asset SRV-DB-05. Policy section 7.3: INCONCLUSIVE on a CRITICAL asset -> block_ip with precautionary=true. This block is containment under uncertainty, NOT a verdict that the attack succeeded; the conclusion is capped by a missing evidence source, not by exculpatory evidence."
+      "reason": "INCONCLUSIVE outcome (score 0.65, clamped from 0.90 due to unavailable server logs) on critical asset SRV-DB-05. Precautionary containment under uncertainty, not a verdict that the attack succeeded."
     },
     {
       "seq": 34,
-      "t": 54.04,
+      "t": 189.941,
       "kind": "tool_result",
       "case_id": "CASE-6001",
       "tool": "block_ip",
@@ -526,9 +526,9 @@
         "ip": "203.0.113.150",
         "record": {
           "ip": "203.0.113.150",
-          "reason": "Case CASE-6001 / ALERT-6001: deterministic scoring returned INCONCLUSIVE (score 0.65, confidence 0.65, clamped from unclamped 0.90 because get_server_logs was unavailable) against critical asset SRV-DB-05. Policy section 7.3: INCONCLUSIVE on a CRITICAL asset -> block_ip with precautionary=true. This block is containment under uncertainty, NOT a verdict that the attack succeeded; the conclusion is capped by a missing evidence source, not by exculpatory evidence.",
+          "reason": "INCONCLUSIVE outcome (score 0.65, clamped from 0.90 due to unavailable server logs) on critical asset SRV-DB-05. Precautionary containment under uncertainty, not a verdict that the attack succeeded.",
           "precautionary": true,
-          "blocked_at": "2026-09-12T11:38:46Z",
+          "blocked_at": "2026-09-12T12:27:12Z",
           "case_id": "CASE-6001",
           "rule": "DROP all from 203.0.113.150"
         },
@@ -537,15 +537,15 @@
     },
     {
       "seq": 35,
-      "t": 62.269,
+      "t": 216.423,
       "kind": "sufficiency",
       "case_id": "CASE-6001",
-      "text": "Now verify by re-reading firewall state from disk:",
+      "text": "Now verifying from disk:",
       "turn": 2
     },
     {
       "seq": 36,
-      "t": 62.269,
+      "t": 216.423,
       "kind": "tool_call",
       "case_id": "CASE-6001",
       "tool": "check_firewall_state",
@@ -553,11 +553,11 @@
         "ip": "203.0.113.150"
       },
       "attempt": 1,
-      "reason": "Verify the precautionary DROP rule requested for CASE-6001 actually took effect on disk; the block_ip response claimed state was written, but I must confirm the persisted state rather than assume."
+      "reason": "Confirm the precautionary DROP rule for 203.0.113.150 was actually persisted to disk, rather than trusting the block_ip response."
     },
     {
       "seq": 37,
-      "t": 62.293,
+      "t": 216.433,
       "kind": "tool_result",
       "case_id": "CASE-6001",
       "tool": "check_firewall_state",
@@ -568,9 +568,9 @@
         "blocked": true,
         "record": {
           "ip": "203.0.113.150",
-          "reason": "Case CASE-6001 / ALERT-6001: deterministic scoring returned INCONCLUSIVE (score 0.65, confidence 0.65, clamped from unclamped 0.90 because get_server_logs was unavailable) against critical asset SRV-DB-05. Policy section 7.3: INCONCLUSIVE on a CRITICAL asset -> block_ip with precautionary=true. This block is containment under uncertainty, NOT a verdict that the attack succeeded; the conclusion is capped by a missing evidence source, not by exculpatory evidence.",
+          "reason": "INCONCLUSIVE outcome (score 0.65, clamped from 0.90 due to unavailable server logs) on critical asset SRV-DB-05. Precautionary containment under uncertainty, not a verdict that the attack succeeded.",
           "precautionary": true,
-          "blocked_at": "2026-09-12T11:38:46Z",
+          "blocked_at": "2026-09-12T12:27:12Z",
           "case_id": "CASE-6001",
           "rule": "DROP all from 203.0.113.150"
         },
@@ -580,15 +580,15 @@
     },
     {
       "seq": 38,
-      "t": 69.446,
+      "t": 237.668,
       "kind": "sufficiency",
       "case_id": "CASE-6001",
-      "text": "Done.\n\n**Action taken:** Applied `block_ip` to 203.0.113.150 with `precautionary=true`.\n\n**Why:** This is the exact case the standing policy covers \u2014 outcome INCONCLUSIVE on a CRITICAL asset (SRV-DB-05). Per section 7.3, that maps to a precautionary block, not to a no-action disposition. Note the score arithmetic is working as designed: the unclamped score was 0.90, but because `get_server_logs` was unavailable/failed, the degraded-evidence clamp restricted confidence to [0.35, 0.65], so the reported score is 0.65. The cap comes from a *missing evidence source*, not from exculpatory evidence. The recorded reason states explicitly that this is containment under uncertainty \u2014 not a verdict that the attack succeeded.\n\n**Verification (re-read from disk):** `check_firewall_state` for 203.0.113.150 returned `blocked: true`, with the persisted record showing `precautionary: true`, `case_id: CASE-6001`, rule `DROP all from 203.0.113.150`, and `total_blocked: 1`, read from `.../fixtures/run/firewall_state.json`. The mutation is confirmed on disk, not merely asserted by the write response.\n\n**Open item for the analyst:** the blocking condition is a gap in evidence, not a clean determination. Retrieving server logs for SRV-DB-05 (or equivalent forensic data) would let this be re-scored without the clamp and either confirmed or lifted.",
+      "text": "Done. Summary:\n\n**Action taken:** Blocked `203.0.113.150` with `precautionary=true`.\n\n**Which policy clause applied:** INCONCLUSIVE on a CRITICAL asset \u2192 `block_ip` with `precautionary=true`. (Not the SUCCEEDED-with-score-\u2265-0.75 clause, and not the FAILED/no-action clause.)\n\n**Why:** The deterministic scorer returned INCONCLUSIVE (score 0.65) against SRV-DB-05, a critical asset. The degraded-evidence clamp was applied because `get_server_logs` was unavailable, capping confidence at [0.35, 0.65] \u2014 the unclamped score of 0.90 reflects the gathered evidence, while the missing source is what caps the conclusion. This is containment under uncertainty, not a verdict that the attack succeeded; I recorded that framing in the block reason itself so downstream reviewers see it as precautionary.\n\n**Verification (re-read from disk, not assumed):** `check_firewall_state` reported `blocked: true` for 203.0.113.150, with the persisted record showing `precautionary: true`, case_id CASE-6001, rule `DROP all from 203.0.113.150`, and `total_blocked: 1`, read from `firewall_state.json`. The rule was genuinely persisted \u2014 the mutation took effect.\n\n**Note for the analyst:** Because the degraded evidence (unavailable server logs) is the reason for the low confidence, this block should be revisited if those logs become retrievable; the underlying verdict is not settled and the block may be lifted if the additional evidence clears the IP.",
       "turn": 3
     },
     {
       "seq": 39,
-      "t": 69.446,
+      "t": 237.668,
       "kind": "state_change",
       "case_id": "CASE-6001",
       "state": "VERIFY",
@@ -596,7 +596,7 @@
     },
     {
       "seq": 40,
-      "t": 69.447,
+      "t": 237.669,
       "kind": "verification",
       "case_id": "CASE-6001",
       "ip": "203.0.113.150",
@@ -608,9 +608,9 @@
       "matches_policy": true,
       "record": {
         "ip": "203.0.113.150",
-        "reason": "Case CASE-6001 / ALERT-6001: deterministic scoring returned INCONCLUSIVE (score 0.65, confidence 0.65, clamped from unclamped 0.90 because get_server_logs was unavailable) against critical asset SRV-DB-05. Policy section 7.3: INCONCLUSIVE on a CRITICAL asset -> block_ip with precautionary=true. This block is containment under uncertainty, NOT a verdict that the attack succeeded; the conclusion is capped by a missing evidence source, not by exculpatory evidence.",
+        "reason": "INCONCLUSIVE outcome (score 0.65, clamped from 0.90 due to unavailable server logs) on critical asset SRV-DB-05. Precautionary containment under uncertainty, not a verdict that the attack succeeded.",
         "precautionary": true,
-        "blocked_at": "2026-09-12T11:38:46Z",
+        "blocked_at": "2026-09-12T12:27:12Z",
         "case_id": "CASE-6001",
         "rule": "DROP all from 203.0.113.150"
       },
@@ -633,9 +633,9 @@
           "outcome": "INCONCLUSIVE",
           "confidence": 0.65,
           "score": 0.65,
-          "hypothesis": "The UNION-based SQL injection from 203.0.113.150 against SRV-DB-05 (MySQL 5.7.22 on port 3306) SUCCEEDED and resulted in exfiltration of roughly 3.1 MB from the billing/payments database. The host runs a version inside CVE-2023-21980's affected range, the CVE's attack class is exactly sql_injection with unauthenticated arbitrary table reads, the flow returned 3.1 MB to the external host (vs 2.7 KB request), and no firewall block was in place to contain it.",
-          "sufficiency": "Sufficient to classify: two independent sources (asset inventory vs. CVE knowledge base, and flow-level packet metadata) agree that (1) the target runs a MySQL version inside the affected range of a UNION-payload SQL-injection CVE, and (2) a 3.1 MB response left the host to an external IP with exfil indicators and no firewall block. What I still do not know: whether the host-side logs would show the specific injected queries and their row counts, because the log collector timed out on both attempts. That gap weakens the direct proof of query execution but does not overturn the version and packet evidence, which point to a successful breach rather than a blocked attempt.",
-          "disconfirming_evidence_checked": "My hypothesis was that the attack succeeded. I looked for (a) signs of patching/blocking: get_asset_info shows mysql 5.7.22, inside CVE-2023-21980's range, and last_patch_date 2024-06-02 did not cover this flaw - the version comparison places the host on the VULNERABLE side, so no disconfirmation. (b) A block or error containing the flow: check_firewall_state for 203.0.113.150 returned blocked=false with total_blocked 0, so nothing stopped it; the packet metadata shows 3.1 MB successfully delivered, the opposite of an error/rejection. (c) Post-exploitation/corroborating history: get_related_alerts returned no_data, so there is no corroborating prior alert (I did not cite related_alert_corroborates). LIMITATION: get_server_logs failed twice with 'log collector timeout' (attempts 1 and 2). That is an evidence gap, not a finding - I have NO host-side confirmation that the injected query executed, and I therefore did not declare logs_consistent. Equally, the failed log query is not proof the logs are clean, so I did not declare logs_clean either. The version-in-range and packet-exfiltration findings rest on independent sources that did return data and do not depend on the log gap.",
+          "hypothesis": "The UNION SELECT SQL injection from 203.0.113.150 against SRV-DB-05 succeeded: the host runs a MySQL version inside CVE-2023-21980's affected range (a sql_injection CVE permitting arbitrary table read by an unauthenticated remote attacker), and the flow returned 3.1 MB of high-entropy data to the external host with an explicit exfil_indicators flag \u2014 consistent with a successful arbitrary-read/injection, not a blocked attempt.",
+          "sufficiency": "Two independent sources agree on a successful breach: the host is provably inside the affected range of a SQL-injection CVE (version join done explicitly: 5.7.22 is inside >=5.7.0,<5.7.30), and the flow metadata shows 3.1 MB of high-entropy egress to an external host with exfil_indicators=true. The firewall check confirms 203.0.113.150 was never blocked, so the egress was permitted. Limitation I could not close: get_server_logs failed twice ('log collector timeout'), so I have NO host-side confirmation of the specific query executed or rows returned \u2014 I could not declare logs_consistent, and equally the failure is not evidence the logs were clean. related_alerts returned genuine no_data (no corroborating alert), so no corroboration factor is claimed. Classification rests on the version-in-range and exfil-indicator evidence classes only.",
+          "disconfirming_evidence_checked": "Falsifier for 'attack succeeded': sign that it was blocked or errored out. Host logs \u2014 the only source that could show an error/403/zero-rows \u2014 were unavailable on both attempts (collector timeout), so I could not use them to falsify. I instead checked the alternate source: an errored or blocked injection returns a short DB error, but packet metadata shows 3,284,119 bytes to the client with entropy 7.9 and exfil_indicators=true, which directly contradicts the 'it failed' reading. I also checked the firewall state: 203.0.113.150 is NOT blocked (blocked=false, record=null, total_blocked=0), so there was no control in place preventing the egress. Alternate benign explanation (legitimate bulk export at 06:18) is unsupported: the flow carries a mysql_response_size_outlier anomaly and off-hours sustained egress on a billing/payments DB with no inventory evidence of a legitimate export.",
           "scoring": {
             "base": 0.5,
             "raw_sum": 0.9,
@@ -647,15 +647,15 @@
                 "factor": "version_in_range",
                 "label": "Running version falls inside a CVE's affected range",
                 "delta": 0.25,
-                "citation": "get_asset_info: SRV-DB-05 runs mysql 5.7.22. get_vulnerabilities: CVE-2023-21980 affected_versions '>=5.7.0,<5.7.30', fixed_in 5.7.30, attack_class sql_injection, 'permits authentication bypass and arbitrary read of arbitrary tables by an unauthenticated remote attacker'. 5.7.22 is >=5.7.0 and <5.7.30, so it IS inside the affected range.",
-                "rationale": "The running version falls inside the affected range of a CVE whose attack class (sql_injection, UNION payload) matches the alert signature exactly. This host is genuinely vulnerable to the attempted attack class."
+                "citation": "get_asset_info: SRV-DB-05 runs mysql 5.7.22 (Ubuntu 20.04.6, critical, 'Billing and payments database'); get_vulnerabilities: CVE-2023-21980 affects '>=5.7.0,<5.7.30', fixed_in 5.7.30, cvss 9.8, attack_class 'sql_injection' \u2014 5.7.22 < 5.7.30 and >= 5.7.0, so this host IS inside the affected range. (CVE-2022-21444 affects >=8.0.0,<8.0.30 \u2014 5.7.22 is outside that range and it is DoS-only.)",
+                "rationale": "The target runs a MySQL version squarely inside the affected range of a SQL-injection CVE that matches the alert signature exactly (UNION payloads permitting arbitrary table read by an unauthenticated remote attacker). This is the vulnerability half of the join, established by comparing the running version against the CVE range myself."
               },
               {
                 "factor": "exfil_indicators",
                 "label": "Packet metadata shows exfil / payload-anomaly indicators",
                 "delta": 0.15,
-                "citation": "get_packet_metadata ALERT-6001: bytes_to_server 2680, bytes_to_client 3284119, duration_ms 52140, exfil_indicators true, payload_entropy 7.9, anomalies ['mysql_response_size_outlier','sustained_egress_off_hours'], notes '3.1 MB returned to an external host over 52 seconds. Strong volumetric exfiltration signal.'",
-                "rationale": "A 2.7 KB request eliciting 3.1 MB of response is a result-set-sized transfer, not an error page or rejection. Combined with off-hours timing and high entropy, this is strong evidence data left the host."
+                "citation": "get_packet_metadata ALERT-6001: bytes_to_server 2680, bytes_to_client 3284119, duration_ms 52140, payload_entropy 7.9, exfil_indicators true, protocol_anomalies ['mysql_response_size_outlier','sustained_egress_off_hours'], notes '3.1 MB returned to an external host over 52 seconds. Strong volumetric exfiltration signal.'",
+                "rationale": "3.1 MB returned to an external host over 52 seconds in response to a 2.68 KB request is not an error page or a blocked attempt \u2014 it is bulk data leaving the host, with an explicit exfil indicator. This is the 'did anything actually leave' half of the correlation."
               }
             ],
             "ignored_factors": [],
@@ -665,7 +665,7 @@
             ],
             "ceiling_note": "Degraded-evidence clamp applied: get_server_logs returned unavailable/failed, so confidence is restricted to [0.35, 0.65]. Unclamped score was 0.90; reported score is 0.65. The missing source, not the evidence that was gathered, is what caps this conclusion."
           },
-          "at": "2026-09-12T11:38:41Z"
+          "at": "2026-09-12T12:26:47Z"
         }
       ],
       "actions": [
@@ -673,8 +673,8 @@
           "action": "block_ip",
           "ip": "203.0.113.150",
           "precautionary": true,
-          "reason": "Case CASE-6001 / ALERT-6001: deterministic scoring returned INCONCLUSIVE (score 0.65, confidence 0.65, clamped from unclamped 0.90 because get_server_logs was unavailable) against critical asset SRV-DB-05. Policy section 7.3: INCONCLUSIVE on a CRITICAL asset -> block_ip with precautionary=true. This block is containment under uncertainty, NOT a verdict that the attack succeeded; the conclusion is capped by a missing evidence source, not by exculpatory evidence.",
-          "at": "2026-09-12T11:38:46Z",
+          "reason": "INCONCLUSIVE outcome (score 0.65, clamped from 0.90 due to unavailable server logs) on critical asset SRV-DB-05. Precautionary containment under uncertainty, not a verdict that the attack succeeded.",
+          "at": "2026-09-12T12:27:12Z",
           "verified": true
         }
       ],
@@ -689,9 +689,9 @@
           "matches_policy": true,
           "record": {
             "ip": "203.0.113.150",
-            "reason": "Case CASE-6001 / ALERT-6001: deterministic scoring returned INCONCLUSIVE (score 0.65, confidence 0.65, clamped from unclamped 0.90 because get_server_logs was unavailable) against critical asset SRV-DB-05. Policy section 7.3: INCONCLUSIVE on a CRITICAL asset -> block_ip with precautionary=true. This block is containment under uncertainty, NOT a verdict that the attack succeeded; the conclusion is capped by a missing evidence source, not by exculpatory evidence.",
+            "reason": "INCONCLUSIVE outcome (score 0.65, clamped from 0.90 due to unavailable server logs) on critical asset SRV-DB-05. Precautionary containment under uncertainty, not a verdict that the attack succeeded.",
             "precautionary": true,
-            "blocked_at": "2026-09-12T11:38:46Z",
+            "blocked_at": "2026-09-12T12:27:12Z",
             "case_id": "CASE-6001",
             "rule": "DROP all from 203.0.113.150"
           },
