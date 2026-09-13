@@ -14,6 +14,11 @@ new evidence, a tool failure, or a human override arrives.
 > that then shipped 2 MB outbound is a **breach**. The severity label does not
 > decide; the correlated evidence does.
 
+> **Hosted viewer:** <https://soc-agent-trace-viewer.vercel.app> replays recorded traces — every case, refusal and
+> reconsideration, read-only. There is deliberately no "run it now" button; the
+> agent loop needs an API key and §10 chose replay over live streaming.
+> To run the agent yourself: clone, set `ANTHROPIC_API_KEY`, `python run_all.py`.
+
 ## Start here
 
 ![The agent choosing its next evidence source, with the reason it gave](docs/viewer.png)
