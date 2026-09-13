@@ -257,6 +257,12 @@ conclusion*, not merely somewhere in the trace. Scenarios 3 and 5 assert they
 **gathered new evidence** after reconsidering (16 and 10 calls in the shipped
 traces; no reconsideration scores 0, the negative control).
 
+**What varies between runs, and what does not.** Across three full runs over the
+same eight cases, every outcome held steady while the number of guard refusals
+moved (10, 11 and 16). That is expected: the agent
+chooses its own tool order and when to submit, so refusal count belongs to the
+path it took, not to the fixtures. A fixed count would suggest a scripted path.
+
 ### The four guard families
 
 Every guard refuses the **form** of a claim, never its content.
@@ -273,21 +279,21 @@ the reconsideration check.
 
 ### Known limitations
 
-- **Scenario 7 fails on purpose.** See above. The gap is documented rather than
-  hidden.
-- **The packet-provenance guard is existential, not universal.** It checks the
-  case's own packet record was *read*, not that the citation names it. Closing it
-  would mean parsing citation prose, the one thing these guards refuse to do.
-  Documented as `K-7`, not patched.
-- **Three guard scopes are structurally verified but not exercised in any
-  trace**: related-alert window, sibling verdict, and packet provenance. They are
-  covered by `selfcheck.py` and did not need to fire, because the agent declared
-  an acceptable factor set first time. Stated as *structurally verified, not
-  exercised* rather than implied to appear in an artifact.
-- **Refusal counts vary between runs** (10, 11 and 16 measured across three full
-  runs over the same eight cases). The model picks its own tool sequence and
-  declaration timing, so refusal count is a property of the trajectory, not of
-  the fixtures.
+- **Scenario 7 fails on purpose.** See the scenario table above. The gap is
+  documented rather than hidden.
+- **Packet provenance is checked by what was read, not by what was cited.** The
+  guard confirms the case read its *own* alert's packet record before making a
+  packet claim. It cannot confirm the claim is based on that record rather than a
+  sibling's, because that would mean reading the citation text, and the guards
+  deliberately never judge what the agent wrote. In the shipped traces this can
+  only arise in one place: scenario 5 case A, the only case that reads two
+  alerts' packet records. Documented as `K-7`.
+- **One guard check has never fired in a live run: the related-alert time
+  window.** `selfcheck.py` exercises it directly, but the agent has not yet made
+  the mistake it catches, and forcing that mistake would mean scripting the agent.
+  Three other checks, sibling verdict, log window and packet provenance, did fire
+  as real refusals in earlier recorded runs (scenarios 5, 6 and 3). They are not
+  in the currently shipped traces only because each full run replaces the traces.
 
 ### Generalization probe
 

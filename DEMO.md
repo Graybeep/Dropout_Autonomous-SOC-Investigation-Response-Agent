@@ -508,15 +508,18 @@ artefact does not contain is the one thing that turns this set piece against you
 
 | scope | refuses | seen in |
 |---|---|---|
-| service coverage | `version_patched` claimed from a subset of the host's KB-covered services | scenarios 1, 3, 4, 5 |
-| log window | `logs_clean` claimed from a window not containing the alert | scenario 6 |
-| precondition | any factor drawn from a source that never returned `ok` | scenarios 2–6 |
+| service coverage | `version_patched` claimed from a subset of the host's KB-covered services | scenarios 1, 3, 4, 7 |
+| precondition | any factor drawn from a source that never returned `ok` | scenarios 1, 2, 3, 4, 6 |
+| contradiction | a finding declared together with its negation | scenarios 3, 7 |
 
-**Verified by `selfcheck.py` but NOT present in any trace:** the related-alert
-window, the sibling-verdict conflict, and packet provenance. They did not need to
-fire — the agent declared an acceptable factor set first time. If asked, say
-exactly that: *structurally verified, not exercised in this run.* Do not imply a
-trace shows them.
+That table is the **shipped traces**, the ones a judge can open. Three more checks
+fired as real refusals in **earlier recorded runs** but are not in the current
+traces, because each full run replaces them: sibling verdict (scenario 5), log
+window (scenario 6) and packet provenance (scenario 3). If asked, say that plainly
+and do not point at a trace for them.
+
+**Never fired in any live run:** only the related-alert time window. `selfcheck.py`
+exercises it directly.
 
 The one-sentence framing covers all of them regardless:
 
@@ -553,13 +556,13 @@ passing suite.
 
 Say it once, in that form. It is a fact about the account, not an apology.
 
-### The three scopes no trace demonstrates
+### Scopes not in the shipped traces
 
 | scope | if asked |
 |---|---|
-| related-alert window | "Structurally verified, not exercised in this run. `selfcheck.py` asserts it refuses a `logs_clean` declared from a window that misses a known sibling alert — ablating that guard fails 7 checks." |
-| sibling verdict | "Same: verified offline. It refuses `logs_clean` when a sibling case already concluded SUCCEEDED on the same asset. Ablating it fails 2 checks, distinct from the others." |
-| packet provenance | "Verified offline. And a known limitation: it requires the case to have *read* its own alert's flow, not that the citation *be* that flow. No outcome impact — both paths clamp to 0.95." |
+| related-alert window | "Verified offline, and it has never fired live: the agent has not made that mistake. `selfcheck.py` asserts it refuses a `logs_clean` declared from a window that misses a known sibling alert, and ablating that guard fails 7 checks." |
+| sibling verdict | "It fired live in an earlier recorded run, on scenario 5: `logs_clean` refused because case 5002 had already concluded SUCCEEDED on the same asset. It is not in today's traces because runs replace them. Ablating it fails 2 checks." |
+| packet provenance | "It fired live in an earlier run, on scenario 3. And a known limitation: it confirms the case *read* its own alert's flow, not that the citation *is* that flow. Only scenario 5 case A reads two flows, so that is the one place it could matter." |
 
 Never imply a trace shows one of these. The three that **are** in the traces are
 service coverage, log window, and precondition.
