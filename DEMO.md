@@ -434,18 +434,19 @@ is not the one on screen.
 Lead with this. It is a stronger answer than any pass count, because it is about
 the failure mode that actually threatens a verification suite.
 
-> Six separate times my own tooling produced a **plausible wrong answer**, and
-> each time the number looked fine. A regex-based guard ablation mis-attributed
-> failures across two guards. An invariant I had "verified" by reading turned
-> out never to have been asserted. A sandbox lock deleted itself, because it
-> lived in the directory it was protecting. A coherence check printed "single
-> coherent run" from a hard-coded string while the underlying span was wrong. A
-> viewer "defect" I was about to fix turned out never to have existed. And the
-> configuration fixture shipped a `prevents_exploitation` boolean that would
-> have handed the agent the verdict it was supposed to derive — while three
-> separate comments in the code asserted that it did no such thing.
+> Seven separate times my own tooling produced a **plausible wrong answer**, and
+> every time the report looked fine. A regex-based guard ablation mis-attributed
+> failures across two guards. An invariant I had "verified" by reading turned out
+> never to have been asserted. A sandbox lock deleted itself, because it lived in
+> the directory it was protecting. A coherence check printed "single coherent
+> run" from a hard-coded string while the underlying span was wrong. A viewer
+> "defect" I was about to fix turned out never to have existed. The configuration
+> fixture shipped a `prevents_exploitation` boolean that would have handed the
+> agent the verdict it was supposed to derive — while three comments in the code
+> asserted it did no such thing. And the deploy reported "ready" on a build where
+> every single path redirected visitors to a login wall.
 >
-> None of those were caught by a suite going red. All six were caught by
+> None of those were caught by a suite going red. All seven were caught by
 > re-reading the output instead of the summary. That is why the guards are now
 > ablated at runtime rather than by patching source, why fixture invariants are
 > adversarially tested, and why every count in this project was re-derived

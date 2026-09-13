@@ -14,10 +14,15 @@ new evidence, a tool failure, or a human override arrives.
 > that then shipped 2 MB outbound is a **breach**. The severity label does not
 > decide; the correlated evidence does.
 
-> **Hosted viewer:** <https://soc-agent-trace-viewer.vercel.app> replays recorded traces — every case, refusal and
-> reconsideration, read-only. There is deliberately no "run it now" button; the
-> agent loop needs an API key and §10 chose replay over live streaming.
-> To run the agent yourself: clone, set `ANTHROPIC_API_KEY`, `python run_all.py`.
+> **Hosted viewer:** <https://soc-agent-trace-viewer.vercel.app>
+>
+> This viewer replays traces from real agent runs — every step shown was produced
+> by the live system, not simulated. The agent itself runs locally: clone the repo,
+> set `ANTHROPIC_API_KEY`, and run `python run_all.py`.
+>
+> Replay rather than live streaming is a design decision taken before the viewer
+> existed (§10): a live loop on stage can hang, rate-limit, or go off-script in
+> front of judges. Determinism over spectacle.
 
 ## Start here
 
