@@ -8,7 +8,7 @@ rate-limit, or go off-script in front of judges. Run the agent live once
 
 ```bash
 python -m http.server 8000
-# open http://localhost:8000/viewer.html
+# open http://localhost:8000/  (viewer at /viewer.html)
 ```
 
 Have a second terminal ready in the project root.
@@ -521,7 +521,7 @@ service coverage, log window, and precondition.
 
 ```bash
 python -m http.server 8000
-# open http://localhost:8000/viewer.html
+# open http://localhost:8000/  (viewer at /viewer.html)
 ```
 
 - Press **Play** for the timed reveal; **Show all** to jump to the end.

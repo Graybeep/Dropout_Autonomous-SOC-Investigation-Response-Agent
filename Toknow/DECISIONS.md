@@ -2375,3 +2375,43 @@ and dominated the page. Anything over 220 characters now sits behind a
 chrome clears AA: stat values 14.26, stat labels 5.29, nav idle 7.81, nav
 active 14.64, panel headers 5.52, case keys 5.29, breadcrumb 15.32. External
 requests still `[]`.
+
+---
+
+## Part 24 - Landing page
+
+**N-29. `index.html` is now the entry point; the viewer is the app behind it.**
+Owner asked for a landing page built from the uupm restaurant template, with the
+viewer reachable from it. Tokens were read off `uupm.cc/demo/restaurant-food`
+the same way as the DevKit ones: ground `#FFFAF0`, body `#6B5344`, primary
+`#FF6B35` on white at 12px radius, Playfair Display SC over Karla.
+
+`run_all.py`, README and DEMO.md now point at `http://localhost:8000/` rather
+than straight at `/viewer.html`.
+
+**N-30. The template's sections were NOT reproduced.** The prompt behind that
+demo asks for food photography, a menu preview, a reservation system, a chef
+story and a location map. This project has none of those things, and the owner's
+instruction was explicit: do not list anything the project does not have. So the
+*visual language* was adopted - warm ground, serif display over sans body, one
+orange call to action, generous white cards - and the *sections* were replaced
+with real ones: how it works (six stages), the asset/vulnerability join, the
+eleven tools, the seven scenarios with their actual outcomes, and what a trace
+records. No pricing or billing section, per the same instruction.
+
+**N-31. Two typefaces named, neither fetched.** Playfair Display SC and Karla
+are Google Fonts. Loading them would have broken the zero-external-reference
+rule (L-2) that exists so the demo survives a venue with no internet, so both
+are named first in the stack and fall back to a system serif / sans. Verified
+in-page: `performance.getEntriesByType('resource')` filtered to non-same-origin
+returns `[]` on the landing page as well as the viewer.
+
+**N-32. The outcome colours are inverted relative to normal product instinct,
+and the landing page says so.** `SUCCEEDED` is rendered as the bad news and
+`FAILED` as the good news, because the subject is the attack, not the agent. The
+scenario section states that in one sentence rather than leaving a reader to
+infer why "SUCCEEDED" is red. Same mapping as `outcomeKind()` in the viewer
+(P-030).
+
+**N-33. Play -> Start.** Owner's rename. The toggle is Start / Pause, and
+`stop()` restores "Start"; both paths verified in-browser.

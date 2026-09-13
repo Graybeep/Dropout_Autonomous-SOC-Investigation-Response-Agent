@@ -241,8 +241,8 @@ def main(argv: list[str]) -> int:
     print(f"Reports -> {config.REPORT_DIR}")
     # Not "open viewer.html": the browser blocks fetch() on file:// origins,
     # so the trace JSON silently fails to load. It has to be served.
-    print("Viewer  -> python -m http.server 8000, "
-          "then http://localhost:8000/viewer.html")
+    print("Open    -> python -m http.server 8000, "
+          "then http://localhost:8000/  (viewer at /viewer.html)")
     sandbox.release()
     return 0 if all_ok else 1
 

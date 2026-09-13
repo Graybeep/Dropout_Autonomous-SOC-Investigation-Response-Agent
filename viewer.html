@@ -182,7 +182,8 @@
   .sidebar{background:#080808;border-right:1px solid var(--line);position:sticky;
     top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
   .brand{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;
-    align-items:center;gap:10px}
+    align-items:center;gap:10px;text-decoration:none;color:inherit}
+  .brand:hover .bs{color:var(--accent)}
   .brand .dot{flex:0 0 9px;height:9px;background:var(--accent);border-radius:2px;
     box-shadow:0 0 10px rgba(57,255,20,.5)}
   .brand .bt{font-weight:600;font-size:13.5px;letter-spacing:-.2px;line-height:1.25}
@@ -240,10 +241,10 @@
 <div class="app">
 
   <aside class="sidebar">
-    <div class="brand">
+    <a class="brand" href="index.html" title="Back to the overview">
       <span class="dot"></span>
-      <span class="bt">SOC Agent<span class="bs">trace replay</span></span>
-    </div>
+      <span class="bt">SOC Agent<span class="bs">&larr; overview</span></span>
+    </a>
     <div class="nav-label">Scenarios</div>
     <nav id="nav" class="nav"></nav>
     <div class="sidebar-foot" id="foot"></div>
@@ -253,7 +254,7 @@
     <header class="topbar">
       <span class="crumb" id="crumb">&nbsp;</span>
       <span class="grow"></span>
-      <button id="play" class="primary">Play</button>
+      <button id="play" class="primary">Start</button>
       <button id="all">Show all</button>
       <button id="reset">Reset</button>
       <span id="count" class="mono" style="color:var(--dim2);font-size:12px"></span>
@@ -572,7 +573,7 @@ function reveal(n){
   }
 }
 
-function stop(){ clearInterval(timer); timer = null; $("play").textContent = "Play"; }
+function stop(){ clearInterval(timer); timer = null; $("play").textContent = "Start"; }
 
 $("play").onclick = () => {
   const total = document.querySelectorAll(".step").length;

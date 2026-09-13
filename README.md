@@ -59,15 +59,18 @@ cp .env.example .env          # then put your key in SOC_API_KEY
 python selfcheck.py           # 99 behavioural checks, no API key needed
 python compliance.py          # 22 guardrail checks, no API key needed
 python run_all.py             # run all seven scenarios against the model
-python -m http.server 8000    # then open http://localhost:8000/viewer.html
+python -m http.server 8000    # then open http://localhost:8000/
 ```
 
 `run_all.py` accepts scenario numbers: `python run_all.py 3 6`.
 
 A presenter's walkthrough is in **[DEMO.md](DEMO.md)**.
 
-**The viewer must be served over HTTP**, not opened as a `file://` URL — browsers
-block `fetch` on local files, so the trace JSON will not load.
+`http://localhost:8000/` is the overview page (`index.html`); the trace viewer is
+linked from it and lives at `/viewer.html`.
+
+**Both must be served over HTTP**, not opened as `file://` URLs — browsers block
+`fetch` on local files, so the trace JSON will not load.
 
 ---
 
