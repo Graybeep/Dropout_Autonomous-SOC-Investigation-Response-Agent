@@ -18,7 +18,7 @@ new evidence, a tool failure, or a human override arrives.
 >
 > This viewer replays traces from real agent runs — every step shown was produced
 > by the live system, not simulated. The agent itself runs locally: clone the repo,
-> set `ANTHROPIC_API_KEY`, and run `python run_all.py`.
+> set an API key (`SOC_API_KEY`, see `.env.example`), and run `python run_all.py`.
 >
 > Replay rather than live streaming is a design decision taken before the viewer
 > existed (§10): a live loop on stage can hang, rate-limit, or go off-script in
