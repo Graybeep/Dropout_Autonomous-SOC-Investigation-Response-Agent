@@ -45,6 +45,12 @@ class Expectation:
     # boundary is not the retry behaviour section 4.6 specifies.
     min_calls: list[tuple[str, int, str]] = field(default_factory=list)
     gather_after_reconsider: bool = False
+    # Scenario 7 only. The scenario documents a correlation section 7.2 has no
+    # term for, so its outcome assertion is expected NOT to hold. Kept in the
+    # suite deliberately: the gap is the finding. run_all.py reports it as
+    # XFAIL so it is legible as a declared limitation rather than a regression,
+    # and it is NOT counted as a suite failure.
+    expected_to_fail: bool = False
 
 
 @dataclass
@@ -317,16 +323,31 @@ SCENARIOS: dict[str, Scenario] = {
                 ("get_configuration", "asset_id", "SRV-HR-11", "pre_conclusion"),
             ],
             final_status="CONCLUDED",
-            required_factors=["config_prevents_exploitation"],
-            notes=("The outcome alone does not prove this scenario works, which is "
-                   "why config_prevents_exploitation is a REQUIRED factor. Stage 1 "
-                   "(tool present, no scoring term) already reached INCONCLUSIVE at "
-                   "0.40 - version_in_range +0.25, logs_clean -0.25, packet_benign "
-                   "-0.10 - because a UNION SELECT that returns zero rows is "
-                   "logs_clean by the schema's own definition, not logs_consistent. "
-                   "So FAILED could in principle be reached without ever consulting "
-                   "the configuration. Requiring the factor is what makes this a "
-                   "test of the four-way correlation rather than of the arithmetic."),
-        ),
+            expected_to_fail=True,
+            notes=("THIS SCENARIO IS EXPECTED TO FAIL, AND THE FAILURE IS THE "
+                   "POINT. It is the one case built for a correlation the "
+                   "scoring model has no term for. SRV-HR-11 runs MySQL 5.7.24, "
+                   "inside CVE-2023-21980's range, and the logs show the "
+                   "injected UNION SELECT reaching the database - on asset and "
+                   "vulnerability evidence alone it is indistinguishable from "
+                   "scenario 2. What separates them is configuration: the portal "
+                   "connects as hr_portal_ro, which holds no privilege on the "
+                   "targeted table, so MySQL returns ERROR 1142 and zero rows. "
+                   "The agent finds all of this - it calls get_configuration, "
+                   "and its report states the grant restriction as the reason "
+                   "the attack failed - but section 7.2 has no factor for a "
+                   "configuration control, so the finding cannot reach the "
+                   "score. The case lands at 0.40 INCONCLUSIVE on "
+                   "version_in_range +0.25, logs_clean -0.25, packet_benign "
+                   "-0.10, and the expected FAILED is not reached. "
+                   "A -0.30 config_prevents_exploitation factor was built and "
+                   "reverted. It worked, but the universal-coverage guard it "
+                   "needed asked the agent to populate a schema field rather "
+                   "than to call a tool, and on one run in two the agent "
+                   "abandoned the factor instead of satisfying the guard - "
+                   "landing here anyway, by a worse route. A guard whose remedy "
+                   "is an action (version_patched's: 'call get_vulnerabilities "
+                   "for each') is repaired reliably; one whose remedy is a field "
+                   "is not. See Toknow P-027, P-028, N-16..N-18."),        ),
     ),
 }

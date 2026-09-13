@@ -40,7 +40,7 @@ Scenario 5 case A is the one case in the suite whose verdict moves on a single
 factor's sign. It runs from its saved trace, which passed. Do not put it in the
 live slot.
 
-While it runs, say what it is doing: the agent is being handed ten tool schemas
+While it runs, say what it is doing: the agent is being handed eleven tool schemas
 and is choosing its own calls. Nothing about the order is scripted.
 
 Then show the guardrails are checkable, not just claimed:
@@ -227,32 +227,50 @@ name, not a friendlier one, because the judge can see it on screen.
 
 **"How stable is it, really?"** — answer this with the number, not a hedge.
 
-> Seven of seven clean, 60/60 checks. The number I actually trust more is the
-> one underneath it: across runs, the declared factor sets, the scores and the
-> outcomes are identical. What varies is tool-call ordering and how many times
-> the guard bus refuses a submission before accepting it — which is variance in
-> how the agent gets there, not in what it concludes.
+> Six of six clean, 51/51, plus 105/105 offline checks. The seventh is a
+> declared XFAIL and I will show you why it fails, because that is the more
+> useful half. The number I trust more than the total is this: across runs the
+> declared factor sets, the scores and the outcomes are identical. What varies
+> is tool-call ordering and how many times the guard bus refuses a submission
+> before accepting it — variance in how the agent gets there, not in what it
+> concludes.
 
-That is the honest shape of the stability claim, and it is worth saying in that
-order: the outcome is stable *because* the scoring is deterministic, and the
-trajectory varies *because* the agent genuinely chooses its own tools. If both
-were stable, the second one would be a script.
+Say it in that order: the outcome is stable *because* the scoring is
+deterministic, and the trajectory varies *because* the agent genuinely chooses
+its own tools. If both were stable, the second one would be a script.
 
-If asked what did move, do not reach for a reassuring answer — there is a real
-one, and it is the better story:
+### The XFAIL — lead with it, do not wait to be asked
 
-> Scenario 7 flipped between `logs_clean` and `logs_consistent` on consecutive
-> runs, a 0.50 swing, and landed on the wrong outcome once. The cause was not
-> the model. MySQL's general log records statements as issued and never their
-> outcome, so nothing in the fixture actually stated that the injected query
-> returned no rows — the only evidence was a constant 1130-byte response. The
-> fixture did not contain the fact the scenario turned on. I added the
-> `ERROR 1142` grant denials MySQL really emits. The scoring weight was not
-> touched.
+`reports/CASE-7001.md`. The agent investigates SRV-HR-11, and on version and
+logs alone the case is indistinguishable from scenario 2: MySQL 5.7.24 sits
+inside CVE-2023-21980's range and the injected `UNION SELECT` reaches the
+database. It calls `get_configuration` unprompted, and its own report says:
+
+> *"the database account `hr_portal_ro` lacked SELECT privileges on the targeted
+> tables, causing all UNION SELECT attempts to return ERROR 1142 with 0 rows"*
+
+It even rules out the WAF as the thing that saved the host — DetectionOnly, so
+the payload did reach the application. That is the asset + vulnerability +
+configuration correlation, done correctly.
+
+And the score still says `INCONCLUSIVE` 0.40, because §7.2 has no factor for a
+configuration control. **The agent established a fact the scoring model has no
+way to represent.** The one sentence to have ready:
+
+> I built that factor, and I reverted it. It passed one full run and failed the
+> next — not because the factor was wrong, but because the guard protecting it
+> asked the agent to fill in a schema field instead of to call a tool, and on
+> one run in two the agent dropped the claim rather than satisfy the guard. A
+> guard that makes a claim harder to state than to abandon will get it
+> abandoned. The gate for that work was declared hard in advance, so it went.
+
+If asked "why not just ship it anyway, it worked once": because a gate that
+moves when you dislike its answer is not a gate, and the two runs needed to
+verify a fix are the two runs this demo was rehearsed in.
 
 Do not offer "a stronger model would fix it." It is a resource excuse dressed as
 a robustness story, and it invites "so why didn't you?" — to which the honest
-answer is that changing the model invalidates a passing 60/60 suite with no time
+answer is that changing the model invalidates a passing 51/51 suite with no time
 to re-verify it. Better not to raise it.
 
 ---
@@ -283,15 +301,45 @@ steps in the evidence chain.
 
 ### If a judge notices refusals everywhere — get ahead of this, do not defend it
 
-Measured across all seven traces: **16 refusals over 8 cases. Every case is
-refused at least once; the most any case takes is 3.** Refusal is the normal
-operating mode here, not an exception, so do not present it as a rare catch.
+Measured across all seven shipped traces: **10 refusals over 8 cases; 7 of the
+8 cases are refused at least once, and no case takes more than 2.** Refusal is
+the normal operating mode here, not an exception, so do not present it as a rare
+catch.
+
+Quote that as "roughly one to two per case", not as a fixed figure — it is
+run-dependent, and an earlier run measured 16 over the same 8 cases with a max
+of 3. The shape is stable; the count is not. To recount against whatever traces
+are on disk:
+
+```bash
+python -c "import json,glob;print(sum(1 for p in glob.glob('traces/*.json') for s in json.load(open(p))['steps'] if s.get('tool')=='submit_assessment' and s.get('status')=='rejected'))"
+```
+
 Present it as the design:
 
-> Every case gets refused at least once. That is the bus doing its job on every
-> case, not a stumble on one. And in all 16 the agent resolved it the same way
-> — by going and getting the evidence. Not once did it resolve a refusal by
-> weakening the claim to slip past the check.
+> Nearly every case gets refused at least once. That is the bus doing its job on
+> the normal path, not a stumble on one case.
+
+**Do not claim "it always responds by gathering more evidence."** It does not,
+and it should not — the correct response depends on which guard fired, and being
+precise about this is stronger than the tidy version:
+
+- **Exhaustiveness** (`version_patched` claimed having checked only some of the
+  host's services) → the agent **gathers**: the next call is
+  `get_vulnerabilities` on the service it skipped. This is the scenario 1 set
+  piece above.
+- **Provenance** (`related_alert_corroborates` declared from a lookup that came
+  back empty) → the agent **drops the factor**, and that is the right answer.
+  The claim was unfounded; the honest fix is to stop making it, not to go
+  manufacture corroboration. Dropping here is the guard working.
+- **Contradiction** (`logs_clean` and `logs_consistent` together) → the agent
+  picks the side the evidence supports.
+
+The one case where dropping was the *wrong* response is the reverted
+configuration guard, and it is worth volunteering rather than hiding: there the
+claim was true and supportable, and the agent dropped it anyway because
+satisfying the guard meant filling in a schema field rather than calling a tool.
+That is what got the guard reverted — see the XFAIL section above.
 
 The three shapes it refuses, worth naming because they are different failures:
 **exhaustiveness** (claiming "outside ALL ranges" having checked some),

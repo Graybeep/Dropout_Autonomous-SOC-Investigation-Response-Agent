@@ -2212,3 +2212,50 @@ can reach `FAILED` on `version_patched` + `logs_clean` without ever consulting
 configuration. `required_factors=["config_prevents_exploitation"]` is what makes
 it a test of the four-way correlation rather than of the arithmetic — the same
 gap N-4 recorded for a different assertion.
+
+**N-19. Gate 2 failed and the factor was reverted. The reason is the useful
+part.** Two consecutive full runs were required. Run 1: 60/60, all seven green.
+Run 2: scenarios 1-6 identical at 51/51, scenario 7 down to 7/9 — the agent
+never established `config_prevents_exploitation` and landed INCONCLUSIVE. The
+submission sequence says exactly what happened:
+
+```
+1: version_in_range, logs_consistent, config_prevents, packet_benign, logs_clean
+   -> refused: logs_consistent and logs_clean contradict
+2: version_in_range, logs_clean, config_prevents, packet_benign
+   -> refused: surfaces_accounted missing db_account_grants, network_egress
+3: config_prevents DROPPED, related_alert_corroborates reached for instead
+   -> refused: provenance
+4: version_in_range, logs_clean, packet_benign -> accepted, 0.40, INCONCLUSIVE
+```
+
+Faced with the surface-coverage refusal, the agent **abandoned the claim rather
+than filling in the field**. That is the finding, and it generalises past this
+factor: `version_patched`'s coverage guard is repaired reliably because its
+remedy is an **action the agent already knows how to take** — "call
+get_vulnerabilities for each of them". The surface guard's remedy was "populate
+a nested schema field", and under refusal pressure the agent discarded the
+factor instead. Run 1 repaired it, run 2 did not; roughly a coin flip.
+
+So the guard was not merely imperfect, it was **actively load-bearing against
+its own factor**. A guard that makes the claim it protects harder to state than
+to drop will sometimes get it dropped.
+
+Reverted: factor, guard, schema field, prompt entry, toolbus wiring. Kept: the
+`get_configuration` tool (the agent calls it unprompted and cites it), the
+fixture with P-027's boolean removed, and P-028's `ERROR 1142` lines — which
+still matter, because without them scenario 7 can read `logs_consistent` and
+land on SUCCEEDED, a far worse failure than the declared one.
+
+**N-20. Scenario 7 kept as a declared XFAIL rather than deleted.** Deleting it
+would have produced a clean seven-of-seven table and hidden the one thing worth
+saying: the agent can establish a fact the scoring model has no way to
+represent. `Expectation.expected_to_fail` marks it, `run_all.py` prints
+`XFAIL (declared)` and does not count it against the exit code, so it reads as
+a limitation rather than a regression. The suite exit code stays 0.
+
+The alternative considered and rejected was keeping the factor and dropping only
+the guard. It would very likely have worked. It was rejected because the gate
+was declared in advance as hard, the configuration would have been unverified,
+and the two runs needed to verify it are the runs the schedule allocates to
+rehearsal. A gate that moves when you dislike its answer is not a gate.

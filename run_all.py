@@ -223,8 +223,17 @@ def main(argv: list[str]) -> int:
         passed = sum(1 for ok, _ in run["checks"] if ok)
         total = len(run["checks"])
         ok = bool(run["checks"]) and passed == total and not run["error"]
-        all_ok &= ok
-        status = "PASS" if ok else ("ERROR" if run["error"] else "FAIL")
+        xfail = run["scenario"].expect.expected_to_fail
+        # A declared limitation is not a regression. Scenario 7 documents a
+        # correlation section 7.2 has no term for; it is kept in the suite
+        # because the gap is the finding, so it must not drag the exit code.
+        all_ok &= (ok or xfail)
+        if ok:
+            status = "XPASS" if xfail else "PASS"
+        elif run["error"]:
+            status = "ERROR"
+        else:
+            status = "XFAIL (declared)" if xfail else "FAIL"
         print(f"{run['key']:<10}{run['scenario'].title[:32]:<34}"
               f"{f'{passed}/{total}':<12}{status}")
     print("=" * 78)

@@ -25,8 +25,6 @@ FACTORS: dict[str, tuple[float, str]] = {
     "version_patched": (-0.30, "Running version outside all affected ranges (patched)"),
     "logs_clean": (-0.25, "Server logs clean across the relevant window"),
     "packet_benign": (-0.10, "Packet metadata benign"),
-    "config_prevents_exploitation": (
-        -0.30, "A configuration control prevents the observed attack from succeeding"),
 }
 
 # A finding and its negation cannot both hold.
@@ -50,7 +48,6 @@ FACTOR_PRECONDITIONS: dict[str, list[str]] = {
     "exfil_indicators": ["get_packet_metadata"],
     "packet_benign": ["get_packet_metadata"],
     "related_alert_corroborates": ["get_related_alerts"],
-    "config_prevents_exploitation": ["get_configuration"],
 }
 
 CLAMP = (0.05, 0.95)
@@ -157,50 +154,6 @@ def check_version_patched_coverage(
                 f"is patched."
             )
     return problems
-
-
-def check_config_surface_coverage(
-    asset_id: str,
-    asset_surfaces: list[str],
-    surfaces_accounted: set[str] | list[str],
-) -> list[str]:
-    """`config_prevents_exploitation` is universal over the host's controls.
-
-    "The configuration prevented this" is not a claim about one control. It is
-    a claim that NO surface left a path open: a database grant that blocks the
-    read does not settle the case if egress is wide open and the logs show the
-    rows leaving. So, like `version_patched`, a universal claim needs universal
-    coverage - the agent must account for every surface get_configuration
-    returned, not just the one that supports its conclusion.
-
-    Note what this does NOT do. It does not ask whether the cited surface
-    matches the alert's attack class. That would be a signature -> surface
-    mapping, i.e. detection knowledge living in the bus, and it is the same
-    rule already rejected for version_patched in favour of exhaustiveness.
-    Which surface stops a UNION SELECT is the agent's join to make and to show.
-
-    This guard takes a STRUCTURED list, not the citation prose. Checking
-    coverage by searching the citation text for surface names would make this
-    the first guard to parse what the agent wrote, and the family's whole
-    discipline (see check_negative_scope's K-7 note) is that it judges
-    bookkeeping and never content. Asking for the surface list as a field keeps
-    it bookkeeping: the agent declares what it accounted for, and the bus
-    compares that against what the tool actually returned.
-    """
-    accounted = {s.lower() for s in surfaces_accounted}
-    present = {s.lower() for s in asset_surfaces}
-    missing = sorted(present - accounted)
-    if not missing:
-        return []
-    return [
-        f"factor 'config_prevents_exploitation' claims {asset_id}'s "
-        f"configuration prevented this attack, but you have not accounted for "
-        f"{', '.join(missing)} - surface(s) get_configuration returned for this "
-        f"host. A control that blocks one step does not prevent exploitation if "
-        f"another surface leaves a path open. List every surface in "
-        f"'surfaces_accounted' and say in your citation why each one does or "
-        f"does not leave the attack a way through."
-    ]
 
 
 def check_sibling_verdict_conflict(

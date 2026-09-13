@@ -17,7 +17,6 @@ FACTOR_ENUM = [
     "related_alert_corroborates",
     "version_patched",
     "logs_clean",
-    "config_prevents_exploitation",
     "packet_benign",
 ]
 
@@ -242,21 +241,6 @@ ANTHROPIC_TOOLS: list[dict[str, Any]] = [
                                     "evidence twice. "
                                     "related_alert_corroborates: another alert on "
                                     "this asset actually corroborates. "
-                                    "config_prevents_exploitation: a control on "
-                                    "the host made this attack UNABLE TO SUCCEED - "
-                                    "e.g. the database account the app connects "
-                                    "as holds no privilege on the table the "
-                                    "injection targeted, so the query returns no "
-                                    "rows whatever its syntax. This is about "
-                                    "CAPABILITY, not about whether the attempt "
-                                    "was logged or alerted on: a WAF in "
-                                    "DetectionOnly mode logs the request and lets "
-                                    "it through, so it prevents nothing. Because "
-                                    "this claims the configuration AS A WHOLE left "
-                                    "no path open, you must list every surface "
-                                    "get_configuration returned in "
-                                    "'surfaces_accounted' and say why each one "
-                                    "does or does not leave a way through."
                                 ),
                             },
                             "citation": {
@@ -269,20 +253,6 @@ ANTHROPIC_TOOLS: list[dict[str, Any]] = [
                                 ),
                             },
                             "rationale": {"type": "string"},
-                            "surfaces_accounted": {
-                                "type": "array",
-                                "items": {"type": "string"},
-                                "description": (
-                                    "Required for config_prevents_exploitation, "
-                                    "ignored otherwise. The 'surface' name of "
-                                    "EVERY configuration surface "
-                                    "get_configuration returned for this asset - "
-                                    "including the ones that prevent nothing. "
-                                    "Claiming the configuration prevented the "
-                                    "attack while ignoring a surface that leaves "
-                                    "a path open is the failure this catches."
-                                ),
-                            },
                         },
                         "required": ["factor", "citation", "rationale"],
                     },

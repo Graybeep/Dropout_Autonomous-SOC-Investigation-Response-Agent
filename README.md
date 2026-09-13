@@ -20,7 +20,7 @@ new evidence, a tool failure, or a human override arrives.
 
 That is the whole idea in one frame: a tool call, **the reason the agent gave for
 making it**, the result, and the next decision that follows from it. The agent
-receives ten tool schemas and picks its own calls and ordering at runtime —
+receives eleven tool schemas and picks its own calls and ordering at runtime —
 nothing about the sequence is scripted.
 
 **The single most informative artefact is
@@ -95,6 +95,14 @@ get_vulnerabilities("mysql")   → CVE-2023-21980 affects >=5.7.0,<5.7.30
 
 That reasoning step is visible in the trace, and it is the thing being graded.
 
+The configuration source follows the same rule, and it had to be corrected to do
+so. `config_state.json` originally shipped a `prevents_exploitation` boolean per
+surface — exactly what §5.1 forbids for the CVE KB, for exactly the same reason:
+a pre-computed verdict means the join never happens in the trace. It was removed.
+The file now describes controls (`hr_portal_ro` holds `SELECT` on `hr_public.*`
+only) and leaves it to the agent to decide whether that stops a `UNION SELECT`
+against `hr_salary`.
+
 ---
 
 ## The seven scenarios
@@ -107,7 +115,7 @@ That reasoning step is visible in the trace, and it is the thing being graded.
 | 4 | Human override | `SUCCEEDED` → `OVERRIDDEN_BENIGN` | Unblocks, preserves both views, does not re-block |
 | 5 | Multi-alert correlation | two cases → `SUCCEEDED` | Case B discovers case A via `get_related_alerts` |
 | 6 | Tool failure | `INCONCLUSIVE` + precautionary block | Notices failure ≠ "no evidence", routes around it |
-| 7 | Configuration prevents exploitation | `FAILED`, no action | Vulnerable version **and** attack in the logs — but the config left no path |
+| 7 | Configuration prevents exploitation | **XFAIL (declared)** | A correlation the scoring model has no term for — kept because the gap is the finding |
 
 **Scenario 6 is the sharpest demonstration of the design.** The raw evidence
 scores 0.90 — `SUCCEEDED`. But `get_server_logs` failed, so the degraded-evidence
@@ -115,15 +123,23 @@ clamp pulls the score to 0.65 and the outcome to `INCONCLUSIVE`, with the missin
 source cited explicitly as the reason for the ceiling. The agent does not get to
 claim a confident verdict on a half-read evidence base.
 
-**Scenario 7 is the sharpest demonstration of correlation.** The host runs a
+**Scenario 7 is a declared limitation, kept on purpose.** The host runs a
 version squarely inside CVE-2023-21980's range and the logs show the injected
 `UNION SELECT` reaching the database — on asset and vulnerability evidence alone
 it reads exactly like scenario 2. What separates them is configuration: the
 portal connects as `hr_portal_ro`, which holds no privilege on the targeted
-table, so MySQL returns `ERROR 1142` and zero rows. Version and logs alone leave
-the case at 0.40 — `INCONCLUSIVE`. Only the configuration factor resolves it to
-`FAILED`. That is the asset + vulnerability + configuration join the problem
-statement asks for, and the verdict genuinely depends on all three.
+table, so MySQL returns `ERROR 1142` and zero rows.
+
+The agent finds all of this. It calls `get_configuration` unprompted and its
+report names the grant restriction as the reason the attack failed. But
+§7.2 has no factor for a configuration control, so that finding cannot reach the
+score: the case lands at 0.40 `INCONCLUSIVE` instead of `FAILED`, and the
+harness reports `XFAIL`. The scenario is kept, and its assertion left failing,
+because a documented gap between what the agent can establish and what the
+scoring model can represent is worth more than a scenario trimmed to fit.
+
+A `config_prevents_exploitation` factor was built and reverted — see
+`Toknow/DECISIONS.md` Part 22 for why, which is the more interesting half.
 
 **Scenario 3 is the sharpest demonstration of adaptation.** The injected
 lateral-movement entry names a second host. The agent must *want* to go look at
@@ -143,7 +159,6 @@ Starts at `S = 0.50` (no prior). Each factor applies at most once:
 | Packet metadata shows exfil / payload-anomaly indicators | +0.15 |
 | A related alert on the same asset corroborates | +0.15 |
 | Running version outside all affected ranges (patched) | −0.30 |
-| A configuration control prevents the observed attack from succeeding | −0.30 |
 | Server logs clean across the relevant window | −0.25 |
 | Packet metadata benign | −0.10 |
 
