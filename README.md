@@ -1,343 +1,322 @@
 # Autonomous SOC Investigation & Response Agent
 
-An autonomous SOC agent that takes a simulated NIDS/Suricata alert and determines
-whether the attack **actually succeeded** — by correlating the alert against asset,
-vulnerability, configuration and log evidence, rather than trusting the alert's
-severity label.
+**An agent that takes a security alert and determines whether the attack actually
+succeeded, then acts on that answer and verifies its own action took effect.**
 
-It then takes a sandboxed firewall action when justified, verifies the action
-took effect by re-reading state from disk, and reconsiders its conclusion when
-new evidence, a tool failure, or a human override arrives.
+The rule every conclusion is held to:
 
-> A "critical" SQL-injection signature against a host patched two years ago whose
-> logs show a 403 is a **false alarm**. A "low" signature against an unpatched host
-> that then shipped 2 MB outbound is a **breach**. The severity label does not
-> decide; the correlated evidence does.
+> **You cannot say ALL after checking SOME.**
 
-> **Hosted viewer:** <https://soc-agent-trace-viewer.vercel.app>
->
-> This viewer replays traces from real agent runs — every step shown was produced
-> by the live system, not simulated. The agent itself runs locally: clone the repo,
-> set an API key (`SOC_API_KEY`, see `.env.example`), and run `python run_all.py`.
->
-> Replay rather than live streaming is a design decision taken before the viewer
-> existed (§10): a live loop on stage can hang, rate-limit, or go off-script in
-> front of judges. Determinism over spectacle.
+**Live viewer: <https://soc-agent-trace-viewer.vercel.app>**
 
-## Start here
+> The hosted viewer replays traces from real agent runs. Every step shown was
+> produced by the live system, not simulated. The agent itself runs locally:
+> clone, set your key, run `python run_all.py`.
 
-![The agent choosing its next evidence source, with the reason it gave](docs/viewer.png)
+The single most informative artefact is
+**[`reports/CASE-1001.md`](reports/CASE-1001.md), section 2, steps 9-11** — the
+agent submits a conclusion, the tool refuses it on two counts, and the agent
+resolves each differently:
 
-That is the whole idea in one frame: a tool call, **the reason the agent gave for
-making it**, the result, and the next decision that follows from it. The agent
-receives eleven tool schemas and picks its own calls and ordering at runtime —
-nothing about the sequence is scripted.
+```
+RESULT  REJECTED                                                    CASE-1001
+  factor 'related_alert_corroborates' cannot be declared: it requires a
+  successful result from get_related_alerts, which you have not obtained.
 
-**The single most informative artefact is
-[`reports/CASE-1001.md`](reports/CASE-1001.md), section 2, steps 9-11** — the
-refused `submit_assessment` and the two steps after it. The agent submits its
-conclusion; the tool **refuses it**, for two separate reasons at once:
+  factor 'version_patched' claims SRV-WEB-01 is outside ALL affected ranges,
+  but you have not looked up openssh - service(s) this host runs that the CVE
+  knowledge base covers.
 
-- it claimed the host was outside **all** affected ranges having looked up two
-  of its three CVE-covered services, and
-- it claimed a related alert corroborated, when that lookup had returned
-  `no_data`.
+REASONING                                                           CASE-1001
+  I need to fix two issues. Let me check openssh CVEs and remove the
+  related_alert_corroborates factor since no_data is not a finding.
+```
 
-The agent's next line is *"I need to fix two issues: remove the
-`related_alert_corroborates` factor … and check the openssh CVE."* It then does
-exactly that — **gathering** the missing CVE data, and **dropping** the claim it
-could not support — and resubmits. Two different refusals, two different correct
-responses, in one exchange. Both the refusal and the correction are steps in the
-evidence chain.
-
-### The one rule the guards enforce
-
-Every guard refuses the **form** of a claim, never its content. Section 7.2's
-three positive factors are *existential* — one witness settles them — while its
-three negatives are *universal*, and "I looked and found nothing" is meaningless
-without a stated scope. So the bus will not accept "outside **all** affected
-ranges" from someone who checked **some** of them, and it never decides whether
-a given version is actually in range: that comparison is the agent's, and it is
-the entire point.
+It then **fetches** the missing CVE data and **drops** the claim it could not
+support. Two refusal types, two correct responses, one exchange.
 
 ---
 
-## Quick start
+## The problem, and why an agent
 
-**Run these in order.** Steps 1 to 4 need nothing but Python. Step 5 is the only
-one that needs an API key, and you can skip it: the repository already ships the
-recorded traces, so the viewer works without ever running the agent.
+A detection signature fires when traffic *looks* like an attack. Whether the
+attack actually worked is a separate question, and the alert cannot answer it.
+A "critical" SQL-injection signature against a host patched two years ago whose
+logs show a 403 is a false alarm. A quieter alert against an unpatched host that
+then shipped 2 MB outbound is a breach.
 
-```bash
-# 1. install nothing - the project is stdlib only
-cd "Autonomous SOC Investigation & Response Agent"
+The agent answers that question by correlating **asset, vulnerability,
+configuration, log and packet** evidence instead of trusting the severity label.
 
-# 2. check the code is sound (no API key needed)
-python selfcheck.py           # behavioural checks
-python compliance.py          # 22 guardrail checks
+This needs an agent rather than a script because **the evidence that settles one
+alert is not the evidence that settles the next**, and what the agent finds
+changes what it should look at. A script fixes the order in advance. Here the
+agent chooses each call, states why before making it, and re-plans when new
+evidence arrives mid-investigation.
 
-# 3. START THE SERVER. Do this before opening anything in a browser.
-python -m http.server 8000
+---
 
-# 4. now open this in your browser
-#    http://localhost:8000/
+## Architecture
+
+| Component | Where it lives | What it does |
+|---|---|---|
+| **External Systems** | `fixtures/seed/*.json` | Alert feed, asset inventory, CVE knowledge base, configuration surfaces, host logs, packet metadata, firewall state |
+| **Agent / Controller** | `soc_agent/agent.py` | Owns the case lifecycle and drives the tool-use loop |
+| **Planning** | `soc_agent/prompts.py` | Hypothesis, disconfirmation, and the per-call sufficiency judgement |
+| **Tools & Retrieval** | `soc_agent/tools.py`, `soc_agent/schemas.py` | Eleven tool schemas: eight read, two act, one submits the conclusion |
+| **Memory / State** | `soc_agent/trace.py`, `fixtures/run/cases.json` | Structured trace plus per-case state that survives reconsideration |
+| **Evaluation / Verification** | `soc_agent/confidence.py`, `check_firewall_state` | Deterministic scoring, and re-reading firewall state from disk |
+| **Human Interaction** | `soc_agent/control.py` | `human_override()`, which always wins |
+| **Failure Handling** | `soc_agent/toolbus.py` | Retry, degraded-evidence clamp, guard refusals, impasse resolution |
+
+> Eight components. A ninth candidate, if wanted, is the **Trace / Reporting**
+> layer (`soc_agent/report.py` + `viewer.html`): the single source both the
+> viewer and the written reports render from.
+
+### The state machine
+
+```
+INGEST_ALERT
+   |
+   v
+HYPOTHESIZE ......... what evidence would confirm "the attack succeeded"?
+   |                  what evidence would FALSIFY it?
+   v
+GATHER_EVIDENCE ..... loop: pick a tool -> state why -> read -> assess
+   |                  sufficiency -> pick next, or stop
+   v
+DETERMINE_OUTCOME ... SUCCEEDED | FAILED | INCONCLUSIVE
+   |                  + deterministic score + evidence citations
+   v
+ACT ................. block_ip / precautionary block / nothing
+   |
+   v
+VERIFY .............. re-read firewall state FROM DISK, compare to policy
+   |
+   v
+[ NEW_EVIDENCE | TOOL_FAILURE | HUMAN_OVERRIDE ]
+   |
+   +--> reconsider() ---> back to HYPOTHESIZE
+   |
+   v
+REPORT
 ```
 
-Leave the server from step 3 running. `http://localhost:8000/` is the overview
-page; the trace viewer is linked from it at `/viewer.html`.
+`reconsider()` re-enters at **HYPOTHESIZE**, not at the verdict. New evidence, a
+tool failure and a human override all route through that one function, so the
+agent forms a *new* hypothesis and gathers *new* evidence rather than silently
+re-scoring what it already had. Rationale in
+[`Toknow/DECISIONS.md`](Toknow/DECISIONS.md).
 
-**Opening `viewer.html` by double-clicking it will not work.** That gives the
-browser a `file://` page, and browsers block those from reading local files, so
-the recorded traces can never load. Nothing is wrong with the files; they just
-have to arrive over `http://`. Step 3 is what makes that happen.
+---
 
-To re-run the agent yourself and regenerate the traces, which does need a key:
+## Tech stack
+
+**Python standard library only.** No framework, no dependencies, no
+`requirements.txt`, no lockfile. A decision, not an omission: the system is
+auditable by reading it, and there is no supply chain to trust.
+
+**No LangChain, no AutoGen.** A hand-written tool-use loop on the model's native
+tool calling, so the trace belongs to this project and every decision point is
+inspectable rather than hidden in a framework.
+
+**Viewer:** vendored, pinned animation library and **zero external references**,
+so it works with no internet. Served under a strict CSP with no `unsafe-inline`.
+
+**Model: provider-agnostic.** `SOC_BASE_URL`, `SOC_MODEL` and `SOC_API_STYLE` are
+environment-driven, and the client speaks both wire formats. The default in
+`.env.example` is `ling-3.0-flash-fin-free`. The traces committed here were
+produced on that provider after a mid-project credit limit forced a swap away
+from the originally intended one. **The guards are structural rather than
+model-specific**, so the evidence they enforce holds regardless of which model
+produced the trace.
+
+---
+
+## Setup
+
+**Requires Python 3.11 or newer** (developed and verified on 3.11.9).
+
+**1. Clone**
 
 ```bash
-# 5. optional: put your key in SOC_API_KEY first
+git clone https://github.com/Graybeep/Dropout_Autonomous-SOC-Investigation-Response-Agent.git
+cd Dropout_Autonomous-SOC-Investigation-Response-Agent
+```
+
+**2. There is no install step.** No `pip install`, no virtualenv required, no
+package manifest. If you are looking for one, that is why you cannot find it.
+
+**3. Check it works without a key** — these need no API access at all:
+
+```bash
+python selfcheck.py      # 99 behavioural checks
+python compliance.py     # 22 guardrail checks
+```
+
+**4. Configure a provider** (only needed to re-run the agent; skip to step 6 to
+just browse the recorded traces).
+
+```bash
 cp .env.example .env
-python run_all.py             # all seven scenarios
-python run_all.py 3 6         # or just the ones you want
 ```
 
-A presenter's walkthrough is in **[DEMO.md](DEMO.md)**.
+Then set four variables. `SOC_API_STYLE` selects the wire format:
 
----
-
-## What the agent actually does
+*OpenAI-compatible endpoint (`Authorization: Bearer`):*
 
 ```
-INGEST_ALERT → HYPOTHESIZE → GATHER_EVIDENCE → DETERMINE_OUTCOME → ACT → VERIFY
-                    ↑                                                      │
-                    └──────────── reconsider(case, event) ←────────────────┘
-                         NEW_EVIDENCE │ HUMAN_OVERRIDE │ RELATED_CASE
+SOC_API_KEY=sk-your-key-here
+SOC_BASE_URL=https://api.openai.com/v1
+SOC_MODEL=gpt-4o-mini
+SOC_API_STYLE=openai
 ```
 
-The agent is given the tool schemas and **chooses its own calls and their order at
-runtime**. There is no scripted sequence anywhere in the decision path. What the
-orchestrator does *not* leave to the model is only this:
-
-- **the arithmetic** — confidence is computed deterministically in Python from the
-  evidence classes the agent declared, so a demo run is reproducible and
-  "where did 0.85 come from" has a one-line answer;
-- **the action policy** — the agent is told the standing policy and held to it;
-- **guardrail 6** — a human override is never re-overridden by an automated action.
-
-### The correlation that matters
-
-The CVE knowledge base is keyed by **service name only** and contains no
-per-host patch status. It cannot tell the agent whether a host is patched,
-because a real CVE database does not know what *your* host runs. So the agent
-must join two independent facts and say the join out loud:
+*Anthropic-compatible endpoint (`x-api-key`):*
 
 ```
-get_asset_info(SRV-DB-02)      → mysql 5.7.21 is running
-get_vulnerabilities("mysql")   → CVE-2023-21980 affects >=5.7.0,<5.7.30
-                               → 5.7.21 is INSIDE that range → vulnerable
+SOC_API_KEY=sk-ant-your-key-here
+SOC_BASE_URL=https://api.anthropic.com/v1
+SOC_MODEL=claude-sonnet-5
+SOC_API_STYLE=anthropic
 ```
 
-That reasoning step is visible in the trace, and it is the thing being graded.
+**5. Run the agent**
 
-The configuration source follows the same rule, and it had to be corrected to do
-so. `config_state.json` originally shipped a `prevents_exploitation` boolean per
-surface — exactly what §5.1 forbids for the CVE KB, for exactly the same reason:
-a pre-computed verdict means the join never happens in the trace. It was removed.
-The file now describes controls (`hr_portal_ro` holds `SELECT` on `hr_public.*`
-only) and leaves it to the agent to decide whether that stops a `UNION SELECT`
-against `hr_salary`.
+```bash
+python run_all.py        # all seven scenarios
+python run_all.py 3      # one scenario
+python run_all.py 3 6    # a subset
+```
+
+Expect roughly **one minute per scenario**; the full suite takes about 25
+minutes, since scenarios 3 and 5 open more than one case. Output ends with a
+results table, then a "What happened" summary: verdict and confidence per
+scenario, action taken, evidence calls, guard refusals and reconsiderations.
+Scenarios 1-6 should read `PASS`; scenario 7 should read `XFAIL (declared)` and
+the exit code should still be `0`.
+
+**6. View the results**
+
+```bash
+python -m http.server 8000
+```
+
+Then open **<http://localhost:8000/>**. Leave the server running.
+
+**Opening `viewer.html` by double-clicking it does not work.** That gives the
+browser a `file://` page, and browsers block those from reading local files, so
+the traces can never load. Nothing is broken when this happens; the files just
+have to arrive over `http://`.
 
 ---
 
 ## The seven scenarios
 
-| # | Scenario | Expected outcome | Demonstrates |
-|---|---|---|---|
-| 1 | False alarm, patched host | `FAILED`, no action | Severity label does not drive the verdict |
-| 2 | True positive, unpatched | `SUCCEEDED`, block + verify | Full happy path, real state mutation |
-| 3 | Delayed evidence | `INCONCLUSIVE` → `SUCCEEDED` | **Re-hypothesise**: goes and investigates a *second host* |
-| 4 | Human override | `SUCCEEDED` → `OVERRIDDEN_BENIGN` | Unblocks, preserves both views, does not re-block |
-| 5 | Multi-alert correlation | two cases → `SUCCEEDED` | Case B discovers case A via `get_related_alerts` |
-| 6 | Tool failure | `INCONCLUSIVE` + precautionary block | Notices failure ≠ "no evidence", routes around it |
-| 7 | Configuration prevents exploitation | **XFAIL (declared)** | A correlation the scoring model has no term for — kept because the gap is the finding |
+| # | Tests | Expected |
+|---|---|---|
+| 1 | A loud alert on a patched host whose logs show the request was blocked | `FAILED`, no action |
+| 2 | Vulnerable version, the query executed, data left the host | `SUCCEEDED`, block, then verify |
+| 3 | Ambiguous, then late evidence names a second host | `INCONCLUSIVE` → `SUCCEEDED` after investigating that host |
+| 4 | An analyst overrules the verdict | `SUCCEEDED` → `OVERRIDDEN_BENIGN`, unblocks, does not re-block |
+| 5 | A second alert on the same asset, correlated across two cases | both `SUCCEEDED` |
+| 6 | The log source fails mid-investigation | `INCONCLUSIVE`, capped by the degraded clamp, precautionary block |
+| 7 | Version in range and attack visible, but configuration made it impossible | **XFAIL (declared)** |
 
-**Scenario 6 is the sharpest demonstration of the design.** The raw evidence
-scores 0.90 — `SUCCEEDED`. But `get_server_logs` failed, so the degraded-evidence
-clamp pulls the score to 0.65 and the outcome to `INCONCLUSIVE`, with the missing
-source cited explicitly as the reason for the ceiling. The agent does not get to
-claim a confident verdict on a half-read evidence base.
-
-**Scenario 7 is a declared limitation, kept on purpose.** The host runs a
-version squarely inside CVE-2023-21980's range and the logs show the injected
-`UNION SELECT` reaching the database — on asset and vulnerability evidence alone
-it reads exactly like scenario 2. What separates them is configuration: the
-portal connects as `hr_portal_ro`, which holds no privilege on the targeted
-table, so MySQL returns `ERROR 1142` and zero rows.
-
-The agent finds all of this. It calls `get_configuration` unprompted and its
-report names the grant restriction as the reason the attack failed. But
-§7.2 has no factor for a configuration control, so that finding cannot reach the
-score: the case lands at 0.40 `INCONCLUSIVE` instead of `FAILED`, and the
-harness reports `XFAIL`. The scenario is kept, and its assertion left failing,
-because a documented gap between what the agent can establish and what the
-scoring model can represent is worth more than a scenario trimmed to fit.
-
-A `config_prevents_exploitation` factor was built and reverted — see
-`Toknow/DECISIONS.md` Part 22 for why, which is the more interesting half.
-
-**Scenario 3 is the sharpest demonstration of adaptation.** The injected
-lateral-movement entry names a second host. The agent must *want* to go look at
-that host — re-entering the loop at `HYPOTHESIZE`, not at `DETERMINE_OUTCOME` —
-because the value is in gathering new evidence, not in re-scoring old evidence.
+**Scenario 7 is a declared known-fail**, marked `expected_to_fail` and excluded
+from the exit code. The agent correctly establishes that the database account
+held no privilege on the targeted table and says so in its report, but §7.2 has
+no factor for a configuration control, so the case stops at `INCONCLUSIVE` 0.40
+instead of `FAILED`. A `config_prevents_exploitation` factor was built and
+**reverted**: it passed one full run and failed the next, because the guard
+protecting it asked the agent to populate a schema field rather than call a tool,
+and the agent dropped a true claim rather than satisfy it. It failed its own gate
+and was reverted rather than ship a number that could not be defended.
 
 ---
 
-## Confidence scoring
+## Deployment
 
-Starts at `S = 0.50` (no prior). Each factor applies at most once:
+The hosted viewer is **not** the running system, and that is deliberate.
 
-| Evidence finding | Δ |
+> The hosted viewer replays traces from real agent runs. Every step shown was
+> produced by the live system, not simulated. The agent itself runs locally:
+> clone, set your key, run `python run_all.py`.
+
+Replay rather than live streaming was decided **before the viewer existed**
+(CLAUDE.md §10): a live loop on stage can hang or rate-limit. A design decision,
+not a hosting limitation. The deployment is static files only: no agent loop, no
+API key, nothing server-side.
+
+---
+
+## Verification and known limitations
+
+| Check | Result |
 |---|---|
-| Running version falls inside a CVE's affected range | +0.25 |
-| Server logs show the attack actually did something | +0.25 |
-| Packet metadata shows exfil / payload-anomaly indicators | +0.15 |
-| A related alert on the same asset corroborates | +0.15 |
-| Running version outside all affected ranges (patched) | −0.30 |
-| Server logs clean across the relevant window | −0.25 |
-| Packet metadata benign | −0.10 |
+| `python selfcheck.py` | **99/99** behavioural, no API key |
+| `python compliance.py` | **22/22** guardrail, no API key |
+| `python run_all.py` | **51/51** live assertions across scenarios 1-6 |
+| Stability | green on two consecutive full runs |
 
-Clamped to `[0.05, 0.95]`. If **any** evidence source failed or was unavailable,
-additionally clamped to `[0.35, 0.65]` — this is what forces Scenario 6 to
-`INCONCLUSIVE` for the right reason.
-
-`S ≥ 0.75` → `SUCCEEDED` · `S ≤ 0.25` → `FAILED` · otherwise `INCONCLUSIVE`.
-
-**Action policy:** `SUCCEEDED` → block. `INCONCLUSIVE` on a **critical** asset →
-block tagged `precautionary` (containment under uncertainty, explicitly *not* a
-verdict). `INCONCLUSIVE` elsewhere → flag for analyst. `FAILED` → nothing.
-
----
-
-## The sandbox is real (within its boundary)
-
-No real network calls, no real firewall, no real credentials. But inside the
-sandbox the mutation is genuine and the verification genuinely depends on it:
-
-- `block_ip()` **writes** `fixtures/run/firewall_state.json`
-- `check_firewall_state()` **reads that same file back from disk**
-
-After every action the orchestrator independently re-reads the file and compares
-observed state to what the policy expected. That assertion cannot be satisfied by
-the agent merely claiming it blocked something.
-
-**Fixtures are immutable; the working copy is not.**
-`fixtures/seed/` is pristine and committed. `fixtures/run/` is gitignored and is
-what every tool touches. `reset_sandbox()` restores it before **every** scenario
-run, so runs are reproducible.
-
----
-
-## Layout
-
-```
-soc_agent/
-  config.py       paths, model/provider config, .env loading
-  sandbox.py      seed→run reset, explicit JSON read/write
-  tools.py        the 10 agent-facing tool implementations
-  schemas.py      tool schemas (Anthropic shape + OpenAI converter)
-  toolbus.py      THE wrapper: trace logging, fault injection, degraded tracking
-  confidence.py   deterministic scoring + action policy
-  llm.py          provider layer (OpenAI & Anthropic surfaces)
-  prompts.py      system prompts — where the autonomy lives
-  agent.py        the state machine, and the single reconsider()
-  control.py      demo-side tools (NOT exposed to the agent)
-  report.py       the mandatory 7-section report
-scenarios/        the seven scenario definitions + expected trajectories
-fixtures/seed/    pristine evidence, human-readable, committed
-traces/           saved traces — these feed the viewer
-reports/          generated per-case markdown reports
-viewer.html       single-file trace replay UI (Swiss/Minimalism, dark)
-vendor/motion.js  Motion, vendored and pinned - the viewer has NO external refs
-run_all.py        evaluation harness
-selfcheck.py      99 behavioural checks, no API key required
-compliance.py     22 guardrail checks, no API key required
-rebuild_reports.py  regenerate reports from saved traces, no model run
-DEMO.md           presenter's walkthrough
-Toknow/           decision & problem log — every decision and every problem hit
-```
-
-## Configuration
-
-| Variable | Purpose |
-|---|---|
-| `SOC_API_KEY` | Gateway API key |
-| `SOC_BASE_URL` | API base URL |
-| `SOC_MODEL` | Model id |
-| `SOC_API_STYLE` | `openai` (`/chat/completions`) or `anthropic` (`/messages`) |
-
-The provider is one config line. See `Toknow/DECISIONS.md` D-002 for why the
-build runs on a third-party gateway rather than the Claude API, and how to
-switch back.
-
----
-
-## Verification
-
-`python compliance.py` runs 22 structural checks with no API key. These make
-"the decision logic is not scripted" a *checkable* claim rather than an
-assertion: no outcome branches keyed on scenario identity, no code branching on
-the alert's severity label, outcome values produced only by `confidence.py`, the
-CVE KB carrying no per-host patch status, control-plane tools absent from the
-agent's toolset, only `sandbox.py` touching `fixtures/seed`, and the §7.2
-constants matching the spec exactly.
-
-`python selfcheck.py` runs 99 behavioural checks with no API key: sandbox reset, every tool's
-success and miss paths, the block→verify round trip against the real file,
-fault injection persistence across retries, every scoring boundary, the action
-policy matrix, schema/implementation agreement, guardrail 6 enforcement, and
-report structure.
-
-`python run_all.py` asserts, per scenario: final outcome class, whether an action
-fired, whether reconsideration fired, that the expected tools were among those
-called, final case status, the precautionary flag, and that firewall verification
-matched policy. Tool *ordering* is deliberately not asserted — pinning a sequence
-would re-introduce exactly the scripted behaviour the design forbids.
-
-Assertions are **phase-scoped** where timing matters. Scenario 3 asserts that
-`get_vulnerabilities("mysql")` happened *before the first conclusion*, not merely
-somewhere in the trace — a whole-trace search passes a run that checked the wrong
-service first and corrected only later. Scenarios 3 and 5 additionally assert
-they **gathered new evidence** after reconsidering rather than re-scoring what
-they already had (16 and 10 new tool calls respectively; a scenario with no
-reconsideration scores 0, which is the negative control).
+Tool *ordering* is never asserted — pinning a sequence would re-introduce the
+scripted behaviour the design forbids. Assertions are phase-scoped where timing
+matters: scenario 3 asserts the right CVE lookup happened *before the first
+conclusion*, not merely somewhere in the trace. Scenarios 3 and 5 assert they
+**gathered new evidence** after reconsidering (16 and 10 calls in the shipped
+traces; no reconsideration scores 0, the negative control).
 
 ### The four guard families
 
-Every guard refuses the **form** of a claim, never its content. §7.2's three
-positive factors are *existential* (one witness settles them); its three
-negatives are *universal* ("I looked and found nothing" is meaningless without a
-stated scope). Each family enforces that distinction on a different axis:
+Every guard refuses the **form** of a claim, never its content.
 
 | family | refuses |
 |---|---|
 | `check_preconditions` | any factor drawn from a source that never returned `ok` |
-| `check_version_patched_coverage` | `version_patched` claimed from a subset of the host's KB-covered services |
-| `check_negative_scope` | `logs_clean` from a window not containing the alert (or a known sibling); packet factors not grounded in this case's own alert |
-| `check_sibling_verdict_conflict` | `logs_clean` when a sibling case already concluded `SUCCEEDED` on the same asset inside that window |
+| `check_version_patched_coverage` | `version_patched` claimed from a subset of the host's covered services |
+| `check_negative_scope` | `logs_clean` from a window not containing the alert; packet factors not grounded in this case's own alert |
+| `check_sibling_verdict_conflict` | `logs_clean` when a sibling case already concluded `SUCCEEDED` on that asset in that window |
 
-None inspects evidence *content* — they compare a declared factor against what
-was read (a status, a service list, a timestamp, a stored outcome). A rule like
-"SQLi alerts must check SQL services" would be the line; "you cannot say *all*
-after checking *some*" is not.
+Three were proven load-bearing by runtime ablation, with a negative control on
+the reconsideration check.
 
-The refuse/resubmit cycle is **bounded**: after three refusals the bus stops
-arguing, drops the factors the guards named, scores what survives, and records an
-**impasse** in the report. An unbounded cycle grows the conversation every round
-without adding evidence.
+### Known limitations
 
-The guards are verified **load-bearing, not merely wired**: each is monkeypatched
-to a no-op and the suite must fail. Ablating `check_preconditions` breaks 4
-checks, `check_version_patched_coverage` 2, `check_negative_scope` 3; restoring
-returns to 0. Fixture invariants are adversarially tested the same way —
-injecting a row implying successful attacker activity into a scenario that must
-start `INCONCLUSIVE` makes `compliance.py` fail, verified for both Scenario 3 and
-Scenario 5 case A.
+- **Scenario 7 fails on purpose.** See above. The gap is documented rather than
+  hidden.
+- **The packet-provenance guard is existential, not universal.** It checks the
+  case's own packet record was *read*, not that the citation names it. Closing it
+  would mean parsing citation prose, the one thing these guards refuse to do.
+  Documented as `K-7`, not patched.
+- **Three guard scopes are structurally verified but not exercised in any
+  trace**: related-alert window, sibling verdict, and packet provenance. They are
+  covered by `selfcheck.py` and did not need to fire, because the agent declared
+  an acceptable factor set first time. Stated as *structurally verified, not
+  exercised* rather than implied to appear in an artefact.
+- **Refusal counts vary between runs** (10, 11 and 16 measured across three full
+  runs over the same eight cases). The model picks its own tool sequence and
+  declaration timing, so refusal count is a property of the trajectory, not of
+  the fixtures.
+
+### Generalisation probe
+
+[`fixtures/probe/`](fixtures/probe/) runs scenario 2's *shape* over a fixture set
+where every surface detail differs — service, CVE, version range, asset, source
+IP, and log phrasing sharing no attack vocabulary with the original. It converged
+on the same evidence classes, score and action, with no scenario 2 vocabulary in
+its citations.
+
+Its README states the caveat that matters: **identical tool ordering is evidence
+of consistency, not adaptivity.** The adaptive evidence is scenarios 3 and 6,
+where ordering genuinely diverges. The probe is not in the suite and was not
+tuned.
+
+---
+
+## Further reading
+
+- [`DEMO.md`](DEMO.md) — presenter's walkthrough
+- [`Toknow/DECISIONS.md`](Toknow/DECISIONS.md) — the full decision record,
+  including every defect found and why each was fixed or deliberately left
+- [`reports/`](reports/) — the written case report for every scenario
+- [`traces/`](traces/) — the structured trace the viewer and reports both render from
