@@ -136,6 +136,10 @@
   .side .h{font-size:10.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2);margin-bottom:4px}
 
   details{margin-top:7px}
+  .refusal{margin:8px 0 4px;border-left:2px solid var(--bad);padding-left:10px}
+  .refusal-item{color:var(--ink);font-size:12.5px;line-height:1.5;margin-bottom:6px}
+  .refusal-item:last-child{margin-bottom:0}
+  .refusal-meta{color:var(--dim2);font-size:11px;margin-top:6px}
   summary{cursor:pointer;color:var(--dim2);font-size:12px;user-select:none}
   summary:hover{color:var(--accent)}
   pre{background:#0B1220;border:1px solid var(--line);border-radius:6px;padding:9px;
@@ -283,7 +287,18 @@ function render(s){
     const st = s.status || "ok";
     const p = st === "ok" ? "ok" : st === "no_data" ? "warn"
             : st === "rejected" ? "bad" : "dim";
-    return `<div class="lbl">Result ${pill(st, p)}${tag}</div>
+    // A refusal's WHOLE content is its `problems` list - collapsing that behind
+    // "inspect payload" hid the one artefact the trace exists to show. Surface
+    // it inline; the raw payload stays available underneath.
+    const probs = (s.result && s.result.problems) || [];
+    const refusal = probs.length
+      ? `<div class="refusal">${probs.map(x =>
+          `<div class="refusal-item">${md(x)}</div>`).join("")}
+         ${s.result.remaining_attempts != null
+            ? `<div class="refusal-meta">attempt ${esc(s.result.attempt)} &middot;
+               ${esc(s.result.remaining_attempts)} remaining</div>` : ""}</div>`
+      : "";
+    return `<div class="lbl">Result ${pill(st, p)}${tag}</div>${refusal}
       <details><summary>inspect payload</summary>
       <pre>${esc(JSON.stringify(s.result, null, 2))}</pre></details>`;
   }

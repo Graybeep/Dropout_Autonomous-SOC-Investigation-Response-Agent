@@ -2259,3 +2259,29 @@ the guard. It would very likely have worked. It was rejected because the gate
 was declared in advance as hard, the configuration would have been unverified,
 and the two runs needed to verify it are the runs the schedule allocates to
 rehearsal. A gate that moves when you dislike its answer is not a gate.
+
+**N-21. Cold-start rehearsal from a fresh clone, and what it caught.** Clone 2s,
+offline suite 1s, viewer served and rendered. Three things only a clean clone
+surfaces:
+
+1. **Six run logs were committed at the repo root** (`gate1_run.log`,
+   `gate2_run1/2`, `s7_stage2a/b`, `final_run1`). A judge's first `ls` of the
+   project showed them next to `README.md`. Untracked; `*.log` added to
+   `.gitignore`.
+2. **`run_all.py` printed "Viewer -> open viewer.html"** at the end of every
+   run, while README says in bold that the viewer must be served over HTTP
+   because browsers block `fetch` on `file://`. The line that a user reads at
+   the exact moment they want the viewer was the one line telling them to do
+   the thing that silently fails. Now prints the `http.server` command.
+3. **The viewer collapsed every refusal behind "inspect payload".** The refusal
+   IS the artefact - the `problems` list is the whole content - and it was one
+   click away from invisible on the demo surface. Surfaced inline with the raw
+   payload still available underneath. Verified in-browser from the clone: the
+   scenario 1 card now shows both refusals, then the agent's own next line
+   ("I need to fix two issues...") directly beneath.
+
+**N-22. 99/99 and 105/105 are both correct; do not "fix" the discrepancy.** A
+fresh clone reports 99/99 offline checks, the working tree reports 105/105. The
+six extra are the `scoring/` copy-drift checks, and `scoring/` is gitignored
+(N-7), so they cannot run in a clone. Recorded because the obvious reading is
+that one of the two numbers is stale.
