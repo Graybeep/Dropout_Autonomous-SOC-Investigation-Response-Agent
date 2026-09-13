@@ -562,11 +562,21 @@ function reveal(n){
     e.classList.toggle("on", now);
     if (now && !was) fresh.push(e);
   });
-  // Stagger only when several appear at once (Show all); a single step during
-  // playback animates immediately so it stays in step with the 400ms cadence.
-  fresh.forEach((e, i) => enter(e, fresh.length > 1 ? Math.min(i, 12) : 0));
+  // State first, animation second. enter() is an OPTIONAL enhancement, so it
+  // must not be able to take the reveal loop down with it: if it threw here
+  // before `shown` was updated, every tick would re-reveal the same step and
+  // playback would freeze after one card, with the button still reading Pause.
+  // L-4 made Motion non-load-bearing for VISIBILITY; this makes it
+  // non-load-bearing for PROGRESS too.
   shown = n;
   $("count").textContent = `${Math.min(n, els.length)} / ${els.length} steps`;
+  // Stagger only when several appear at once (Show all); a single step during
+  // playback animates immediately so it stays in step with the 400ms cadence.
+  try {
+    fresh.forEach((e, i) => enter(e, fresh.length > 1 ? Math.min(i, 12) : 0));
+  } catch (err) {
+    console.warn("motion enhancement failed, reveal continues:", err);
+  }
   if (n && n <= els.length && els[n-1]) {
     const r = els[n-1].getBoundingClientRect();
     if (r.bottom > innerHeight - 40 || r.top < 90)
@@ -579,7 +589,13 @@ function stop(){ clearInterval(timer); timer = null; $("play").textContent = "St
 $("play").onclick = () => {
   const total = document.querySelectorAll(".step").length;
   if (timer) return stop();
-  if (shown >= total) reveal(0);
+  if (shown >= total) {
+    // Restarting from the top: bring the timeline into view first, or the
+    // page appears to go blank wherever the reader happens to be scrolled.
+    reveal(0);
+    const tl = $("tl");
+    if (tl) tl.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
   $("play").textContent = "Pause";
   timer = setInterval(() => {
     if (shown >= total) return stop();
