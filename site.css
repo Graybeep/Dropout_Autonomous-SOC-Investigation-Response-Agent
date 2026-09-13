@@ -116,3 +116,101 @@
   .pagenav{display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;
     align-items:center;padding:30px 0 0;border-top:1px solid var(--line);margin-top:10px}
   .pagenav .sp{flex:1}
+
+  /* ---- "How it works" page ------------------------------------------------
+     Scoped classes; nothing here is used by the other landing pages. The page
+     is an argument rather than a reference, so the layout carries the flow:
+     a pipeline strip up top, the six stages on a connected rail, then the
+     correlation join, the access boundary, the verify loop, and a trace
+     preview. Detail sits behind <details> so the page reads short first. */
+  .pipe{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:26px}
+  .pipe a{display:inline-flex;align-items:center;gap:8px;text-decoration:none;
+    background:var(--card);border:1px solid var(--line);border-radius:6px;
+    padding:8px 13px;color:var(--ink);font-size:14px;font-weight:700}
+  .pipe a:hover{border-color:var(--orange);color:var(--orange-dk)}
+  .pipe a.on{background:var(--orange);border-color:var(--orange);color:#fff}
+  .pipe .arw{color:var(--muted);font-size:15px;line-height:1}
+
+  .flow{margin-top:30px;position:relative;padding-left:38px}
+  .flow::before{content:"";position:absolute;left:14px;top:10px;bottom:10px;
+    width:2px;background:var(--line)}
+  .fstep{position:relative;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r);padding:18px 20px;margin-bottom:14px;scroll-margin-top:86px}
+  .fstep::before{content:attr(data-n);position:absolute;left:-38px;top:16px;
+    width:28px;height:28px;border-radius:50%;background:var(--cream2);
+    border:1px solid var(--line);color:var(--orange-dk);font-weight:700;
+    font-size:13px;display:grid;place-items:center}
+  .fstep:target,.fstep.on{border-color:var(--orange)}
+  .fstep:target::before,.fstep.on::before{background:var(--orange);color:#fff;
+    border-color:var(--orange)}
+  .fstep h3{font-size:18px;margin-bottom:4px}
+  .fstep .what{margin:8px 0 0;font-size:15px}
+  .fstep .why{margin:10px 0 0;font-size:14px;color:var(--muted);
+    border-left:2px solid var(--line);padding-left:11px}
+  .fstep .why b{color:var(--ink)}
+
+  .ex{margin-top:12px}
+  .ex>summary{cursor:pointer;font-size:13px;color:var(--orange-dk);font-weight:700;
+    list-style:none}
+  .ex>summary::-webkit-details-marker{display:none}
+  .ex>summary::before{content:"+ ";font-weight:700}
+  .ex[open]>summary::before{content:"\2212 "}
+  .ex .body{margin-top:10px;background:var(--cream2);border:1px solid var(--line);
+    border-radius:6px;padding:12px 14px;font-size:13.5px;line-height:1.75}
+  .ex code{background:var(--card)}
+
+  .corr{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px}
+  .cin{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+  .cin .src{font-size:11px;letter-spacing:.9px;text-transform:uppercase;
+    color:var(--orange-dk);font-weight:700}
+  .cin .fact{margin-top:9px;font-size:14px;color:var(--ink);line-height:1.6}
+  .join{margin:14px 0 0;text-align:center;color:var(--muted);font-size:22px;line-height:1}
+  .cout{background:var(--cream2);border:1px solid var(--orange);border-left:4px solid var(--orange);
+    border-radius:var(--r);padding:18px 20px;margin-top:14px}
+  .cout .v{font-size:17px;color:var(--ink);font-weight:700;margin-bottom:6px}
+  .cout p{margin:0;font-size:14.5px}
+
+  .access{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px}
+  .acol{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+  .acol.no{background:#FBF1EC;border-style:dashed}
+  .acol .hd{font-size:11.5px;letter-spacing:1px;text-transform:uppercase;font-weight:700;
+    padding-bottom:9px;margin-bottom:11px;border-bottom:1px solid var(--line)}
+  .acol.read .hd{color:#0B6B44} .acol.act .hd{color:#A82D16} .acol.no .hd{color:var(--muted)}
+  .acol li{list-style:none;font-size:13.5px;padding:4px 0;line-height:1.5}
+  .acol ul{margin:0;padding:0}
+  .acol .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12.5px}
+  .acol .note{font-size:12.5px;color:var(--muted);margin:11px 0 0;line-height:1.55}
+
+  .chain{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin-top:24px}
+  .clink{flex:1 1 170px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r);padding:15px 16px}
+  .clink.key{border-color:var(--orange);background:var(--cream2)}
+  .clink .k{font-size:10.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--muted);
+    font-weight:700}
+  .clink .v{font-size:14.5px;color:var(--ink);margin-top:6px;line-height:1.5}
+
+  .mini{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    padding:6px 18px 18px;margin-top:26px}
+  .mrow{display:grid;grid-template-columns:118px 1fr;gap:14px;padding:13px 0;
+    border-bottom:1px dashed var(--line)}
+  .mrow:last-child{border-bottom:0}
+  .mrow .stage{font-size:10.5px;letter-spacing:.9px;text-transform:uppercase;
+    color:var(--orange-dk);font-weight:700;padding-top:2px}
+  .mrow .said{font-size:14px;color:var(--ink);line-height:1.6}
+  .mrow .said .m{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    font-size:12.5px;background:var(--cream2);border:1px solid var(--line);
+    border-radius:4px;padding:1px 5px}
+  .mrow .said em{font-style:normal;color:var(--muted)}
+
+  .spread{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .sp1{flex:1 1 150px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r);padding:14px}
+  .sp1 .n{font-size:23px;font-weight:700;color:var(--ink);line-height:1}
+  .sp1 .l{font-size:12.5px;color:var(--muted);margin-top:5px;line-height:1.45}
+
+  @media(max-width:820px){
+    .corr,.access{grid-template-columns:1fr}
+    .mrow{grid-template-columns:1fr;gap:5px}
+    .flow{padding-left:30px}
+    .fstep::before{left:-30px}
+  }

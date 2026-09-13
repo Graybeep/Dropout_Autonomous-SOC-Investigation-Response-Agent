@@ -21,63 +21,294 @@
 </nav>
 
 <header class="pagehead wrap">
-  <h1>How it works</h1>
-  <p class="sub">The alert arrives with no verdict attached. Everything that follows is the agent's own decision: which evidence to pull, in what order, and when it has enough to stop.</p>
+  <h1>An alert is only a starting point, not a verdict</h1>
+  <p class="sub">A detection signature fires when traffic <em>looks</em> like an attack. Whether
+    the attack actually worked is a separate question, and answering it means going and checking.
+    That is the whole job.</p>
+
+  <nav class="pipe" aria-label="Investigation pipeline">
+    <a href="#s1">Alert</a><span class="arw">&rsaquo;</span>
+    <a href="#s2">Hypothesis</a><span class="arw">&rsaquo;</span>
+    <a href="#s3">Evidence</a><span class="arw">&rsaquo;</span>
+    <a href="#s4">Verdict</a><span class="arw">&rsaquo;</span>
+    <a href="#s5">Action</a><span class="arw">&rsaquo;</span>
+    <a href="#s6">Verification</a>
+  </nav>
 </header>
 
 <section class="wrap first">
+  <div class="eyebrow">The six stages</div>
+  <h2>The agent picks its own path through them</h2>
+  <p class="sub">Nothing below is a fixed script. The agent decides which evidence to pull, in
+    what order, and when it has enough to stop.</p>
 
-  <div class="steps six">
-    <div class="step"><div class="n">1</div><h3>Ingest</h3>
-      <p>An alert opens a case. Its severity label is recorded as the sensor's opinion, never as a finding.</p></div>
-    <div class="step"><div class="n">2</div><h3>Hypothesise</h3>
-      <p>The agent states what would confirm the attack succeeded, and what would falsify it.</p></div>
-    <div class="step"><div class="n">3</div><h3>Gather</h3>
-      <p>It chooses tool calls one at a time, giving a reason before each, and judges after each whether it has enough.</p></div>
-    <div class="step"><div class="n">4</div><h3>Score</h3>
-      <p>It declares which classes of evidence it found, with citations. A fixed function turns those into a score.</p></div>
-    <div class="step"><div class="n">5</div><h3>Act</h3>
-      <p>A justified verdict blocks the source IP in a sandboxed firewall file. An uncertain one on a critical asset contains precautionarily.</p></div>
-    <div class="step"><div class="n">6</div><h3>Verify</h3>
-      <p>It re-reads firewall state from disk to confirm the block actually landed, rather than assuming it did.</p></div>
+  <div class="flow">
+
+    <article class="fstep" id="s1" data-n="1">
+      <h3>Alert</h3>
+      <p class="what">A detection alert opens a case: signature, source, destination, target asset,
+        and the sensor's severity label.</p>
+      <p class="why"><b>Why it matters:</b> the severity label is recorded as the sensor's opinion,
+        never as a finding. A "critical" label earns no points in the score.</p>
+      <details class="ex"><summary>See it</summary>
+        <div class="body"><code>ET WEB_SERVER SQL Injection Attempt UNION SELECT</code><br>
+          198.51.100.23 to 10.20.2.22:3306 on <code>SRV-DB-02</code>, labelled
+          <strong>critical</strong> by the sensor. At this point nothing is known except that
+          traffic matched a pattern.</div>
+      </details>
+    </article>
+
+    <article class="fstep" id="s2" data-n="2">
+      <h3>Hypothesis</h3>
+      <p class="what">The agent states what it believes happened, what evidence would
+        <strong>confirm</strong> it, and what evidence would <strong>falsify</strong> it.</p>
+      <p class="why"><b>Why it matters:</b> naming the disconfirming evidence up front is what
+        stops the investigation becoming a hunt for agreement.</p>
+      <details class="ex"><summary>See it</summary>
+        <div class="body"><em>Hypothesis:</em> the injection succeeded and data was read.<br>
+          <em>Would confirm:</em> a vulnerable version, logs showing the query executed, bulk
+          egress.<br>
+          <em>Would falsify:</em> a patched version, logs showing the request blocked or returning
+          zero rows, or a control that made the read impossible.</div>
+      </details>
+    </article>
+
+    <article class="fstep" id="s3" data-n="3">
+      <h3>Evidence</h3>
+      <p class="what">The agent chooses one tool call at a time, states its reason before making it,
+        and judges after each result whether it has enough.</p>
+      <p class="why"><b>Why it matters:</b> the order is the agent's, not ours. Two cases with the
+        same signature routinely take different paths.</p>
+      <details class="ex"><summary>See it</summary>
+        <div class="body">Scenario 2 went
+          <code>get_alert</code>, <code>get_asset_info</code>, <code>get_packet_metadata</code>,
+          <code>get_server_logs</code>, <code>get_related_alerts</code>,
+          <code>get_vulnerabilities</code>, <code>get_configuration</code>.<br>
+          Each call carries the reason the agent gave before making it, and each result is followed
+          by an explicit "do I have enough yet" judgement.</div>
+      </details>
+    </article>
+
+    <article class="fstep" id="s4" data-n="4">
+      <h3>Verdict</h3>
+      <p class="what">The agent declares which <em>classes</em> of evidence it established and cites
+        the tool result behind each. A fixed table turns those into a score and an outcome.</p>
+      <p class="why"><b>Why it matters:</b> the agent never writes the confidence number. Ask where
+        0.95 came from and there is a one line answer, and the same evidence scores identically
+        every run.</p>
+      <details class="ex"><summary>See it</summary>
+        <div class="body">Base 0.50, then
+          <code>version_in_range</code> +0.25,
+          <code>logs_consistent</code> +0.25,
+          <code>exfil_indicators</code> +0.15.<br>
+          Raw 1.15, clamped to <strong>0.95</strong>, outcome <strong>SUCCEEDED</strong>.
+          A submission citing a source that returned nothing is refused before it ever scores.</div>
+      </details>
+    </article>
+
+    <article class="fstep" id="s5" data-n="5">
+      <h3>Action</h3>
+      <p class="what">A justified verdict blocks the source IP. An uncertain verdict on a critical
+        asset contains precautionarily and says so. A failed attack gets no action at all.</p>
+      <p class="why"><b>Why it matters:</b> containment under uncertainty is labelled as exactly
+        that, so a precautionary block is never mistaken for a finding of breach.</p>
+      <details class="ex"><summary>See it</summary>
+        <div class="body"><code>SUCCEEDED</code> at 0.95 blocks.
+          <code>INCONCLUSIVE</code> on a critical asset blocks with
+          <code>precautionary: true</code>.
+          <code>INCONCLUSIVE</code> elsewhere takes no action and flags for an analyst.
+          <code>FAILED</code> does nothing.</div>
+      </details>
+    </article>
+
+    <article class="fstep" id="s6" data-n="6">
+      <h3>Verification</h3>
+      <p class="what">The agent re-reads firewall state from disk and compares what it observes
+        against what the policy expected.</p>
+      <p class="why"><b>Why it matters:</b> requesting an action and achieving one are different
+        events. The agent is not permitted to assume the block landed.</p>
+      <details class="ex"><summary>See it</summary>
+        <div class="body">After <code>block_ip</code>, the agent calls
+          <code>check_firewall_state</code>, which reads the same file back from disk.
+          Expected blocked <code>true</code>, observed blocked <code>true</code>. If those
+          disagreed, the case would say so.</div>
+      </details>
+    </article>
+
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="eyebrow">Evidence correlation</div>
+  <h2>No single source answers the question</h2>
+  <p class="sub">The vulnerability database is keyed by service name and holds no per-host patch
+    status, because a real CVE feed does not know what your host runs. The agent has to join
+    independent facts and show the join.</p>
+
+  <div class="corr">
+    <div class="cin"><div class="src">Asset</div>
+      <div class="fact"><code>get_asset_info</code><br><code>SRV-DB-02</code> runs
+        <strong>mysql 5.7.21</strong></div></div>
+    <div class="cin"><div class="src">Vulnerability</div>
+      <div class="fact"><code>get_vulnerabilities</code><br><strong>CVE-2023-21980</strong> affects
+        <code>&gt;=5.7.0,&lt;5.7.30</code></div></div>
+    <div class="cin"><div class="src">Configuration</div>
+      <div class="fact"><code>get_configuration</code><br>the app account holds
+        <strong>SELECT on every schema</strong></div></div>
   </div>
 
-  <div class="two" style="margin-top:40px">
-    <div class="story">
-      <h3 style="font-size:19px;margin-bottom:12px">The correlation that matters</h3>
-      <p>The vulnerability database is keyed by service name and holds no per-host patch status
-        A real CVE feed does not know what your host runs, so the agent has to join two
-        independent facts and show its working:</p>
-      <div class="quote"><p><code>get_asset_info</code> &rarr; the host runs MySQL 5.7.21<br>
-        <code>get_vulnerabilities</code> &rarr; CVE-2023-21980 affects <code>&gt;=5.7.0,&lt;5.7.30</code><br>
-        &rarr; 5.7.21 is inside that range &rarr; vulnerable</p></div>
-      <p style="margin-top:15px">The configuration source follows the same rule. It describes controls
-        (which tables an account may read, whether the web firewall blocks or merely logs)
-        and never says whether they stopped <em>this</em> attack. That judgement stays the agent's, and
-        it is visible in the trace.</p>
+  <div class="join">&darr;</div>
+
+  <div class="cout">
+    <div class="v">5.7.21 falls inside that range, and nothing in the configuration stops the read</div>
+    <p>Neither fact is a verdict on its own. The knowledge base never says "this host is
+      vulnerable" and the host never says "this version is affected". That comparison is the
+      agent's to make, and it appears in the trace as a step you can read.</p>
+  </div>
+
+  <p class="sub" style="margin-top:22px">The same join can point the other way. On
+    <code>SRV-HR-11</code> the version <em>is</em> in range and the injected query
+    <em>does</em> reach the database, but the account it runs as holds no privilege on the targeted
+    table, so the query returns zero rows. Same signature, opposite outcome, and only the
+    configuration explains the difference.</p>
+</section>
+
+<section class="wrap">
+  <div class="eyebrow">Boundaries</div>
+  <h2>What the agent can reach</h2>
+  <p class="sub">Eleven tool schemas: eight that read evidence, two that act on the network, and
+    one it submits its conclusion through. Everything sits inside a sandbox that is reset from a
+    pristine copy before every run.</p>
+
+  <div class="access">
+    <div class="acol read">
+      <div class="hd">Read: evidence</div>
+      <ul>
+        <li class="mono">get_alert</li>
+        <li class="mono">get_asset_info</li>
+        <li class="mono">get_vulnerabilities</li>
+        <li class="mono">get_configuration</li>
+        <li class="mono">get_server_logs</li>
+        <li class="mono">get_packet_metadata</li>
+        <li class="mono">get_related_alerts</li>
+        <li class="mono">check_firewall_state</li>
+      </ul>
+      <p class="note">Flat JSON files you can open and read yourself. A lookup that finds nothing
+        returns an explicit "no data" rather than an empty answer.</p>
     </div>
 
-    <div class="panelbox">
-      <h3>What the agent can reach</h3>
-      <div class="toolgrid">
-        <code>get_alert</code><code>get_packet_metadata</code><code>get_asset_info</code>
-        <code>get_configuration</code><code>get_vulnerabilities</code><code>get_server_logs</code>
-        <code>get_related_alerts</code><code>check_firewall_state</code><code>block_ip</code>
-        <code>unblock_ip</code><code>submit_assessment</code>
-      </div>
-      <div style="margin-top:18px">
-        <div class="kv"><b>Evidence</b><span>Flat JSON files you can open and read</span></div>
-        <div class="kv"><b>Actions</b><span>Writes to a sandboxed firewall state file</span></div>
-        <div class="kv"><b>Reset</b><span>Every run starts from a pristine copy of the fixtures</span></div>
-        <div class="kv"><b>Network</b><span>None. No real hosts, credentials or traffic</span></div>
-      </div>
+    <div class="acol act">
+      <div class="hd">Act: response</div>
+      <ul>
+        <li class="mono">block_ip</li>
+        <li class="mono">unblock_ip</li>
+      </ul>
+      <p class="note">Both write to a sandboxed firewall state file, and
+        <code>check_firewall_state</code> reads that same file back. The mutation is real inside
+        the sandbox, which is what makes verification meaningful rather than decorative.</p>
+      <p class="note">The eleventh schema, <code>submit_assessment</code>, is neither: it is how
+        the agent declares what it found, and it can be refused.</p>
+    </div>
+
+    <div class="acol no">
+      <div class="hd">Cannot access</div>
+      <ul>
+        <li>Real hosts or production systems</li>
+        <li>Credentials of any kind</li>
+        <li>Live network traffic</li>
+        <li>Any outbound network call</li>
+        <li>The fixtures it was seeded from</li>
+      </ul>
+      <p class="note">Every hostname, IP, account and log line in this project is synthetic. No
+        real system is described anywhere.</p>
     </div>
   </div>
 </section>
 
-<div class="wrap">
-  <div class="pagenav"><span></span><span class="sp"></span><a class="btn ghost sm" href="scenarios.html">The seven scenarios &rarr;</a></div>
-</div>
+<section class="wrap">
+  <div class="eyebrow">The trust moment</div>
+  <h2>The agent does not assume its own action worked</h2>
+  <p class="sub">This is the shortest section and the one that matters most. Requesting a block and
+    achieving a block are two different events, and only one of them is evidence.</p>
+
+  <div class="chain">
+    <div class="clink"><div class="k">1. Verdict</div>
+      <div class="v"><code>SUCCEEDED</code> at 0.95, above the action threshold</div></div>
+    <div class="clink"><div class="k">2. Action</div>
+      <div class="v"><code>block_ip</code> writes the rule to firewall state</div></div>
+    <div class="clink key"><div class="k">3. Re-read</div>
+      <div class="v"><code>check_firewall_state</code> reads the file back <strong>from
+        disk</strong>, not from memory</div></div>
+    <div class="clink key"><div class="k">4. Confirm</div>
+      <div class="v">Observed state compared against what the policy expected, and the result
+        recorded either way</div></div>
+  </div>
+
+  <p class="sub" style="margin-top:20px">If the re-read disagreed with the expectation, the case
+    would record the disagreement rather than the intention. A run where the block silently failed
+    would show up as a failed check, not as a success.</p>
+</section>
+
+<section class="wrap">
+  <div class="eyebrow">Watch an investigation unfold</div>
+  <h2>One case, start to finish</h2>
+  <p class="sub">A compressed view of a real recorded trace. The viewer shows every step, including
+    the ones where the agent was refused and had to correct itself.</p>
+
+  <div class="mini">
+    <div class="mrow"><div class="stage">Alert</div>
+      <div class="said">Critical SQLi signature against <span class="m">SRV-DB-02</span>.
+        <em>Severity noted, nothing concluded.</em></div></div>
+    <div class="mrow"><div class="stage">Hypothesis</div>
+      <div class="said">The injection succeeded. <em>Would be falsified by a patched version,
+        blocked requests, or zero rows returned.</em></div></div>
+    <div class="mrow"><div class="stage">Evidence</div>
+      <div class="said"><span class="m">mysql 5.7.21</span> inside
+        <span class="m">CVE-2023-21980</span>; logs show the query executed and
+        48,219 rows read; 2.4 MB left the host.</div></div>
+    <div class="mrow"><div class="stage">Verdict</div>
+      <div class="said"><span class="m">SUCCEEDED</span> at 0.95, from three cited evidence
+        classes. <em>Computed, not asserted.</em></div></div>
+    <div class="mrow"><div class="stage">Action</div>
+      <div class="said"><span class="m">block_ip</span> on 198.51.100.23, with the reason recorded
+        alongside the rule.</div></div>
+    <div class="mrow"><div class="stage">Verification</div>
+      <div class="said">Firewall state re-read from disk: blocked <span class="m">true</span>,
+        matching policy.</div></div>
+  </div>
+
+  <div class="cta" style="margin-top:22px">
+    <a class="btn" href="viewer.html">Open the full trace viewer</a>
+    <a class="btn ghost" href="scenarios.html">See all seven scenarios</a>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="eyebrow">Proof</div>
+  <h2>It has to survive the cases that are not clean</h2>
+  <p class="sub">Any system can look good on an obvious breach. These seven exist because the
+    interesting failures are the ambiguous ones, and the outcomes are genuinely spread.</p>
+
+  <div class="spread">
+    <div class="sp1"><div class="n">1</div><div class="l"><strong>FAILED</strong><br>a critical
+      label on a patched host, correctly dismissed</div></div>
+    <div class="sp1"><div class="n">4</div><div class="l"><strong>SUCCEEDED</strong><br>including
+      one reopened by later evidence and one overturned by a human</div></div>
+    <div class="sp1"><div class="n">2</div><div class="l"><strong>INCONCLUSIVE</strong><br>one
+      capped by a failed tool, one by a gap we document rather than hide</div></div>
+  </div>
+
+  <p class="sub" style="margin-top:22px">The set deliberately includes a false alarm, a case where
+    a tool fails mid-investigation, a case where an analyst overrules the agent and it must not
+    re-block, and one case the scoring model cannot currently resolve. That last one is left
+    failing on purpose.</p>
+
+  <div class="pagenav">
+    <a class="btn ghost sm" href="index.html">Back to the overview</a>
+    <span class="sp"></span>
+    <a class="btn ghost sm" href="scenarios.html">The seven scenarios</a>
+  </div>
+</section>
 
 <footer class="wrap">
   <h2>Watch an investigation unfold</h2>
@@ -87,6 +318,30 @@
   <p class="fine">Traces are replayed from disk. To regenerate them, run <code>python run_all.py</code>.</p>
   <p class="fine"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms of use</a></p>
 </footer>
+
+<script>
+// Pipeline chips highlight the stage you are reading. Progressive enhancement:
+// the chips are plain anchors and the page works with this script removed.
+(function () {
+  var chips = [].slice.call(document.querySelectorAll('.pipe a'));
+  var steps = [].slice.call(document.querySelectorAll('.fstep'));
+  if (!chips.length || !steps.length || !('IntersectionObserver' in window)) return;
+
+  var byId = {};
+  chips.forEach(function (c) { byId[c.getAttribute('href').slice(1)] = c; });
+
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      var chip = byId[e.target.id];
+      if (!chip) return;
+      e.target.classList.toggle('on', e.isIntersecting);
+      chip.classList.toggle('on', e.isIntersecting);
+    });
+  }, { rootMargin: '-45% 0px -45% 0px' });
+
+  steps.forEach(function (s) { io.observe(s); });
+})();
+</script>
 
 </body>
 </html>
