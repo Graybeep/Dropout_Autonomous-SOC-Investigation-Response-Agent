@@ -2415,3 +2415,25 @@ infer why "SUCCEEDED" is red. Same mapping as `outcomeKind()` in the viewer
 
 **N-33. Play -> Start.** Owner's rename. The toggle is Start / Pause, and
 `stop()` restores "Start"; both paths verified in-browser.
+
+**N-34. The landing page split into four; nav items are pages, not anchors.**
+Owner asked for each tab to be its own tab. `index.html` is now a short home
+page that routes onward; `how-it-works.html`, `scenarios.html` and
+`design.html` each hold one section. Prev/next paging at the foot of each, and
+the current tab is underlined since there is no scroll position left to imply
+which section you are in.
+
+Shared styling moved to `site.css`. Note this is the ONE structural departure
+from "single file" in the project, and it is scoped: `viewer.html` is still
+entirely self-contained, as CLAUDE.md section 10 requires. The landing pages are
+not covered by that rule and duplicating 118 lines of CSS four times would
+guarantee drift.
+
+**P-031. Splitting duplicated every heading, and the fix nearly lost a
+load-bearing sentence.** Each extracted section still carried its own eyebrow,
+`<h2>` and lead paragraph, so every page printed its title twice. Stripping
+those also removed the sentence stating that SUCCEEDED is the bad news and
+FAILED the good news (N-32) - the one line that stops a reader treating a red
+SUCCEEDED as a bug. Restored into the scenarios page header. Worth recording
+because the duplicate heading was obvious on screen and the missing sentence was
+not; only re-reading the diff caught it.

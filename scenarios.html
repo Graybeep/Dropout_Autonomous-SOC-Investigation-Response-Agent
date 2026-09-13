@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scenarios — SOC Agent</title>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="brand" href="index.html"><span class="dot"></span>SOC Agent</a>
+    <a class="l" href="how-it-works.html">How it works</a>
+    <a class="l active" href="scenarios.html">Scenarios</a>
+    <a class="l" href="design.html">Why it is built this way</a>
+    <span class="sp"></span>
+    <a class="btn sm" href="viewer.html">Open the viewer</a>
+  </div>
+</nav>
+
+<header class="pagehead wrap">
+  <h1>Seven scenarios</h1>
+  <p class="sub">Each one is a different way to be wrong. Every scenario runs the same loop over different evidence, and the outcome shown is what the scoring function produced &mdash; <strong>SUCCEEDED</strong> means the attack worked, so it is the bad news, and <strong>FAILED</strong> is the good news.</p>
+</header>
+
+<section class="wrap first">
+
+  <div class="cards">
+    <div class="sc"><div class="sc-hd"><span class="sc-n">1</span><h3>False alarm, patched host</h3></div>
+      <p>A critical-labelled injection alert against a host running a version outside every affected
+        range, whose logs show the request was blocked before it reached the database.</p>
+      <span class="tag t-fail">FAILED &mdash; attack did not work</span></div>
+
+    <div class="sc"><div class="sc-hd"><span class="sc-n">2</span><h3>True positive, unpatched host</h3></div>
+      <p>The same signature, a vulnerable version, and logs showing the query ran and data left the
+        host. The source IP is blocked, then the block is verified from disk.</p>
+      <span class="tag t-succ">SUCCEEDED &mdash; attack worked</span></div>
+
+    <div class="sc"><div class="sc-hd"><span class="sc-n">3</span><h3>Delayed evidence</h3></div>
+      <p>Ambiguous at first. New evidence arrives naming a second host, so the agent forms a fresh
+        hypothesis and goes and investigates that host rather than just re-scoring.</p>
+      <span class="tag t-succ">SUCCEEDED &mdash; after re-opening</span></div>
+
+    <div class="sc"><div class="sc-hd"><span class="sc-n">4</span><h3>Human override</h3></div>
+      <p>An analyst overrules the verdict. The agent unblocks, records the override beside its own
+        prior conclusion, and does not re-block on its own.</p>
+      <span class="tag t-succ">SUCCEEDED &mdash; then overridden</span></div>
+
+    <div class="sc"><div class="sc-hd"><span class="sc-n">5</span><h3>Multi-alert correlation</h3></div>
+      <p>A second alert on the same asset opens its own case, discovers the first, and both
+        conclusions move on the strength of the other.</p>
+      <span class="tag t-succ">SUCCEEDED &mdash; two cases</span></div>
+
+    <div class="sc"><div class="sc-hd"><span class="sc-n">6</span><h3>Tool failure</h3></div>
+      <p>The log source fails. The agent notices, retries, routes to another source, and refuses to
+        treat missing evidence as evidence that nothing happened.</p>
+      <span class="tag t-inc">INCONCLUSIVE &mdash; capped on purpose</span></div>
+
+    <div class="sc"><div class="sc-hd"><span class="sc-n">7</span><h3>Configuration prevents it</h3></div>
+      <p>Vulnerable version, attack visible in the logs &mdash; but the database account cannot read
+        the targeted table. The agent establishes this and says so; the scoring model has no term for
+        it, so the case is left short of a verdict.</p>
+      <span class="tag t-inc">INCONCLUSIVE &mdash; declared limitation</span></div>
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="pagenav"><a class="btn ghost sm" href="how-it-works.html">&larr; How it works</a><span class="sp"></span><a class="btn ghost sm" href="design.html">Why it is built this way &rarr;</a></div>
+</div>
+
+<footer class="wrap">
+  <h2>Watch an investigation unfold</h2>
+  <p class="sub">The viewer replays a saved trace step by step &mdash; each decision, the reason
+    behind it, and the evidence that produced the verdict.</p>
+  <div class="cta"><a class="btn" href="viewer.html">Open the trace viewer</a></div>
+  <p class="fine">Traces are replayed from disk. To regenerate them, run <code>python run_all.py</code>.</p>
+</footer>
+
+</body>
+</html>

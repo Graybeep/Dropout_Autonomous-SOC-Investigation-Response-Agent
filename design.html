@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Why it is built this way — SOC Agent</title>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="brand" href="index.html"><span class="dot"></span>SOC Agent</a>
+    <a class="l" href="how-it-works.html">How it works</a>
+    <a class="l" href="scenarios.html">Scenarios</a>
+    <a class="l active" href="design.html">Why it is built this way</a>
+    <span class="sp"></span>
+    <a class="btn sm" href="viewer.html">Open the viewer</a>
+  </div>
+</nav>
+
+<header class="pagehead wrap">
+  <h1>Why it is built this way</h1>
+  <p class="sub">The score is arithmetic. The reasoning is the agent's.</p>
+</header>
+
+<section class="wrap first">
+  <div class="two" style="margin-top:28px">
+    <div class="story">
+      <p>The agent never emits a confidence number. It declares which <em>classes</em> of evidence it
+        established and cites the tool result behind each one; a fixed table turns those into a score.
+        Ask where <code>0.95</code> came from and there is a one-line answer, and the same evidence
+        scores the same way every time.</p>
+      <p>Submissions pass through a checker that can refuse them. It never decides whether a version
+        falls in a range &mdash; that is the agent's call. It refuses the <em>form</em> of a claim:
+        saying a host is outside <em>all</em> affected ranges having looked up only some of its
+        services, or citing a source that came back empty.</p>
+      <p>Refusal is routine rather than exceptional, and both the refusal and the correction stay in
+        the trace. Scenario 1 is the clearest case &mdash; the agent is refused on two counts at once,
+        then resolves each differently: it fetches the data it was missing, and drops the claim it
+        could not support.</p>
+    </div>
+    <div class="panelbox">
+      <h3>What a trace records</h3>
+      <div class="kv"><b>Every call</b><span>and the reason given before making it</span></div>
+      <div class="kv"><b>Every refusal</b><span>what was wrong, and how it was fixed</span></div>
+      <div class="kv"><b>The score</b><span>itemised factor by factor, with citations</span></div>
+      <div class="kv"><b>Reconsiderations</b><span>prior conclusion beside the new one, never overwritten</span></div>
+      <div class="kv"><b>Degraded sources</b><span>anything that failed, and the ceiling it imposed</span></div>
+      <p style="margin:18px 0 0;font-size:14.5px">That record is the single source of truth: the
+        viewer and the written case reports are both rendered from it.</p>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="pagenav"><a class="btn ghost sm" href="scenarios.html">&larr; The seven scenarios</a><span class="sp"></span><a class="btn sm" href="viewer.html">Open the viewer &rarr;</a></div>
+</div>
+
+<footer class="wrap">
+  <h2>Watch an investigation unfold</h2>
+  <p class="sub">The viewer replays a saved trace step by step &mdash; each decision, the reason
+    behind it, and the evidence that produced the verdict.</p>
+  <div class="cta"><a class="btn" href="viewer.html">Open the trace viewer</a></div>
+  <p class="fine">Traces are replayed from disk. To regenerate them, run <code>python run_all.py</code>.</p>
+</footer>
+
+</body>
+</html>
