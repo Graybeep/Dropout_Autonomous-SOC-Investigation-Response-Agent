@@ -9,6 +9,13 @@ from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 
+# ---- Submission links --------------------------------------------------------
+# Fill these in and re-run `python tools_make_deck.py`. While a value is empty the
+# slide shows "[Insert Link]"; once set, the URL is written as a real hyperlink on
+# the text AND on the whole card, so it is clickable in slideshow mode.
+GITHUB_URL = ""
+VIDEO_URL = ""
+
 INK = RGBColor(0x1C, 0x1C, 0x1E)
 BODY = RGBColor(0x4A, 0x4A, 0x52)
 MUTED = RGBColor(0x8A, 0x8A, 0x94)
@@ -581,6 +588,44 @@ box(s, Inches(1.2), Inches(5.1), Inches(11.0), Inches(.7),
 box(s, Inches(.85), Inches(6.25), Inches(11.6), Inches(.5),
     "soc-agent-trace-viewer.vercel.app", size=17, color=ORNG, bold=True,
     font="Consolas", align=PP_ALIGN.CENTER)
+
+# --------------------------------------------------------------- 11. Submission links
+s = slide()
+header(s, "Submission", "Submission Links")
+
+def link_row(s, y, emoji, label, url):
+    has = bool(url.strip())
+    c = card(s, Inches(.85), y, Inches(11.6), Inches(1.55), accent=ORNG)
+    if has:
+        c.click_action.hyperlink.address = url          # whole card clickable
+    tb = s.shapes.add_textbox(Inches(1.25), y + Inches(.25), Inches(10.9), Inches(1.1))
+    tf = tb.text_frame; tf.word_wrap = True
+    tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
+    p1 = tf.paragraphs[0]
+    e = p1.add_run(); e.text = emoji + "  "
+    e.font.size = Pt(22); e.font.name = "Segoe UI Emoji"
+    l = p1.add_run(); l.text = label
+    l.font.size = Pt(22); l.font.bold = True; l.font.color.rgb = INK; l.font.name = "Segoe UI"
+    p2 = tf.add_paragraph(); p2.space_before = Pt(8)
+    r = p2.add_run()
+    if has:
+        r.text = url
+        r.hyperlink.address = url                       # the text itself is a link
+        r.font.color.rgb = ORNG; r.font.underline = True
+    else:
+        r.text = "[Insert Link]"
+        r.font.color.rgb = MUTED
+    r.font.size = Pt(17); r.font.name = "Consolas"
+
+link_row(s, Inches(2.05), "🔗", "GitHub Repository", GITHUB_URL)
+link_row(s, Inches(3.85), "▶️", "Video Demo", VIDEO_URL)
+
+lv = box(s, Inches(.85), Inches(5.75), Inches(11.6), Inches(.4),
+         "Live viewer:  ", size=14, color=BODY)
+lr = lv.text_frame.paragraphs[0].add_run()
+lr.text = "soc-agent-trace-viewer.vercel.app"
+lr.hyperlink.address = "https://soc-agent-trace-viewer.vercel.app"
+lr.font.size = Pt(14); lr.font.color.rgb = ORNG; lr.font.underline = True; lr.font.name = "Consolas"
 
 prs.save("deck.pptx")
 print("saved deck.pptx")
