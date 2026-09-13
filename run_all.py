@@ -192,7 +192,86 @@ def run_one(key: str) -> dict:
             (config.REPORT_DIR / f"{case.case_id}.md").write_text(md, encoding="utf-8")
 
     return {"key": key, "scenario": scenario, "result": result,
-            "checks": checks, "error": error}
+            "checks": checks, "error": error, "payload": payload}
+
+
+def _summarise(runs: list[dict]) -> None:
+    """One line per scenario saying what the agent actually did, then totals.
+
+    The pass/fail table above says whether the run met expectations; it does not
+    say what happened. This does - the verdict it reached, what it did about it,
+    and how much evidence and argument it took to get there.
+
+    ASCII only, deliberately. The first version used a middot separator and an
+    arrow in "overridden -> benign"; the arrow is not in cp1252, so printing
+    scenario 4 raised UnicodeEncodeError and took the whole harness down after
+    it had already done the work.
+    """
+    tot = {"calls": 0, "refusals": 0, "recons": 0, "actions": 0, "degraded": 0}
+    lines = []
+    plural = lambda n, word: f"{n} {word}{'' if n == 1 else 's'}"
+
+    for run in runs:
+        steps = (run["payload"] or {}).get("steps", [])
+        cases = (run["payload"] or {}).get("cases", []) or []
+
+        calls = sum(1 for x in steps
+                    if x.get("kind") == "tool_call" and x.get("tool") != "submit_assessment")
+        refusals = sum(1 for x in steps
+                       if x.get("kind") == "tool_result"
+                       and x.get("tool") == "submit_assessment"
+                       and x.get("status") == "rejected")
+        recons = sum(1 for x in steps if x.get("kind") == "reconsider")
+
+        verdicts, acts, degraded = [], [], []
+        for c in cases:
+            concl = (c.get("conclusions") or [])
+            if concl:
+                last = concl[-1]
+                verdicts.append(f"{last.get('outcome')} {float(last.get('confidence', 0)):.2f}")
+            status = c.get("status", "")
+            if status.startswith("OVERRIDDEN"):
+                verdicts.append(status.replace("OVERRIDDEN_", "overridden -> ").lower())
+            for a in (c.get("actions") or []):
+                acts.append(a.get("action", "?")
+                            + (" (precautionary)" if a.get("precautionary") else ""))
+            degraded += c.get("degraded_sources") or []
+
+        tot["calls"] += calls
+        tot["refusals"] += refusals
+        tot["recons"] += recons
+        tot["actions"] += len(acts)
+        tot["degraded"] += len(set(degraded))
+
+        bits = [", ".join(verdicts) or "no conclusion"]
+        bits.append(", ".join(dict.fromkeys(acts)) if acts else "no action")
+        bits.append(f"{calls} evidence calls")
+        if refusals:
+            bits.append(plural(refusals, "refusal") + " resolved")
+        if recons:
+            bits.append(plural(recons, "reconsideration"))
+        if degraded:
+            bits.append(f"degraded: {', '.join(sorted(set(degraded)))}")
+        if run["error"]:
+            bits.append(f"ERROR {run['error']}")
+
+        lines.append(f"{run['key']:<3}{run['scenario'].title[:34]:<36}"
+                     f"{' | '.join(bits)}")
+
+    print()
+    print("What happened")
+    print("-" * 78)
+    for ln in lines:
+        print(ln)
+    print("-" * 78)
+    print(" | ".join([
+        plural(len(runs), "scenario"),
+        plural(tot["calls"], "evidence call"),
+        plural(tot["refusals"], "guard refusal"),
+        plural(tot["recons"], "reconsideration"),
+        plural(tot["actions"], "firewall action"),
+        plural(tot["degraded"], "degraded source"),
+    ]))
 
 
 def main(argv: list[str]) -> int:
@@ -237,6 +316,11 @@ def main(argv: list[str]) -> int:
         print(f"{run['key']:<10}{run['scenario'].title[:32]:<34}"
               f"{f'{passed}/{total}':<12}{status}")
     print("=" * 78)
+    _summarise(runs)
+    print("=" * 78)
+    if any(r["scenario"].expect.expected_to_fail for r in runs):
+        print("XFAIL = expected not to hold and kept on purpose; see its notes")
+        print("        and Toknow/DECISIONS.md Part 22.")
     print(f"\nTraces  -> {config.TRACE_DIR}")
     print(f"Reports -> {config.REPORT_DIR}")
     # Not "open viewer.html": the browser blocks fetch() on file:// origins,

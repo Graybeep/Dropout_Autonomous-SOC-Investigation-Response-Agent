@@ -2437,3 +2437,42 @@ FAILED the good news (N-32) - the one line that stops a reader treating a red
 SUCCEEDED as a bug. Restored into the scenarios page header. Worth recording
 because the duplicate heading was obvious on screen and the missing sentence was
 not; only re-reading the diff caught it.
+
+---
+
+## Part 25 - End-of-run summary
+
+**N-35. `run_all.py` now says what happened, not just whether it passed.** The
+results table answers "did the run meet expectations". It does not answer "what
+did the agent do", which is the thing anyone actually wants after a run. A
+"What happened" block now prints one line per scenario - verdict and confidence,
+the action taken, evidence calls, refusals resolved, reconsiderations, degraded
+sources - and a totals line. Every figure is derived from the trace that was
+just written, so it cannot drift from the artefact.
+
+**P-032. Two edits silently did nothing, and one of them had already been
+committed as working.** Both were `str.replace()` calls whose pattern contained
+a `\n` escape written inside a triple-quoted Python string, so the pattern held
+a real newline while the target file held the two characters backslash-n. The
+match failed, `replace` returned the string unchanged, and nothing raised.
+
+The first was the `_summarise(runs)` call - caught immediately, because the
+summary visibly did not print. The second was the XFAIL explanatory note added
+back in Part 22: **it never shipped**, and the commit message for that change
+claimed it did. The table's "XFAIL (declared)" label came from a different,
+successful edit, which is exactly why the miss went unnoticed - the feature
+looked half-present.
+
+Both are now inserted by index rather than by pattern, and both are verified by
+grepping the file afterwards instead of trusting the edit. The rule this
+project already applies to tool output applies to its own edits: an edit that
+reports nothing is not the same as an edit that worked. `replace()` without a
+following assertion is a silent-failure primitive.
+
+**P-033. The first summary crashed on scenario 4.** It used a middot separator
+and an arrow in "overridden -> benign". The arrow (U+2192) is not in cp1252,
+which is what the Windows console encodes to, so `print` raised
+`UnicodeEncodeError` *after* the scenario had already run and written its trace.
+The block is ASCII-only now, matching the rest of the harness output. Found by
+running the summary over saved traces before wiring it in, rather than
+discovering it during a 35-minute live run.
