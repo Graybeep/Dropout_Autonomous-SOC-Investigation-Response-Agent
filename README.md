@@ -24,10 +24,20 @@ receives eleven tool schemas and picks its own calls and ordering at runtime —
 nothing about the sequence is scripted.
 
 **The single most informative artefact is
-[`reports/CASE-1001.md`](reports/CASE-1001.md), section 2, steps 8-10.** The agent
-submits its assessment claiming the host is patched; the tool **refuses it**,
-because it checked two of the host's three CVE-covered services; the agent looks
-up the third and resubmits. Both the refusal and the correction are steps in the
+[`reports/CASE-1001.md`](reports/CASE-1001.md), section 2, steps 9-11** — the
+refused `submit_assessment` and the two steps after it. The agent submits its
+conclusion; the tool **refuses it**, for two separate reasons at once:
+
+- it claimed the host was outside **all** affected ranges having looked up two
+  of its three CVE-covered services, and
+- it claimed a related alert corroborated, when that lookup had returned
+  `no_data`.
+
+The agent's next line is *"I need to fix two issues: remove the
+`related_alert_corroborates` factor … and check the openssh CVE."* It then does
+exactly that — **gathering** the missing CVE data, and **dropping** the claim it
+could not support — and resubmits. Two different refusals, two different correct
+responses, in one exchange. Both the refusal and the correction are steps in the
 evidence chain.
 
 ### The one rule the guards enforce

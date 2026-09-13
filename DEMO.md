@@ -277,19 +277,31 @@ to re-verify it. Better not to raise it.
 
 ## Rehearsed set piece — the guard refusal (know this cold)
 
-**Where:** `reports/CASE-1001.md`, section 2, steps **8–10**. Scenario 1.
+**Where:** `reports/CASE-1001.md`, section 2, steps **9–11**. Scenario 1.
 Do not go looking for this live; it is here because it is the strongest single
 artefact for the autonomy and verification criteria.
 
-The agent submitted its assessment claiming `version_patched`. The bus refused:
+The agent submitted its assessment. The bus refused it for **two** reasons in
+the same response — use both, they are different guards:
 
+> **Refused:** factor `related_alert_corroborates` cannot be declared: it
+> requires a successful result from `get_related_alerts`, which you have not
+> obtained.
+>
 > **Refused:** factor `version_patched` claims SRV-WEB-01 is outside ALL
 > affected ranges, but you have not looked up **openssh** — service(s) this host
 > runs that the CVE knowledge base covers.
 
-The very next step is `get_vulnerabilities(service_name='openssh')`, then a
-corrected resubmission that is accepted. Both the refusal and the correction are
-steps in the evidence chain.
+The agent's own next line, which is the one to read aloud:
+
+> *"I need to fix two issues: remove the `related_alert_corroborates` factor
+> (since `get_related_alerts` returned `no_data`), and check the openssh CVE."*
+
+It then calls `get_vulnerabilities(service_name='openssh')` and resubmits
+without the unsupported factor, and that submission is accepted. **Two refusals,
+two different correct responses:** it *gathered* what was missing, and *dropped*
+what it could not support. Both the refusal and the correction are steps in the
+evidence chain.
 
 ### The one sentence, if asked "isn't the bus deciding the verdict?"
 
@@ -376,15 +388,18 @@ is not the one on screen.
 Lead with this. It is a stronger answer than any pass count, because it is about
 the failure mode that actually threatens a verification suite.
 
-> Four separate times a verification tool produced a **plausible wrong answer**,
-> and each time the number looked fine. A regex-based guard ablation
-> mis-attributed failures across two guards. An invariant I had "verified" by
-> reading turned out never to have been asserted. A sandbox lock deleted itself,
-> because it lived in the directory it was protecting. And a coherence check
-> printed "single coherent run" from a hard-coded string while the underlying
-> span was wrong.
+> Six separate times my own tooling produced a **plausible wrong answer**, and
+> each time the number looked fine. A regex-based guard ablation mis-attributed
+> failures across two guards. An invariant I had "verified" by reading turned
+> out never to have been asserted. A sandbox lock deleted itself, because it
+> lived in the directory it was protecting. A coherence check printed "single
+> coherent run" from a hard-coded string while the underlying span was wrong. A
+> viewer "defect" I was about to fix turned out never to have existed. And the
+> configuration fixture shipped a `prevents_exploitation` boolean that would
+> have handed the agent the verdict it was supposed to derive — while three
+> separate comments in the code asserted that it did no such thing.
 >
-> None of those were caught by a suite going red. All four were caught by
+> None of those were caught by a suite going red. All six were caught by
 > re-reading the output instead of the summary. That is why the guards are now
 > ablated at runtime rather than by patching source, why fixture invariants are
 > adversarially tested, and why every count in this project was re-derived
@@ -522,7 +537,7 @@ python -m http.server 8000
 1. **Saved trace in the viewer** — every scenario already has a passing trace
    committed. Nothing about the demo depends on the live run succeeding.
 2. **`reports/CASE-1001.md`** — the set piece reads just as well on the page as
-   on screen; section 2, steps 8-10.
+   on screen; section 2, steps 9-11.
 3. **`python selfcheck.py` and `python compliance.py`** — 99 and 22 checks, no
    API key, no network. These cannot fail for environmental reasons.
 
