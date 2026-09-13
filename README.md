@@ -315,7 +315,8 @@ tuned.
 
 ## Further reading
 
-- [`DEMO.md`](DEMO.md) — presenter's walkthrough
+- [`demo-script.md`](demo-script.md) — the timed four-minute demo script
+- [`DEMO.md`](DEMO.md) — presenter's walkthrough and Q&A
 - [`Toknow/DECISIONS.md`](Toknow/DECISIONS.md) — the full decision record,
   including every defect found and why each was fixed or deliberately left
 - [`reports/`](reports/) — the written case report for every scenario
