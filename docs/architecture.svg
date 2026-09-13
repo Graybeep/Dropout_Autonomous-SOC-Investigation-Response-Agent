@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 930" width="1200" height="930" role="img" aria-labelledby="t d">
+  <title id="t">SOC Agent system architecture</title>
+  <desc id="d">Nine components. Human interaction feeds the agent controller. The controller frames the case for planning (1); planning chooses a tool through the tool bus (2), which wraps every call in failure handling; tools submit the assessment to evaluation and verification (3); an accepted verdict returns to the controller (4); the controller acts and verifies through the tools (5). A refusal returns to planning, and reconsider re-enters planning at the hypothesis stage. Retrieval reads external systems; tools write firewall state; the controller records every step in memory.</desc>
+
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6B5344"/>
+    </marker>
+    <marker id="aho" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#E2551F"/>
+    </marker>
+    <marker id="ahg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0B6B44"/>
+    </marker>
+    <style>
+      .t  { font: 700 15px "Segoe UI", Helvetica, Arial, sans-serif; fill: #1C1C1E; letter-spacing: .3px; }
+      .s  { font: 400 12.5px "Segoe UI", Helvetica, Arial, sans-serif; fill: #4A4A52; }
+      .m  { font: 400 12px Consolas, "SF Mono", Menlo, monospace; fill: #6B5344; }
+      .lb { font: 600 12.5px "Segoe UI", Helvetica, Arial, sans-serif; fill: #4A4A52; }
+      .lo { font: 600 12.5px "Segoe UI", Helvetica, Arial, sans-serif; fill: #C4491A; }
+      .n  { font: 700 12px "Segoe UI", Helvetica, Arial, sans-serif; fill: #FFFFFF; }
+      .h  { font: 700 24px Georgia, "Times New Roman", serif; fill: #1C1C1E; }
+      .k  { font: 700 11px "Segoe UI", Helvetica, Arial, sans-serif; fill: #C4491A; letter-spacing: 1.2px; }
+      .leg{ font: 400 13px "Segoe UI", Helvetica, Arial, sans-serif; fill: #4A4A52; }
+    </style>
+  </defs>
+
+  <!-- ground: its own background, so it reads the same in GitHub light and dark -->
+  <rect x="6" y="6" width="1188" height="918" rx="18" fill="#FFFAF0" stroke="#E2D8CC" stroke-width="1.5"/>
+
+  <text class="k" x="40" y="44">SYSTEM ARCHITECTURE</text>
+  <text class="h" x="40" y="76">Nine components, one loop</text>
+
+  <!-- ============================ HUMAN INTERACTION ============================ -->
+  <rect x="820" y="30" width="320" height="76" rx="12" fill="#E8F6EF" stroke="#0B6B44" stroke-width="1.5"/>
+  <text class="t" x="980" y="58" text-anchor="middle" style="fill:#0B6B44">HUMAN INTERACTION</text>
+  <text class="m" x="980" y="78" text-anchor="middle" style="fill:#0B6B44">control.py</text>
+  <text class="s" x="980" y="95" text-anchor="middle">human_override · inject_new_evidence</text>
+
+  <!-- ============================ feedback brackets ============================ -->
+  <!-- reconsider (outer bracket): controller top -> over the row -> planning top -->
+  <path d="M230,236 V150 H1060 V236" fill="none" stroke="#6B5344" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#ah)"/>
+  <rect x="505" y="139" width="252" height="22" rx="4" fill="#FFFAF0"/>
+  <text class="lb" x="631" y="155" text-anchor="middle">reconsider: back to HYPOTHESIZE</text>
+
+  <!-- 1. frame the case (inner bracket) -->
+  <path d="M300,236 V196 H990 V236" fill="none" stroke="#6B5344" stroke-width="2" marker-end="url(#ah)"/>
+  <rect x="548" y="185" width="166" height="22" rx="4" fill="#FFFAF0"/>
+  <circle cx="562" cy="196" r="10" fill="#E2551F"/><text class="n" x="562" y="200" text-anchor="middle">1</text>
+  <text class="lb" x="578" y="201">frame the case</text>
+
+  <!-- human -> controller: along the top and down the left, entering outside both brackets -->
+  <path d="M820,68 H790 V120 H44 V262 H56" fill="none" stroke="#0B6B44" stroke-width="1.8" marker-end="url(#ahg)"/>
+  <rect x="530" y="109" width="180" height="22" rx="4" fill="#FFFAF0"/>
+  <text class="lb" x="620" y="125" text-anchor="middle" style="fill:#0B6B44">override or new evidence</text>
+
+  <!-- ============================ AGENT ROW ============================ -->
+  <!-- AGENT / CONTROLLER -->
+  <rect x="60" y="236" width="300" height="130" rx="12" fill="#FFFFFF" stroke="#1C1C1E" stroke-width="2.5"/>
+  <text class="t" x="210" y="272" text-anchor="middle">AGENT / CONTROLLER</text>
+  <text class="m" x="210" y="294" text-anchor="middle">agent.py</text>
+  <text class="s" x="210" y="316" text-anchor="middle">Investigation · Case</text>
+  <text class="s" x="210" y="335" text-anchor="middle">investigate() · reconsider()</text>
+
+  <!-- EVALUATION / VERIFICATION -->
+  <rect x="450" y="236" width="300" height="130" rx="12" fill="#FFE8DC" stroke="#E2551F" stroke-width="2.5"/>
+  <text class="t" x="600" y="266" text-anchor="middle">EVALUATION / VERIFICATION</text>
+  <text class="m" x="600" y="288" text-anchor="middle">confidence.py</text>
+  <text class="s" x="600" y="310" text-anchor="middle">4 guard families · deterministic score</text>
+  <text class="s" x="600" y="329" text-anchor="middle">action policy · re-read state from disk</text>
+
+  <!-- PLANNING -->
+  <rect x="840" y="236" width="300" height="130" rx="12" fill="#FFFFFF" stroke="#6B5344" stroke-width="1.5"/>
+  <text class="t" x="990" y="272" text-anchor="middle">PLANNING</text>
+  <text class="m" x="990" y="294" text-anchor="middle">prompts.py + the model</text>
+  <text class="s" x="990" y="316" text-anchor="middle">hypothesis · what would falsify it</text>
+  <text class="s" x="990" y="335" text-anchor="middle">sufficiency judged after every result</text>
+
+  <!-- 4. accepted verdict: evaluation -> controller -->
+  <line x1="450" y1="322" x2="364" y2="322" stroke="#6B5344" stroke-width="2" marker-end="url(#ah)"/>
+  <circle cx="405" cy="302" r="10" fill="#E2551F"/><text class="n" x="405" y="306" text-anchor="middle">4</text>
+  <text class="lb" x="405" y="345" text-anchor="middle">verdict</text>
+
+  <!-- refused: evaluation -> planning -->
+  <line x1="750" y1="300" x2="836" y2="300" stroke="#E2551F" stroke-width="1.8" stroke-dasharray="6 5" marker-end="url(#aho)"/>
+  <text class="lo" x="795" y="288" text-anchor="middle">refused</text>
+
+  <!-- ============================ TOOL BUS / FAILURE HANDLING ============================ -->
+  <rect x="40" y="446" width="1120" height="186" rx="16" fill="#FFF6EF" stroke="#E2551F" stroke-width="1.8" stroke-dasharray="2 0"/>
+  <text class="k" x="62" y="474">FAILURE HANDLING  ·  THE TOOL BUS</text>
+  <text class="s" x="62" y="494">every call passes through toolbus.py</text>
+  <text class="s" x="62" y="602">retry · degraded-evidence clamp</text>
+  <text class="s" x="62" y="620">refusal · impasse after 3 rejections</text>
+
+  <!-- TOOLS -->
+  <rect x="450" y="500" width="300" height="104" rx="12" fill="#FFFFFF" stroke="#6B5344" stroke-width="1.5"/>
+  <text class="t" x="600" y="532" text-anchor="middle">TOOLS</text>
+  <text class="m" x="600" y="553" text-anchor="middle">tools.py · schemas.py</text>
+  <text class="s" x="600" y="575" text-anchor="middle">block_ip · unblock_ip · submit_assessment</text>
+
+  <!-- RETRIEVAL -->
+  <rect x="840" y="500" width="300" height="104" rx="12" fill="#FFFFFF" stroke="#6B5344" stroke-width="1.5"/>
+  <text class="t" x="990" y="532" text-anchor="middle">RETRIEVAL</text>
+  <text class="m" x="990" y="553" text-anchor="middle">8 read tools · keyed lookup</text>
+  <text class="s" x="990" y="575" text-anchor="middle">evidence + other cases' stored verdicts</text>
+
+  <!-- 2. choose a tool: planning -> tool bus -->
+  <line x1="1080" y1="366" x2="1080" y2="442" stroke="#6B5344" stroke-width="2" marker-end="url(#ah)"/>
+  <circle cx="1080" cy="404" r="10" fill="#E2551F"/><text class="n" x="1080" y="408" text-anchor="middle">2</text>
+  <text class="lb" x="1062" y="409" text-anchor="end">choose a tool + reason</text>
+
+  <!-- 3. submit_assessment: tools -> evaluation -->
+  <line x1="600" y1="500" x2="600" y2="370" stroke="#E2551F" stroke-width="2" marker-end="url(#aho)"/>
+  <circle cx="600" cy="420" r="10" fill="#E2551F"/><text class="n" x="600" y="424" text-anchor="middle">3</text>
+  <text class="lo" x="614" y="425">submit_assessment</text>
+
+  <!-- 5. act, then verify: controller -> tools -->
+  <path d="M300,366 V420 H500 V496" fill="none" stroke="#6B5344" stroke-width="2" marker-end="url(#ah)"/>
+  <circle cx="330" cy="420" r="10" fill="#E2551F"/><text class="n" x="330" y="424" text-anchor="middle">5</text>
+  <text class="lb" x="346" y="412">act, then verify</text>
+
+  <!-- ============================ STORES ============================ -->
+  <!-- MEMORY / STATE -->
+  <path d="M60,700 q0,-14 150,-14 q150,0 150,14 v108 q0,14 -150,14 q-150,0 -150,-14 z" fill="#FFF3E4" stroke="#C4491A" stroke-width="1.5"/>
+  <path d="M60,700 q0,14 150,14 q150,0 150,-14" fill="none" stroke="#C4491A" stroke-width="1.2"/>
+  <text class="t" x="210" y="748" text-anchor="middle">MEMORY / STATE</text>
+  <text class="m" x="210" y="769" text-anchor="middle">trace.py · cases.json</text>
+  <text class="s" x="210" y="790" text-anchor="middle">append-only conclusions</text>
+
+  <!-- EXTERNAL SYSTEMS -->
+  <path d="M450,700 q0,-14 345,-14 q345,0 345,14 v108 q0,14 -345,14 q-345,0 -345,-14 z" fill="#FFF3E4" stroke="#C4491A" stroke-width="1.5"/>
+  <path d="M450,700 q0,14 345,14 q345,0 345,-14" fill="none" stroke="#C4491A" stroke-width="1.2"/>
+  <text class="t" x="795" y="748" text-anchor="middle">EXTERNAL SYSTEMS</text>
+  <text class="m" x="795" y="769" text-anchor="middle">fixtures/run/</text>
+  <text class="s" x="795" y="790" text-anchor="middle">alerts · assets · CVE knowledge base · configuration · host logs · packets · firewall state</text>
+
+  <!-- controller -> memory, down the left margin -->
+  <path d="M60,300 H30 V754 H56" fill="none" stroke="#6B5344" stroke-width="1.6" marker-end="url(#ah)"/>
+  <text class="lb" transform="translate(22,527) rotate(-90)" text-anchor="middle">record every step</text>
+
+  <!-- tools -> external: write firewall state -->
+  <line x1="520" y1="604" x2="520" y2="682" stroke="#6B5344" stroke-width="1.8" marker-end="url(#ah)"/>
+  <text class="lb" x="532" y="652">write firewall state</text>
+
+  <!-- retrieval -> external: read -->
+  <line x1="990" y1="604" x2="990" y2="682" stroke="#6B5344" stroke-width="1.8" marker-end="url(#ah)"/>
+  <text class="lb" x="1002" y="652">read</text>
+
+  <!-- ============================ legend ============================ -->
+  <line x1="40" y1="860" x2="84" y2="860" stroke="#6B5344" stroke-width="2"/>
+  <text class="leg" x="94" y="865">main loop, steps 1 to 5</text>
+  <line x1="300" y1="860" x2="344" y2="860" stroke="#6B5344" stroke-width="1.6" stroke-dasharray="6 5"/>
+  <text class="leg" x="354" y="865">correction paths: a refusal returns to Planning; reconsider re-enters at HYPOTHESIZE</text>
+  <text class="leg" x="40" y="897">The model decides which tool, in what order, and what the evidence means. Code decides whether a claim is well-formed, the score, and the action.</text>
+</svg>

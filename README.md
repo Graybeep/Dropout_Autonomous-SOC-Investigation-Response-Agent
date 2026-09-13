@@ -46,6 +46,8 @@ evidence arrives mid-investigation.
 
 ## Architecture
 
+![System architecture: nine components and the numbered agent loop](docs/architecture.svg)
+
 | Component | Where it lives | What it does |
 |---|---|---|
 | **Agent / Controller** | `soc_agent/agent.py` | Owns the case lifecycle and drives the tool-use loop |
@@ -299,14 +301,3 @@ Its README states the caveat that matters: **identical tool ordering is evidence
 of consistency, not adaptivity.** The adaptive evidence is scenarios 3 and 6,
 where ordering genuinely diverges. The probe is not in the suite and was not
 tuned.
-
----
-
-## Further reading
-
-- [`demo-script.md`](demo-script.md) — the timed four-minute demo script
-- [`DEMO.md`](DEMO.md) — presenter's walkthrough and Q&A
-- [`Toknow/DECISIONS.md`](Toknow/DECISIONS.md) — the full decision record,
-  including every defect found and why each was fixed or deliberately left
-- [`reports/`](reports/) — the written case report for every scenario
-- [`traces/`](traces/) — the structured trace the viewer and reports both render from

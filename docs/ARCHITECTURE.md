@@ -13,42 +13,7 @@ file and function that implements it. Rationale for individual decisions lives i
 
 ## Architecture diagram
 
-```mermaid
-flowchart TB
-    HUMAN(["<b>HUMAN INTERACTION</b><br/>control.py<br/>human_override · inject_new_evidence"])
-    CTRL["<b>AGENT / CONTROLLER</b><br/>agent.py<br/>investigate · reconsider"]
-    PLAN["<b>PLANNING</b><br/>prompts.py + the model<br/>hypothesis · falsifier · sufficiency"]
-    FAIL["<b>FAILURE HANDLING</b><br/>toolbus.py · the one entry point<br/>retry · degraded clamp · impasse"]
-    RETR["<b>RETRIEVAL</b><br/>8 read tools<br/>keyed lookup, no vector store"]
-    TOOLS["<b>TOOLS</b><br/>tools.py · schemas.py<br/>block_ip · unblock_ip · submit_assessment"]
-    EVAL["<b>EVALUATION / VERIFICATION</b><br/>confidence.py<br/>4 guard families · score · re-read disk"]
-    MEM[("<b>MEMORY / STATE</b><br/>trace · cases.json<br/>append-only conclusions")]
-    EXT[("<b>EXTERNAL SYSTEMS</b><br/>alerts · assets · CVE KB · config<br/>host logs · packets · firewall state")]
-
-    HUMAN -->|override or new evidence| CTRL
-    CTRL -->|"1. frame the case"| PLAN
-    PLAN -->|"2. choose a tool + reason"| FAIL
-    FAIL --> RETR
-    FAIL --> TOOLS
-    RETR -->|read| EXT
-    TOOLS -->|write firewall state| EXT
-    RETR -->|stored verdicts| MEM
-    TOOLS -->|"3. submit_assessment"| EVAL
-    EVAL -.->|refused: what is wrong| PLAN
-    EVAL -->|"4. accepted verdict"| CTRL
-    CTRL -->|"5. act, then verify"| TOOLS
-    CTRL -->|record every step| MEM
-    CTRL -.->|reconsider: back to HYPOTHESIZE| PLAN
-
-    classDef base fill:#FFFFFF,stroke:#6B5344,color:#1C1C1E,stroke-width:1px
-    classDef gate fill:#FFE8DC,stroke:#E2551F,color:#1C1C1E,stroke-width:2px
-    classDef store fill:#FFF3E4,stroke:#C4491A,color:#3B2A1F,stroke-width:1px
-    classDef human fill:#E8F6EF,stroke:#0B6B44,color:#0B3D27,stroke-width:1px
-    class CTRL,PLAN,RETR,TOOLS base
-    class EVAL,FAIL gate
-    class MEM,EXT store
-    class HUMAN human
-```
+![System architecture: nine components and the numbered agent loop](architecture.svg)
 
 <details>
 <summary>Plain-text version, with more detail (LLM client and outputs shown)</summary>
