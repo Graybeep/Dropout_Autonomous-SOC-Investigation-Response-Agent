@@ -220,31 +220,39 @@ the trace.
 **"Why this model / why not Claude?"**
 See `Toknow/DECISIONS.md` D-002. The architecture is Claude-native tool use. The
 account is on a free plan with zero credits, so every Claude model returns
-"Insufficient credits" — verified by probing each one, not assumed. DeepSeek
-v4.1 Flash is the strongest model this key can actually reach: 1M context,
-reasoning-capable.
+"Insufficient credits" — verified by probing each one, not assumed.
+`ling-3.0-flash-fin-free` is the strongest model this key can actually reach,
+and it is the name the harness banner prints at the top of every run — say that
+name, not a friendlier one, because the judge can see it on screen.
 
 **"How stable is it, really?"** — answer this with the number, not a hedge.
 
-> Five of six clean on a full run, twice consecutively at the current bar. The
-> one failure was Scenario 5 case A, and I know exactly what happened: the agent
-> re-read the logs, saw all three injected exploitation entries — a UNION SELECT
-> that executed, 38,402 rows returned, 1.7 MB egress — and still declined to
-> swap `logs_clean` for `logs_consistent`. It added the corroboration factor and
-> landed at 0.55 against a 0.75 threshold. That one swap is worth 0.50 and takes
-> it to 0.95.
+> Seven of seven clean, 60/60 checks. The number I actually trust more is the
+> one underneath it: across runs, the declared factor sets, the scores and the
+> outcomes are identical. What varies is tool-call ordering and how many times
+> the guard bus refuses a submission before accepting it — which is variance in
+> how the agent gets there, not in what it concludes.
 
-Then the *why*, which is the interesting half:
+That is the honest shape of the stability claim, and it is worth saying in that
+order: the outcome is stable *because* the scoring is deterministic, and the
+trajectory varies *because* the agent genuinely chooses its own tools. If both
+were stable, the second one would be a script.
 
-> Its reasoning was defensible in isolation. Case A is the 05:02 port scan; the
-> exploitation is timestamped 07:14 and belongs to the sibling alert. "Clean for
-> my window." What it missed is that both alerts are one source against one
-> asset. That is now addressed in the `RELATED_CASE` prompt — judge whether THIS
-> asset was compromised by THIS source, not whether one packet did damage alone.
+If asked what did move, do not reach for a reassuring answer — there is a real
+one, and it is the better story:
+
+> Scenario 7 flipped between `logs_clean` and `logs_consistent` on consecutive
+> runs, a 0.50 swing, and landed on the wrong outcome once. The cause was not
+> the model. MySQL's general log records statements as issued and never their
+> outcome, so nothing in the fixture actually stated that the injected query
+> returned no rows — the only evidence was a constant 1130-byte response. The
+> fixture did not contain the fact the scenario turned on. I added the
+> `ERROR 1142` grant denials MySQL really emits. The scoring weight was not
+> touched.
 
 Do not offer "a stronger model would fix it." It is a resource excuse dressed as
 a robustness story, and it invites "so why didn't you?" — to which the honest
-answer is that changing the model invalidates a passing 84/84 suite with no time
+answer is that changing the model invalidates a passing 60/60 suite with no time
 to re-verify it. Better not to raise it.
 
 ---
@@ -272,6 +280,29 @@ steps in the evidence chain.
 > services; you cannot say "all" after checking "some". The bus never decides
 > whether MySQL 8.0.36 falls inside a range — that comparison is the agent's, and
 > it is the whole point of §5.1.
+
+### If a judge notices refusals everywhere — get ahead of this, do not defend it
+
+Measured across all seven traces: **16 refusals over 8 cases. Every case is
+refused at least once; the most any case takes is 3.** Refusal is the normal
+operating mode here, not an exception, so do not present it as a rare catch.
+Present it as the design:
+
+> Every case gets refused at least once. That is the bus doing its job on every
+> case, not a stumble on one. And in all 16 the agent resolved it the same way
+> — by going and getting the evidence. Not once did it resolve a refusal by
+> weakening the claim to slip past the check.
+
+The three shapes it refuses, worth naming because they are different failures:
+**exhaustiveness** (claiming "outside ALL ranges" having checked some),
+**provenance** (declaring a factor from a lookup that returned no data or
+failed), and **contradiction** (declaring a finding and its negation together).
+
+The sharpest single instance is in Scenario 5: `logs_clean` was refused because
+**case 5002 had already concluded SUCCEEDED on that same asset over the window
+being called clean.** That one compares a declared factor against a verdict the
+agent itself produced in another case — and it is the one to reach for if
+someone suspects the guards are cosmetic.
 
 ### Two follow-ups to have ready
 

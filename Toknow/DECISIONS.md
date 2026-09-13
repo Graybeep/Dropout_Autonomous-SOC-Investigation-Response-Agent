@@ -2135,3 +2135,80 @@ output was lost, and the run looked like it had produced nothing while exiting
 held the sandbox. It crashed on the lock rather than wiping anything - which is
 how P-025 was found - but the correct behaviour is not to run anything against
 the sandbox during a live run, and the second attempt did not.
+
+---
+
+## Part 22 — configuration correlation (stage 1 + stage 2)
+
+**P-027. `config_state.json` shipped a `prevents_exploitation` boolean — the
+exact thing section 5.1 forbids, in the file built to satisfy section 5.1.**
+Section 5.1 bans a `patched` boolean in the CVE KB because a pre-computed
+verdict means the asset/vulnerability join never happens in the trace. The new
+configuration source reproduced that mistake one level over: every surface
+carried `prevents_exploitation`, and on SRV-HR-11 one of them said `true`. The
+agent could have read the answer instead of deriving it, in the one scenario
+built to demonstrate configuration correlation.
+
+What makes it a genuine catch rather than a typo is that three separate places
+asserted the opposite of what the data did — the tool docstring ("it never says
+whether THIS attack was stopped"), the fixture `_readme` ("the agent's join to
+make, the same way patch status is"), and the tool's return `note`. All three
+described a file that did not exist. Prose agreeing with itself is not evidence
+that the data agrees with the prose.
+
+Field removed from all 16 surfaces. Nothing was lost: the `detail` strings
+already carried the grants, the targeted tables, and the WAF's DetectionOnly
+state, which is everything the join needs.
+
+**P-028. The scenario's own logs did not contain the fact the scenario turned
+on.** After the factor was added, scenario 7 scored 0.60/`INCONCLUSIVE` instead
+of the predicted 0.10/`FAILED`. The cause was not the weight. MySQL's general
+log records statements **as issued and never their outcome**, so no line in the
+fixture said the `UNION SELECT` was denied or returned zero rows. The only
+evidence that nothing came back was that all three HTTP responses were exactly
+1130 bytes, identical to the benign baseline — a real inference, but subtle
+enough that the model read the same logs as `logs_clean` on one run and
+`logs_consistent` on the next. A 0.50 swing on an ambiguous fixture.
+
+Fixed by adding the `ERROR 1142 ... SELECT command denied to user
+'hr_portal_ro'` lines MySQL actually emits, which is what makes the case
+"attempt visible but demonstrably failed" — `logs_clean` by the schema's own
+wording. The weight was not touched. Configuration stays load-bearing: version
+and logs alone leave the case at 0.40, and only the config factor resolves it
+to 0.10.
+
+The discipline worth keeping: the prediction was written down *before* the run
+("if it diverges, that is a fixture-clarity problem, not a weight problem"), so
+when it diverged there was no temptation to reach for the number.
+
+**N-16. Why a factor and not a clamp.** The first proposal was a band clamp —
+establish the factor, force the score into `[0.05, 0.25]` — on the precedent of
+the degraded-evidence clamp. It was rejected in favour of a plain `-0.30`
+factor, the same weight as `version_patched`, for a reason that only became
+visible after measuring the actual score: the clamp was designed against an
+assumed 0.95 starting point that did not exist. Scenario 7 sat at 0.40, so
+reaching `FAILED` needed -0.15, not the -0.75 that had made a plain factor look
+impossible. The mechanism was being chosen to solve an arithmetic problem that
+had been mis-measured. No new mechanism, no existing weight touched.
+
+**N-17. The surface guard takes a structured list, not the citation prose.**
+`config_prevents_exploitation` is universal over the host's controls — a grant
+that blocks the read does not settle the case if egress is open — so like
+`version_patched` it needs universal coverage. The obvious implementation is to
+search the citation text for each surface name, and that would have made this
+the first guard to read what the agent *wrote*. The family's whole discipline
+(see K-7) is that it judges bookkeeping and never content. So the agent declares
+`surfaces_accounted` as a field and the bus compares it against what
+`get_configuration` returned. Still bookkeeping.
+
+It deliberately does **not** check whether the cited surface matches the alert's
+attack class. That would be a signature→surface mapping, i.e. detection
+knowledge living in the bus, and it is the same rule already rejected for
+`version_patched` in favour of exhaustiveness. Which control stops a UNION
+SELECT is the agent's join to make and to show.
+
+**N-18. The outcome assertion alone would not have tested anything.** Scenario 7
+can reach `FAILED` on `version_patched` + `logs_clean` without ever consulting
+configuration. `required_factors=["config_prevents_exploitation"]` is what makes
+it a test of the four-way correlation rather than of the arithmetic — the same
+gap N-4 recorded for a different assertion.

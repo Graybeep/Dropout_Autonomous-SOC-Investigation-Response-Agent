@@ -48,7 +48,7 @@ the entire point.
 cp .env.example .env          # then put your key in SOC_API_KEY
 python selfcheck.py           # 99 behavioural checks, no API key needed
 python compliance.py          # 22 guardrail checks, no API key needed
-python run_all.py             # run all six scenarios against the model
+python run_all.py             # run all seven scenarios against the model
 python -m http.server 8000    # then open http://localhost:8000/viewer.html
 ```
 
@@ -97,7 +97,7 @@ That reasoning step is visible in the trace, and it is the thing being graded.
 
 ---
 
-## The six scenarios
+## The seven scenarios
 
 | # | Scenario | Expected outcome | Demonstrates |
 |---|---|---|---|
@@ -107,12 +107,23 @@ That reasoning step is visible in the trace, and it is the thing being graded.
 | 4 | Human override | `SUCCEEDED` → `OVERRIDDEN_BENIGN` | Unblocks, preserves both views, does not re-block |
 | 5 | Multi-alert correlation | two cases → `SUCCEEDED` | Case B discovers case A via `get_related_alerts` |
 | 6 | Tool failure | `INCONCLUSIVE` + precautionary block | Notices failure ≠ "no evidence", routes around it |
+| 7 | Configuration prevents exploitation | `FAILED`, no action | Vulnerable version **and** attack in the logs — but the config left no path |
 
 **Scenario 6 is the sharpest demonstration of the design.** The raw evidence
 scores 0.90 — `SUCCEEDED`. But `get_server_logs` failed, so the degraded-evidence
 clamp pulls the score to 0.65 and the outcome to `INCONCLUSIVE`, with the missing
 source cited explicitly as the reason for the ceiling. The agent does not get to
 claim a confident verdict on a half-read evidence base.
+
+**Scenario 7 is the sharpest demonstration of correlation.** The host runs a
+version squarely inside CVE-2023-21980's range and the logs show the injected
+`UNION SELECT` reaching the database — on asset and vulnerability evidence alone
+it reads exactly like scenario 2. What separates them is configuration: the
+portal connects as `hr_portal_ro`, which holds no privilege on the targeted
+table, so MySQL returns `ERROR 1142` and zero rows. Version and logs alone leave
+the case at 0.40 — `INCONCLUSIVE`. Only the configuration factor resolves it to
+`FAILED`. That is the asset + vulnerability + configuration join the problem
+statement asks for, and the verdict genuinely depends on all three.
 
 **Scenario 3 is the sharpest demonstration of adaptation.** The injected
 lateral-movement entry names a second host. The agent must *want* to go look at
@@ -132,6 +143,7 @@ Starts at `S = 0.50` (no prior). Each factor applies at most once:
 | Packet metadata shows exfil / payload-anomaly indicators | +0.15 |
 | A related alert on the same asset corroborates | +0.15 |
 | Running version outside all affected ranges (patched) | −0.30 |
+| A configuration control prevents the observed attack from succeeding | −0.30 |
 | Server logs clean across the relevant window | −0.25 |
 | Packet metadata benign | −0.10 |
 
@@ -181,7 +193,7 @@ soc_agent/
   agent.py        the state machine, and the single reconsider()
   control.py      demo-side tools (NOT exposed to the agent)
   report.py       the mandatory 7-section report
-scenarios/        the six scenario definitions + expected trajectories
+scenarios/        the seven scenario definitions + expected trajectories
 fixtures/seed/    pristine evidence, human-readable, committed
 traces/           saved traces — these feed the viewer
 reports/          generated per-case markdown reports
