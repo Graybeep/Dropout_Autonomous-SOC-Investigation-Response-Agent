@@ -15,72 +15,43 @@ file and function that implements it. Rationale for individual decisions lives i
 
 ```mermaid
 flowchart TB
-    %% ---------- outside the agent ----------
-    subgraph EXT["EXTERNAL SYSTEMS  (sandbox: fixtures/run/)"]
-        direction LR
-        ALERTS[("alerts.json")]
-        ASSETS[("asset_inventory.json")]
-        CVE[("cve_kb.json")]
-        CONF[("config_state.json")]
-        LOGS[("server_logs.json")]
-        PKT[("packet_logs.json")]
-        FW[("firewall_state.json<br/>MUTABLE")]
-    end
+    HUMAN(["<b>HUMAN INTERACTION</b><br/>control.py<br/>human_override · inject_new_evidence"])
+    CTRL["<b>AGENT / CONTROLLER</b><br/>agent.py<br/>investigate · reconsider"]
+    PLAN["<b>PLANNING</b><br/>prompts.py + the model<br/>hypothesis · falsifier · sufficiency"]
+    FAIL["<b>FAILURE HANDLING</b><br/>toolbus.py · the one entry point<br/>retry · degraded clamp · impasse"]
+    RETR["<b>RETRIEVAL</b><br/>8 read tools<br/>keyed lookup, no vector store"]
+    TOOLS["<b>TOOLS</b><br/>tools.py · schemas.py<br/>block_ip · unblock_ip · submit_assessment"]
+    EVAL["<b>EVALUATION / VERIFICATION</b><br/>confidence.py<br/>4 guard families · score · re-read disk"]
+    MEM[("<b>MEMORY / STATE</b><br/>trace · cases.json<br/>append-only conclusions")]
+    EXT[("<b>EXTERNAL SYSTEMS</b><br/>alerts · assets · CVE KB · config<br/>host logs · packets · firewall state")]
 
-    HUMAN(["HUMAN INTERACTION<br/>control.py<br/>human_override()<br/>inject_new_evidence()<br/>inject_alert()"])
+    HUMAN -->|override or new evidence| CTRL
+    CTRL -->|"1. frame the case"| PLAN
+    PLAN -->|"2. choose a tool + reason"| FAIL
+    FAIL --> RETR
+    FAIL --> TOOLS
+    RETR -->|read| EXT
+    TOOLS -->|write firewall state| EXT
+    RETR -->|stored verdicts| MEM
+    TOOLS -->|"3. submit_assessment"| EVAL
+    EVAL -.->|refused: what is wrong| PLAN
+    EVAL -->|"4. accepted verdict"| CTRL
+    CTRL -->|"5. act, then verify"| TOOLS
+    CTRL -->|record every step| MEM
+    CTRL -.->|reconsider: back to HYPOTHESIZE| PLAN
 
-    subgraph CORE["AGENT"]
-        direction TB
-        CTRL["AGENT / CONTROLLER<br/>agent.py<br/>Investigation · Case<br/>investigate() · reconsider()"]
-        PLAN["PLANNING<br/>prompts.py + the model<br/>hypothesis · falsifier<br/>per-call sufficiency"]
-        LLM["LLM CLIENT<br/>llm.py<br/>OpenAI or Anthropic wire format"]
-
-        subgraph BUS["TOOL BUS  toolbus.py  (the one entry point)"]
-            direction TB
-            RETR["RETRIEVAL<br/>8 read tools<br/>keyed lookups over fixtures<br/>+ stored case conclusions"]
-            TOOLS["TOOLS<br/>tools.py · schemas.py<br/>block_ip · unblock_ip<br/>submit_assessment"]
-            FAIL["FAILURE HANDLING<br/>fail_tools injection · retry<br/>degraded clamp · guard refusal<br/>impasse after 3 rejections"]
-        end
-
-        EVAL["EVALUATION / VERIFICATION<br/>confidence.py<br/>4 guard families · score()<br/>decide_action() · re-read from disk"]
-        MEM[("MEMORY / STATE<br/>trace.py → traces/*.json<br/>cases.json · Case.conclusions")]
-    end
-
-    OUT["OUTPUTS<br/>report.py → reports/*.md<br/>viewer.html"]
-
-    %% ---------- the reasoning loop ----------
-    ALERTS -->|opens a case| CTRL
-    CTRL -->|framing| PLAN
-    PLAN <-->|tool-use turns| LLM
-    LLM -->|chooses a tool + reason| BUS
-    RETR -->|reads| ASSETS & CVE & CONF & LOGS & PKT & ALERTS
-    RETR <-->|reads stored verdicts| MEM
-    TOOLS -->|writes| FW
-    RETR -->|check_firewall_state reads back| FW
-    FAIL -.->|wraps every call| RETR
-    FAIL -.->|wraps every call| TOOLS
-    TOOLS -->|submit_assessment| EVAL
-    EVAL -->|refused: problems| LLM
-    EVAL -->|accepted: score + outcome| CTRL
-    CTRL -->|policy action| TOOLS
-    BUS -->|every call, reason, result| MEM
-    CTRL -->|persist| MEM
-    HUMAN -->|event| CTRL
-    CTRL -->|reconsider re-enters at HYPOTHESIZE| PLAN
-    MEM --> OUT
-
-    classDef ext fill:#FFF3E4,stroke:#C4491A,color:#3B2A1F
-    classDef core fill:#FFFFFF,stroke:#6B5344,color:#1C1C1E
-    classDef key fill:#FFE8DC,stroke:#E2551F,color:#1C1C1E,stroke-width:2px
-    classDef human fill:#E8F6EF,stroke:#0B6B44,color:#0B3D27
-    class ALERTS,ASSETS,CVE,CONF,LOGS,PKT,FW ext
-    class CTRL,PLAN,LLM,RETR,TOOLS,MEM,OUT core
-    class EVAL,FAIL key
+    classDef base fill:#FFFFFF,stroke:#6B5344,color:#1C1C1E,stroke-width:1px
+    classDef gate fill:#FFE8DC,stroke:#E2551F,color:#1C1C1E,stroke-width:2px
+    classDef store fill:#FFF3E4,stroke:#C4491A,color:#3B2A1F,stroke-width:1px
+    classDef human fill:#E8F6EF,stroke:#0B6B44,color:#0B3D27,stroke-width:1px
+    class CTRL,PLAN,RETR,TOOLS base
+    class EVAL,FAIL gate
+    class MEM,EXT store
     class HUMAN human
 ```
 
 <details>
-<summary>Plain-text version of the same diagram</summary>
+<summary>Plain-text version, with more detail (LLM client and outputs shown)</summary>
 
 ```
    HUMAN INTERACTION ─────────────── event ──────────────────┐

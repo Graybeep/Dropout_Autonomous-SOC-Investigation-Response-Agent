@@ -18,19 +18,7 @@ The single most informative artefact is
 agent submits a conclusion, the tool refuses it on two counts, and the agent
 resolves each differently:
 
-```
-RESULT  REJECTED                                                    CASE-1001
-  factor 'related_alert_corroborates' cannot be declared: it requires a
-  successful result from get_related_alerts, which you have not obtained.
-
-  factor 'version_patched' claims SRV-WEB-01 is outside ALL affected ranges,
-  but you have not looked up openssh - service(s) this host runs that the CVE
-  knowledge base covers.
-
-REASONING                                                           CASE-1001
-  I need to fix two issues. Let me check openssh CVEs and remove the
-  related_alert_corroborates factor since no_data is not a finding.
-```
+![A guard refusal rendered inline in the viewer, followed by the agent's own correction](docs/viewer-refusal.png)
 
 It then **fetches** the missing CVE data and **drops** the claim it could not
 support. Two refusal types, two correct responses, one exchange.

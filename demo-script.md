@@ -1,196 +1,198 @@
 # Four-minute demo script
 
-**Run the whole thing on Scenario 3.** It contains every beat in the required
-order, so there is no scenario switch and no re-establishing context halfway
-through. Open `http://localhost:8000/viewer.html#3` and press **Show all**, then
-scroll. Do not use Start/replay: 95 steps at 400ms is 38 seconds of your four
-minutes spent watching cards appear.
+**Two scenarios, one switch.** Scenario 1 carries 0:00 to 2:30: the alert, the
+hypothesis stated before any gathering, the reasoning between calls, and the
+refusal. Scenario 3 carries 2:30 to 4:00: new evidence, the case re-opening, and
+the fork. The switch lands exactly where the story turns from "how it
+investigates" to "what happens when it was wrong".
 
-Second screen or second tab: `reports/CASE-3001.md`, already scrolled to
-section 6. You switch to it once, at 3:30.
+Every quotation below is copied from the shipped traces, not paraphrased. If you
+change a word while speaking, say it as your own summary, not as a quote.
+
+**Set up before you start**
+
+- Tab 1: `http://localhost:8000/viewer.html#1` with **Show all** pressed
+- Tab 2: `http://localhost:8000/viewer.html#3` with **Show all** pressed
+- Tab 3: `reports/CASE-3001.md`, scrolled to section 6
+
+Do not press Start. Replaying 39 and then 93 cards at 400ms would eat a
+minute of a four-minute slot.
 
 ---
 
 ## 0:00 – 0:30 · What it does, and the rule
 
-Say, roughly:
-
 > A detection tool fires an alert when traffic *looks* like an attack. It cannot
-> tell you whether the attack actually worked. That question is what a SOC
-> analyst spends their day on, and it is what this agent does: it investigates
-> the alert and decides whether the attack succeeded, by correlating asset,
-> vulnerability, configuration, log and packet evidence instead of trusting the
-> alert's severity label.
+> tell you whether the attack actually worked. This agent answers that question:
+> it investigates the alert and decides whether the attack succeeded, by
+> correlating asset, vulnerability, configuration, log and packet evidence
+> instead of trusting the alert's severity label.
 
-Then the guard rule, which you will need at 2:00 and should plant now:
+Then plant the rule you will cash in at 2:00:
 
 > Every conclusion it reaches has to survive one rule: **you cannot say ALL
 > after checking SOME.**
 
-Nothing on screen yet matters. Do not read the KPI row aloud.
-
 ---
 
-## 0:30 – 1:00 · The alert, the hypothesis, the first call
+## 0:30 – 1:00 · The alert, the hypothesis, the first call  *(Tab 1, Scenario 1)*
 
-Scroll to the top of the timeline. Three cards, in order.
+**The alert.** A SQL-injection signature against `SRV-WEB-01`, labelled
+critical. Say the label is the sensor's opinion and earns nothing in the score.
 
-**The alert.** A SQL-injection signature against `SRV-APP-03`, labelled
-critical. Say the label is the sensor's opinion and earns nothing.
-
-**The hypothesis.** The agent writes down what it believes *and what would prove
-it wrong*, before looking anywhere:
-
-> For this attack to have succeeded, the target must be running a vulnerable
-> version, the injection must have actually executed on the host rather than
-> been attempted or blocked, and data must have left.
-
-Point out the second half explicitly. Deciding in advance what would change its
-mind is what stops the investigation becoming a hunt for agreement.
-
-**The first tool call, with its reason attached.** Every evidence tool takes a
-required `reason` parameter, so the trace cannot contain an unexplained call:
+**The first call, with its reason.** Every evidence tool requires a stated
+reason, so the trace cannot contain an unexplained call:
 
 > *Why:* Get the alert details: signature, source/destination IP, target asset,
 > and severity label to understand the attack type and form an initial
 > hypothesis.
 
-The line to land: **the agent chose that call.** Nothing about the order is
-scripted.
+**The hypothesis, stated before gathering.** This card appears after that single
+call and before any evidence is fetched:
+
+> **My hypothesis:** For this attack to have *succeeded*, the target must be
+> running a vulnerable version of the web service, the SQL injection must have
+> actually executed on the host (not just been attempted/blocked), and
+> potentially data must have exfiltrated.
+
+The point to land: it wrote down what would have to be true **before** looking,
+including the case that would sink the hypothesis, an attempt that was blocked.
 
 ---
 
-## 1:00 – 2:00 · Gather, and the thinking between calls
+## 1:00 – 2:00 · Gather, and the thinking between calls  *(Tab 1)*
 
-Scroll through the gather phase. Do not read every card. Land three things:
+Scroll through the gather phase. Do not read every card. Land three things.
 
-1. **Every call carries its reason**, and they are different reasons, not a
-   template.
-2. **Between calls the agent judges whether it has enough.** Stop on one
-   `SUFFICIENCY ASSESSMENT` card and read a line of it aloud. This is the part
-   that distinguishes an agent from a pipeline.
-3. **The correlation.** The vulnerability database is keyed by service name and
-   holds no per-host patch status, because a real CVE feed does not know what
-   your host runs. So the agent has to join two independent facts and show the
-   join: the host runs a version, the CVE covers a range, and it says out loud
-   which side of the range the version falls on.
+**Every call carries its own reason**, and they are different reasons, not a
+template.
 
-If you are running long, cut point 3 and pick it up at 2:30 where it recurs.
+**Between calls it judges whether it has enough.** Stop on the sufficiency card
+after the log fetch and read it:
 
----
+> Excellent - the server logs are very revealing. The WAF **blocked** the SQL
+> injection with a 403, and the only MySQL query that executed was benign. Let
+> me still check CVEs to complete the picture on whether the host was even in a
+> vulnerable range.
 
-## 2:00 – 2:30 · The refusal
+That word **"still"** is the agent part. The evidence already looks decisive and
+it chooses to keep going rather than stop at the first convenient answer.
 
-This is the set piece. Find the red-railed card (first one, around step 23).
-
-**Submit.** The agent declares its evidence and submits.
-
-**Rejected.** Read the refusal off the screen:
-
-> factor `related_alert_corroborates` cannot be declared: it requires a
-> successful result from `get_related_alerts`, which you have not obtained.
-
-**The agent's own words**, on the very next card:
-
-> The assessment was rejected because I included `related_alert_corroborates` as
-> a factor even though `get_related_alerts` returned `no_data`. Per the rules, an
-> empty or failed lookup establishes nothing and must not be cited as a factor.
-
-**Resubmit, accepted.** It drops the claim and concludes `INCONCLUSIVE` at 0.40.
-
-Then the sentence that answers the obvious objection before it is asked:
-
-> The bus refuses the **form** of a claim, never its content. It never decides
-> whether a version is in range — that comparison is the agent's. It refuses
-> citing a source that came back empty, and claiming *all* having checked *some*.
-
-**If asked "is it always being corrected?"** — do not get defensive. Every case
-gets refused at least once; that is the bus working on the normal path, not a
-stumble. And across every run measured, the agent has **never** resolved a
-refusal by rewording the same claim. It either fetches what it was missing or
-withdraws the claim. It does not negotiate.
+**The correlation.** The vulnerability database is keyed by service name and
+holds no per-host patch status, so the agent has to join two independent facts:
+the version the host runs and the range the CVE covers. If running long, cut
+this point.
 
 ---
 
-## 2:30 – 3:30 · New evidence, and the case re-opens
+## 2:00 – 2:30 · The refusal  *(Tab 1)*
 
-Scroll to the purple dashed fork card.
+Find the red-railed card.
 
-**What lands:**
+**Submit.** It declares the host patched and cites a related alert as
+corroboration.
+
+**Rejected, on two counts.** Read both off the screen:
+
+> factor 'related_alert_corroborates' cannot be declared: it requires a
+> successful result from get_related_alerts, which you have not obtained.
+
+> factor 'version_patched' claims SRV-WEB-01 is outside ALL affected ranges, but
+> you have not looked up openssh - service(s) this host runs that the CVE
+> knowledge base covers.
+
+The second one is the rule you planted at 0:00. Say so.
+
+**The agent's own words**, on the next card:
+
+> Good catch - I need to fix two issues. Let me check openssh CVEs and remove the
+> `related_alert_corroborates` factor since `no_data` is not a finding.
+
+**Resolves both, differently.** The next call is `get_vulnerabilities` on
+`openssh`, so it *fetches* what it was missing, and it *drops* the claim it could
+not support. It resubmits and is accepted: `FAILED`, confidence 0.95.
+
+Then the line that heads off the obvious objection:
+
+> The guard refuses the **form** of a claim, never its content. It never decides
+> whether a version is in range; that comparison is the agent's.
+
+---
+
+## 2:30 – 3:30 · New evidence, and the case re-opens  *(switch to Tab 2, Scenario 3)*
+
+> A harder case. On this one the agent's first pass came back inconclusive.
+
+Scroll to the purple dashed fork card. What lands:
 
 > Delayed log shipping delivered two entries for SRV-APP-03 that post-date your
-> investigation. They indicate lateral movement from SRV-APP-03 to a second
-> host, 10.20.2.99 (SRV-DB-09), using the svc_app service account.
+> investigation. They indicate lateral movement from SRV-APP-03 to a second host,
+> 10.20.2.99 (SRV-DB-09), using the svc_app service account.
 
-**The point that matters, and it is the whole demo:** the case does not re-open
-at the verdict. It re-opens at **HYPOTHESIZE**. New evidence, a tool failure and
-a human override all route through one `reconsider()` function, and it puts the
-agent back at the hypothesis stage.
+**The point of the whole demo:** the case does not re-open at the verdict. It
+re-opens at **HYPOTHESIZE**. New evidence, a tool failure and a human override
+all route through one `reconsider()` function, which puts the agent back at the
+hypothesis stage.
 
-So the agent does not re-score what it already had. **It goes and investigates
-the second host.** Scroll through and count out loud if you like: **16 new tool
-calls after the fork** — asset info for `SRV-DB-09`, its logs, its CVE ranges,
-its configuration, related alerts on it.
+So it does not re-score what it already had. **It goes and investigates the
+second host: 16 new tool calls after the fork**: asset information, logs,
+configuration and related alerts for `SRV-DB-09`, plus CVE ranges for what it runs.
 
-That is the difference between adaptation and re-arithmetic, and the harness
-asserts it: scenarios 3 and 5 must *gather new evidence* after reconsidering, and
-a scenario with no reconsideration scores 0 as the negative control.
+The harness enforces this: scenarios 3 and 5 must gather new evidence after
+reconsidering, and a scenario with no reconsideration scores zero as the
+negative control.
 
-**The flip:** `INCONCLUSIVE` 0.40 becomes `SUCCEEDED` 0.95. The new hypothesis is
-the interesting part — the original injection *did* fail, and the attack
-succeeded anyway:
+**The flip**, from `INCONCLUSIVE` 0.40 to `SUCCEEDED` 0.95. The new conclusion:
 
-> While the initial SQL injection on SRV-APP-03 failed, the attacker used
-> credentials obtained during that session to move laterally.
+> The attack SUCCEEDED. While the initial SQL injection on SRV-APP-03 failed
+> (syntax error, 0 rows), the attacker used credentials obtained during that
+> session to pivot laterally to SRV-DB-09, where they successfully authenticated,
+> exfiltrated sensitive payroll data, created a persistence backdoor account, and
+> dumped all databases to the attacker's server.
+
+Worth saying out loud: the original injection really did fail. The first verdict
+was not wrong about what it saw. It just had not seen enough yet.
 
 ---
 
-## 3:30 – 4:00 · The fork in the report
+## 3:30 – 4:00 · The fork in the report  *(switch to Tab 3)*
 
-Switch to `reports/CASE-3001.md`, **section 6, Reconsideration events**.
-
-Show the two conclusions **side by side**:
+`reports/CASE-3001.md`, section 6, **Reconsideration events**. Both conclusions,
+side by side:
 
 | | outcome | score | confidence |
 |---|---|---|---|
 | Before | `INCONCLUSIVE` | 0.40 | 0.40 |
 | After | `SUCCEEDED` | 0.95 | 0.95 |
 
-Then explain why that layout is the point, not a formatting choice:
-
 > The prior conclusion is **preserved, never overwritten**. A system that
-> silently replaced its answer would be indistinguishable from one that had been
-> right all along. Here the trace records what it believed, what arrived, and
-> what it believed afterwards — so you can audit the change of mind, not just
-> the final answer.
+> silently replaced its answer would look exactly like one that had been right
+> all along. Here you can audit the change of mind, not just the final answer.
 
-Close on the same rule you opened with:
+Close on the rule:
 
 > It reached a verdict, acted on it, verified its own action took effect, and
 > when new evidence arrived it went back and looked again rather than adjusting
-> a number. And it never got to claim anything it had not actually checked.
+> a number. And it never got to claim anything it had not checked.
 
 ---
 
 ## Practical notes
 
-**Timing is tight.** The gather phase at 1:00–2:00 is where you will overrun.
-Rehearse that minute specifically, and be willing to cut the correlation point.
+**Protect the last thirty seconds.** If you overrun, cut from 1:00–2:00 (the
+correlation point first), never from 3:30–4:00.
 
-**Do not press Start.** Use Show all and scroll. Replay is for a slower
-walkthrough, not a four-minute slot.
+**Fallback order**, fixed in advance:
 
-**Fallback order**, in this order, no improvising on the day:
+1. Local viewer, `http://localhost:8000/viewer.html#1` and `#3`
+2. Hosted viewer, <https://soc-agent-trace-viewer.vercel.app/viewer.html#1>
+3. `reports/CASE-1001.md` and `reports/CASE-3001.md` read directly; every beat is
+   in the report text
 
-1. Local viewer at `http://localhost:8000/viewer.html#3`
-2. The hosted viewer, <https://soc-agent-trace-viewer.vercel.app/viewer.html#3>
-3. `reports/CASE-3001.md` read directly — every beat above is in the report text
+**Start the server before opening a browser.** Opening `viewer.html` from the
+folder gives a `file://` page and the traces cannot load.
 
-**Do not open `viewer.html` from the folder.** `file://` blocks the trace from
-loading. Start the server first.
-
-**Bonus refusals if you have slack**, both later in Scenario 3: a two-family
-refusal at step 72 (provenance *and* the openssh coverage rule, the "all after
-some" case you planted at 0:00), and a contradiction refusal at step 78 where the
-agent answers *"the system correctly flagged the contradiction"*. Neither is
-needed for the four minutes.
+**If you have slack at 2:30**, Scenario 3 has two more refusals worth a line: at
+step 72 the same openssh coverage rule fires on the second host, and at step 78
+the agent declared a finding and its negation together and wrote *"The system
+correctly flagged the contradiction."*

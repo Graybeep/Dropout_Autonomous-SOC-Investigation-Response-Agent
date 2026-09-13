@@ -65,7 +65,7 @@ different frame entirely:
 > a tool the agent chose → **the reason it gave** → the result → the decision
 > about what to look at next.
 
-That is the shape of `docs/viewer.png`, and it is the first thing to put on
+That is the shape of `docs/viewer-overview.png`, and it is the first thing to put on
 screen. Open Scenario 1, press Play, and narrate *that loop* for thirty seconds
 before saying anything about scoring or guards. Let a judge watch the agent
 decide.
@@ -227,7 +227,7 @@ name, not a friendlier one, because the judge can see it on screen.
 
 **"How stable is it, really?"** — answer this with the number, not a hedge.
 
-> Six of six clean, 51/51, plus 105/105 offline checks. The seventh is a
+> Six of six clean, 51/51, plus 99/99 offline checks. The seventh is a
 > declared XFAIL and I will show you why it fails, because that is the more
 > useful half. The number I trust more than the total is this: across runs the
 > declared factor sets, the scores and the outcomes are identical. What varies
@@ -294,8 +294,8 @@ the same response — use both, they are different guards:
 
 The agent's own next line, which is the one to read aloud:
 
-> *"I need to fix two issues: remove the `related_alert_corroborates` factor
-> (since `get_related_alerts` returned `no_data`), and check the openssh CVE."*
+> *"Good catch - I need to fix two issues. Let me check openssh CVEs and remove
+> the `related_alert_corroborates` factor since `no_data` is not a finding."*
 
 It then calls `get_vulnerabilities(service_name='openssh')` and resubmits
 without the unsupported factor, and that submission is accepted. **Two refusals,

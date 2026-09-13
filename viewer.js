@@ -406,7 +406,7 @@ async function load(key){
       (data.cases || []).length > 1 ? `${data.cases.length} cases` : (c0?.case_id || "")],
     [`Confidence`, concl ? Number(concl.confidence).toFixed(2) : "n/a",
       concl ? `score ${Number(concl.score).toFixed(2)}` : ""],
-    [`Evidence calls`, calls, `${steps.length} trace steps`],
+    [`Evidence calls`, calls, `across the whole investigation`],
     [`Guard refusals`, refusals,
       refusals ? "resolved before concluding" : "none on this case"],
     [`Reconsiderations`, recons, recons ? "case re-opened" : "single pass"],
@@ -418,10 +418,12 @@ async function load(key){
 
   $("crumb").innerHTML = `${esc(data.title || "Scenario " + key)}
     <i>&middot; scenario ${esc(key)}</i>`;
-  $("tlmeta").innerHTML = `<span class="tl-meta">${
-    steps.length} steps</span>`;
-
   paint();
+  // Count what is actually on screen. steps.length includes the hidden
+  // scenario_meta entry and duplicate event cards paint() folds into the fork,
+  // so using it here put "40 STEPS" beside a top-bar counter reading "39 / 39".
+  const rendered = document.querySelectorAll(".step").length;
+  $("tlmeta").innerHTML = `<span class="tl-meta">${rendered} steps</span>`;
   // Show the whole trace by default. Opening on an empty timeline (with the
   // hidden steps still occupying layout) reads as a broken page; Play restarts
   // the reveal from the top for the demo.
