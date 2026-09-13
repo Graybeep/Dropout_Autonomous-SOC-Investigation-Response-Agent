@@ -60,18 +60,19 @@ evidence arrives mid-investigation.
 
 | Component | Where it lives | What it does |
 |---|---|---|
-| **External Systems** | `fixtures/seed/*.json` | Alert feed, asset inventory, CVE knowledge base, configuration surfaces, host logs, packet metadata, firewall state |
 | **Agent / Controller** | `soc_agent/agent.py` | Owns the case lifecycle and drives the tool-use loop |
-| **Planning** | `soc_agent/prompts.py` | Hypothesis, disconfirmation, and the per-call sufficiency judgement |
-| **Tools & Retrieval** | `soc_agent/tools.py`, `soc_agent/schemas.py` | Eleven tool schemas: eight read, two act, one submits the conclusion |
-| **Memory / State** | `soc_agent/trace.py`, `fixtures/run/cases.json` | Structured trace plus per-case state that survives reconsideration |
-| **Evaluation / Verification** | `soc_agent/confidence.py`, `check_firewall_state` | Deterministic scoring, and re-reading firewall state from disk |
-| **Human Interaction** | `soc_agent/control.py` | `human_override()`, which always wins |
-| **Failure Handling** | `soc_agent/toolbus.py` | Retry, degraded-evidence clamp, guard refusals, impasse resolution |
+| **Tools** | `soc_agent/tools.py`, `soc_agent/schemas.py` | Eleven schemas: `block_ip`, `unblock_ip`, `submit_assessment`, plus the read tools below |
+| **External Systems** | `fixtures/seed/*.json` | Alert feed, asset inventory, CVE knowledge base, configuration, host logs, packet metadata, firewall state |
+| **Memory / State** | `soc_agent/trace.py`, `fixtures/run/cases.json` | Structured trace plus append-only per-case conclusions |
+| **Retrieval** | the eight read tools in `soc_agent/tools.py` | Keyed lookups over the fixtures, plus stored verdicts from other cases |
+| **Planning** | `soc_agent/prompts.py` + the model | Hypothesis, falsifier, and a sufficiency judgement after every result |
+| **Evaluation / Verification** | `soc_agent/confidence.py`, `check_firewall_state` | Four guard families, deterministic scoring, re-reading state from disk |
+| **Human Interaction** | `soc_agent/control.py` | `human_override()`, which always wins, and evidence injection |
+| **Failure Handling** | `soc_agent/toolbus.py`, `soc_agent/llm.py` | Retry, degraded-evidence clamp, guard refusals, impasse after three rejections |
 
-> Eight components. A ninth candidate, if wanted, is the **Trace / Reporting**
-> layer (`soc_agent/report.py` + `viewer.html`): the single source both the
-> viewer and the written reports render from.
+The diagram, the data paths between these components, and the normal,
+reconsideration and failure flows are in
+**[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)**.
 
 ### The state machine
 

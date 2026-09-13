@@ -142,7 +142,7 @@ rows = [
     ("An alert is only a pattern match",
      "A detection rule fires when traffic LOOKS like an attack. It cannot tell you whether anything was actually breached."),
     ("The severity label is an opinion",
-     "A critical signature against a host patched two years ago is noise. A quiet one against an unpatched host that then shipped 2 MB outbound is a breach."),
+     "A critical label on a host patched years ago is noise. A quiet alert on an unpatched host shipping 2 MB out is a breach."),
     ("So a human checks, every single time",
      "An analyst pulls asset data, CVE ranges, host logs, configuration and packet metadata, joins them, and decides. Then does it again."),
 ]
@@ -154,17 +154,17 @@ for t, d in rows:
         size=13, color=BODY)
     y += Inches(1.16)
 
-card(s, Inches(.85), Inches(5.55), Inches(11.6), Inches(1.3), fill=WARM, accent=ORNG)
+card(s, Inches(.85), Inches(5.5), Inches(11.6), Inches(1.5), fill=WARM, accent=ORNG)
 box(s, Inches(1.2), Inches(5.75), Inches(11.0), Inches(.32),
     "WHY THIS NEEDS AN AGENT AND NOT A SCRIPT", size=12, color=ORNG, bold=True)
 box(s, Inches(1.2), Inches(6.1), Inches(11.0), Inches(.65),
-    "The evidence that settles one alert is not the evidence that settles the next, and what the agent finds changes what it "
-    "should look at next. A script fixes that order in advance. Here the agent chooses each call, states why before making it, "
-    "and re-plans when new evidence arrives mid-investigation.", size=13, color=BODY)
+    "The evidence that settles one alert is not the evidence that settles the next. A script fixes the order "
+    "in advance; here the agent chooses each call, states why, and re-plans when new evidence arrives.",
+    size=13, color=BODY)
 
 # --------------------------------------------------------------- 3. Architecture
 s = slide()
-header(s, "Agentic architecture", "The agent picks its own path through the loop", "25%")
+header(s, "Agentic architecture", "The agent picks its own path", "25%")
 stages = [("INGEST", "an alert\nopens a case"),
           ("HYPOTHESIZE", "what confirms?\nwhat falsifies?"),
           ("GATHER", "pick a tool,\nsay why, assess"),
@@ -208,6 +208,126 @@ box(s, Inches(7.13), Inches(5.4), Inches(5.1), Inches(1.3),
     "the sequence is scripted: measured across runs, the outcome is identical "
     "while the trajectory genuinely varies.",
     size=12.5, color=BODY)
+
+# --------------------------------------------------------------- 3b. System architecture
+# Same nine components, same names, as docs/ARCHITECTURE.md and the README, so
+# the deck and the repository cannot contradict each other.
+from pptx.enum.shapes import MSO_CONNECTOR
+from pptx.oxml.ns import qn
+from lxml import etree
+
+def node(s, x, y, w, h, title, sub, fill=CARD, border=LINE, tcol=INK, thick=False):
+    r = s.shapes.add_shape(5, x, y, w, h)
+    r.fill.solid(); r.fill.fore_color.rgb = fill
+    r.line.color.rgb = border; r.line.width = Pt(2 if thick else 1)
+    r.shadow.inherit = False
+    try: r.adjustments[0] = 0.08
+    except Exception: pass
+    tf = r.text_frame; tf.word_wrap = True
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    tf.margin_left = tf.margin_right = Inches(.06)
+    tf.margin_top = tf.margin_bottom = Inches(.02)
+    p1 = tf.paragraphs[0]; p1.alignment = PP_ALIGN.CENTER
+    a = p1.add_run(); a.text = title
+    a.font.size = Pt(10.5); a.font.bold = True; a.font.color.rgb = tcol; a.font.name = "Segoe UI"
+    p2 = tf.add_paragraph(); p2.alignment = PP_ALIGN.CENTER
+    b = p2.add_run(); b.text = sub
+    b.font.size = Pt(8.5); b.font.color.rgb = BODY; b.font.name = "Segoe UI"
+    return r
+
+def link(s, x1, y1, x2, y2, color=MUTED, dashed=False, head=True):
+    c = s.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, x1, y1, x2, y2)
+    c.line.color.rgb = color; c.line.width = Pt(1.4)
+    ln = c.line._get_or_add_ln()
+    if dashed:
+        d = etree.SubElement(ln, qn('a:prstDash')); d.set('val', 'dash')
+    if head:
+        t = etree.SubElement(ln, qn('a:tailEnd')); t.set('type', 'triangle')
+        t.set('w', 'med'); t.set('len', 'med')
+    return c
+
+s = slide()
+header(s, "System architecture", "Nine components, one entry point", "25%")
+
+# External systems strip
+ext = s.shapes.add_shape(5, Inches(.85), Inches(1.78), Inches(11.6), Inches(.78))
+ext.fill.solid(); ext.fill.fore_color.rgb = WARM
+ext.line.color.rgb = ORNG; ext.shadow.inherit = False
+try: ext.adjustments[0] = 0.12
+except Exception: pass
+box(s, Inches(1.05), Inches(1.86), Inches(3.0), Inches(.25), "EXTERNAL SYSTEMS",
+    size=10.5, color=ORNG, bold=True)
+box(s, Inches(1.05), Inches(2.13), Inches(11.2), Inches(.35),
+    "alerts  ·  asset inventory  ·  CVE knowledge base  ·  configuration  ·  host logs  ·  "
+    "packet metadata  ·  firewall state (read AND written)", size=11, color=BODY)
+
+# Row 2: planning  <->  controller  <->  memory      human interaction on the far right
+PLANX, CTRLX, MEMX, HUMX = Inches(.85), Inches(3.95), Inches(7.05), Inches(10.15)
+R2Y, R2H, NW = Inches(2.95), Inches(.95), Inches(2.3)
+node(s, PLANX, R2Y, Inches(2.75), R2H, "PLANNING",
+     "hypothesis + falsifier\nre-plan after every result")
+node(s, CTRLX, R2Y, Inches(2.75), R2H, "AGENT / CONTROLLER",
+     "Investigation · Case\ninvestigate() · reconsider()", border=INK, thick=True)
+node(s, MEMX, R2Y, Inches(2.75), R2H, "MEMORY / STATE",
+     "trace · cases.json\nconclusions append-only")
+node(s, HUMX, R2Y, NW, R2H, "HUMAN INTERACTION",
+     "human_override()\ninject_new_evidence()", fill=RGBColor(0xE8,0xF6,0xEF),
+     border=GREEN, tcol=GREEN)
+
+# Row 3: the tool bus
+bus = s.shapes.add_shape(5, Inches(.85), Inches(4.3), Inches(8.95), Inches(1.28))
+bus.fill.solid(); bus.fill.fore_color.rgb = RGBColor(0xFA,0xF5,0xEE)
+bus.line.color.rgb = LINE; bus.shadow.inherit = False
+try: bus.adjustments[0] = 0.07
+except Exception: pass
+box(s, Inches(1.02), Inches(4.35), Inches(4), Inches(.22), "TOOL BUS · the one entry point",
+    size=9, color=MUTED, bold=True)
+node(s, Inches(1.02), Inches(4.62), Inches(2.72), Inches(.86), "RETRIEVAL",
+     "8 read tools, keyed lookup\n+ stored case verdicts")
+node(s, Inches(3.9), Inches(4.62), Inches(2.72), Inches(.86), "TOOLS",
+     "block_ip · unblock_ip\nsubmit_assessment")
+node(s, Inches(6.78), Inches(4.62), Inches(2.87), Inches(.86), "FAILURE HANDLING",
+     "retry · degraded clamp\nrefusal · impasse after 3", border=ORNG, tcol=ORNG)
+
+# Evaluation, the gate on every conclusion
+node(s, Inches(10.15), Inches(4.3), NW, Inches(1.28), "EVALUATION /\nVERIFICATION",
+     "4 guard families\nscore() · re-read from disk", fill=RGBColor(0xFF,0xE8,0xDC),
+     border=ORNG, tcol=ORNG, thick=True)
+
+# Connectors. Every line runs through a GAP between boxes, never across one:
+#   gap A  x 3.60-3.95  between Planning and Controller      (vertical)
+#   gap B  y 2.56-2.95  between External strip and row 2    (horizontal)
+#   gap C  y 3.90-4.30  between row 2 and the tool bus      (horizontal)
+mid2 = R2Y + R2H // 2
+CTRL_CX = CTRLX + Inches(1.375)
+link(s, CTRLX, mid2, PLANX + Inches(2.75), mid2)                        # controller -> planning
+link(s, CTRLX + Inches(2.75), mid2, MEMX, mid2)                         # controller -> memory
+link(s, Inches(2.2), R2Y + R2H, Inches(2.2), Inches(4.3))               # planning -> bus: choose a tool
+link(s, Inches(3.78), Inches(4.3), Inches(3.78), Inches(2.56),
+     color=ORNG, dashed=True)                                           # bus <-> external, via gap A
+# human -> controller, over the top through gap B
+HX = HUMX + NW // 2
+link(s, HX, R2Y, HX, Inches(2.76), color=GREEN, head=False)
+link(s, HX, Inches(2.76), CTRL_CX + Inches(.3), Inches(2.76), color=GREEN, head=False)
+link(s, CTRL_CX + Inches(.3), Inches(2.76), CTRL_CX + Inches(.3), R2Y, color=GREEN)
+# submit_assessment -> evaluation
+link(s, Inches(9.8), Inches(5.05), Inches(10.15), Inches(5.05), color=ORNG)
+# evaluation -> controller (accepted verdict), under row 2 through gap C
+EX = Inches(10.6)
+link(s, EX, Inches(4.3), EX, Inches(4.1), color=ORNG, head=False)
+link(s, EX, Inches(4.1), CTRL_CX - Inches(.3), Inches(4.1), color=ORNG, head=False)
+link(s, CTRL_CX - Inches(.3), Inches(4.1), CTRL_CX - Inches(.3), R2Y + R2H, color=ORNG)
+
+# Legend line
+box(s, Inches(.85), Inches(5.85), Inches(11.6), Inches(.35),
+    "reconsider() re-enters at HYPOTHESIZE, not at the verdict: evidence, failure and override all route through it.",
+    size=12, color=ORNG, bold=True)
+box(s, Inches(.85), Inches(6.28), Inches(11.6), Inches(.6),
+    "The model decides which tool, in what order, and what the evidence means. Code decides whether a claim is "
+    "well-formed, the score, and the action policy. Nothing reaches a real network, host or credential.",
+    size=12, color=BODY)
+box(s, Inches(.85), Inches(6.95), Inches(11.6), Inches(.3),
+    "Full breakdown: docs/ARCHITECTURE.md", size=10.5, color=MUTED, font="Consolas")
 
 # --------------------------------------------------------------- 4. Sandbox
 s = slide()
@@ -277,7 +397,7 @@ box(s, Inches(1.2), Inches(6.16), Inches(11.0), Inches(.7),
 
 # --------------------------------------------------------------- 6. Technical
 s = slide()
-header(s, "Technical implementation", "Deterministic where it must be, free where it should be", "15%")
+header(s, "Technical implementation", "Deterministic where it must be", "15%")
 left = [
     ("MODEL AND PROVIDER",
      "Provider-agnostic by design. SOC_BASE_URL, SOC_MODEL and SOC_API_STYLE are "
@@ -419,7 +539,7 @@ box(s, Inches(.85), Inches(6.15), Inches(7.4), Inches(.85),
 
 card(s, Inches(8.6), Inches(1.9), Inches(3.85), Inches(5.1), fill=WARM, accent=ORNG)
 box(s, Inches(8.95), Inches(2.12), Inches(3.3), Inches(.3), "VERIFIED, NOT ASSERTED", size=11, color=ORNG, bold=True)
-nums = [("105 / 105", "offline behavioural checks"),
+nums = [("99 / 99", "offline behavioural checks, clean clone"),
         ("22 / 22", "guardrail checks"),
         ("51 / 51", "live checks across six scenarios"),
         ("1", "scenario left FAILING on purpose"),
