@@ -64,23 +64,43 @@ the entire point.
 
 ## Quick start
 
+**Run these in order.** Steps 1 to 4 need nothing but Python. Step 5 is the only
+one that needs an API key, and you can skip it: the repository already ships the
+recorded traces, so the viewer works without ever running the agent.
+
 ```bash
-cp .env.example .env          # then put your key in SOC_API_KEY
-python selfcheck.py           # 99 behavioural checks, no API key needed
-python compliance.py          # 22 guardrail checks, no API key needed
-python run_all.py             # run all seven scenarios against the model
-python -m http.server 8000    # then open http://localhost:8000/
+# 1. install nothing - the project is stdlib only
+cd "Autonomous SOC Investigation & Response Agent"
+
+# 2. check the code is sound (no API key needed)
+python selfcheck.py           # behavioural checks
+python compliance.py          # 22 guardrail checks
+
+# 3. START THE SERVER. Do this before opening anything in a browser.
+python -m http.server 8000
+
+# 4. now open this in your browser
+#    http://localhost:8000/
 ```
 
-`run_all.py` accepts scenario numbers: `python run_all.py 3 6`.
+Leave the server from step 3 running. `http://localhost:8000/` is the overview
+page; the trace viewer is linked from it at `/viewer.html`.
+
+**Opening `viewer.html` by double-clicking it will not work.** That gives the
+browser a `file://` page, and browsers block those from reading local files, so
+the recorded traces can never load. Nothing is wrong with the files; they just
+have to arrive over `http://`. Step 3 is what makes that happen.
+
+To re-run the agent yourself and regenerate the traces, which does need a key:
+
+```bash
+# 5. optional: put your key in SOC_API_KEY first
+cp .env.example .env
+python run_all.py             # all seven scenarios
+python run_all.py 3 6         # or just the ones you want
+```
 
 A presenter's walkthrough is in **[DEMO.md](DEMO.md)**.
-
-`http://localhost:8000/` is the overview page (`index.html`); the trace viewer is
-linked from it and lives at `/viewer.html`.
-
-**Both must be served over HTTP**, not opened as `file://` URLs — browsers block
-`fetch` on local files, so the trace JSON will not load.
 
 ---
 

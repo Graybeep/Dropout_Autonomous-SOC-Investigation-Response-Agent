@@ -621,21 +621,11 @@ async function load(key){
     // Detect the cause and say the actual thing, prominently.
     const isFile = location.protocol === "file:";
     $("summary").innerHTML = isFile
-      ? `<b style="color:var(--warn);font-size:15px">This page has to be served, not opened
-           from the folder.</b><br><br>
-         You opened it as a <code>file://</code> page. Browsers block pages like this from
-         reading local files, so the investigation data can never load. Nothing is broken
-         and nothing is missing.<br><br>
-         <b>To fix it, in this folder run:</b><br>
-         <code>python -m http.server 8000</code><br><br>
-         then open <code>http://localhost:8000/viewer.html</code>`
-      : `<b>Could not load traces/scenario_${key}.json.</b><br>
-         The file is missing from this folder. Run <code>python run_all.py</code> to
-         generate the traces.`;
-    $("tl").innerHTML = `<div class="empty">${
-      location.protocol === "file:"
-        ? "Serve this folder over http:// and the investigation will load."
-        : "no trace loaded"}</div>`;
+      ? `<b>No trace loaded.</b> Start a local server in this folder first;
+         the README has the steps in order.`
+      : `<b>Could not load traces/scenario_${key}.json.</b>
+         Run <code>python run_all.py</code> to generate the traces.`;
+    $("tl").innerHTML = `<div class="empty">no trace loaded</div>`;
     $("count").textContent = "";
     $("stats").innerHTML = "";
     $("crumb").innerHTML = `Scenario ${esc(key)} <i>&middot; trace missing</i>`;
