@@ -13,8 +13,8 @@ The rule every conclusion is held to:
 > produced by the live system, not simulated. The agent itself runs locally:
 > clone, set your key, run `python run_all.py`.
 
-The single most informative artefact is
-**[`reports/CASE-1001.md`](reports/CASE-1001.md), section 2, steps 9-11** — the
+The single most informative artifact is
+**[`reports/CASE-1001.md`](reports/CASE-1001.md), section 2, steps 9-11**: the
 agent submits a conclusion, the tool refuses it on two counts, and the agent
 resolves each differently:
 
@@ -39,7 +39,7 @@ configuration, log and packet** evidence instead of trusting the severity label.
 This needs an agent rather than a script because **the evidence that settles one
 alert is not the evidence that settles the next**, and what the agent finds
 changes what it should look at. A script fixes the order in advance. Here the
-agent chooses each call, states why before making it, and re-plans when new
+agent chooses each call, states why before making it, and replans when new
 evidence arrives mid-investigation.
 
 ---
@@ -55,8 +55,8 @@ evidence arrives mid-investigation.
 | **External Systems** | `fixtures/seed/*.json` | Alert feed, asset inventory, CVE knowledge base, configuration, host logs, packet metadata, firewall state |
 | **Memory / State** | `soc_agent/trace.py`, `fixtures/run/cases.json` | Structured trace plus append-only per-case conclusions |
 | **Retrieval** | the eight read tools in `soc_agent/tools.py` | Keyed lookups over the fixtures, plus stored verdicts from other cases |
-| **Planning** | `soc_agent/prompts.py` + the model | Hypothesis, falsifier, and a sufficiency judgement after every result |
-| **Evaluation / Verification** | `soc_agent/confidence.py`, `check_firewall_state` | Four guard families, deterministic scoring, re-reading state from disk |
+| **Planning** | `soc_agent/prompts.py` + the model | Hypothesis, falsifier, and a sufficiency judgment after every result |
+| **Evaluation / Verification** | `soc_agent/confidence.py`, `check_firewall_state` | Four guard families, deterministic scoring, rereading state from disk |
 | **Human Interaction** | `soc_agent/control.py` | `human_override()`, which always wins, and evidence injection |
 | **Failure Handling** | `soc_agent/toolbus.py`, `soc_agent/llm.py` | Retry, degraded-evidence clamp, guard refusals, impasse after three rejections |
 
@@ -96,7 +96,7 @@ REPORT
 `reconsider()` re-enters at **HYPOTHESIZE**, not at the verdict. New evidence, a
 tool failure and a human override all route through that one function, so the
 agent forms a *new* hypothesis and gathers *new* evidence rather than silently
-re-scoring what it already had. Rationale in
+rescoring what it already had. Rationale in
 [`Toknow/DECISIONS.md`](Toknow/DECISIONS.md).
 
 ---
@@ -138,14 +138,14 @@ cd Dropout_Autonomous-SOC-Investigation-Response-Agent
 **2. There is no install step.** No `pip install`, no virtualenv required, no
 package manifest. If you are looking for one, that is why you cannot find it.
 
-**3. Check it works without a key** — these need no API access at all:
+**3. Check it works without a key.** These need no API access at all:
 
 ```bash
-python selfcheck.py      # 99 behavioural checks
+python selfcheck.py      # 99 behavioral checks
 python compliance.py     # 22 guardrail checks
 ```
 
-**4. Configure a provider** (only needed to re-run the agent; skip to step 6 to
+**4. Configure a provider** (only needed to rerun the agent; skip to step 6 to
 just browse the recorded traces).
 
 ```bash
@@ -245,13 +245,13 @@ API key, nothing server-side.
 
 | Check | Result |
 |---|---|
-| `python selfcheck.py` | **99/99** behavioural, no API key |
+| `python selfcheck.py` | **99/99** behavioral, no API key |
 | `python compliance.py` | **22/22** guardrail, no API key |
 | `python run_all.py` | **51/51** live assertions across scenarios 1-6 |
 | Stability | green on two consecutive full runs |
 
-Tool *ordering* is never asserted — pinning a sequence would re-introduce the
-scripted behaviour the design forbids. Assertions are phase-scoped where timing
+Tool *ordering* is never asserted, because pinning a sequence would reintroduce the
+scripted behavior the design forbids. Assertions are phase-scoped where timing
 matters: scenario 3 asserts the right CVE lookup happened *before the first
 conclusion*, not merely somewhere in the trace. Scenarios 3 and 5 assert they
 **gathered new evidence** after reconsidering (16 and 10 calls in the shipped
@@ -283,16 +283,16 @@ the reconsideration check.
   trace**: related-alert window, sibling verdict, and packet provenance. They are
   covered by `selfcheck.py` and did not need to fire, because the agent declared
   an acceptable factor set first time. Stated as *structurally verified, not
-  exercised* rather than implied to appear in an artefact.
+  exercised* rather than implied to appear in an artifact.
 - **Refusal counts vary between runs** (10, 11 and 16 measured across three full
   runs over the same eight cases). The model picks its own tool sequence and
   declaration timing, so refusal count is a property of the trajectory, not of
   the fixtures.
 
-### Generalisation probe
+### Generalization probe
 
 [`fixtures/probe/`](fixtures/probe/) runs scenario 2's *shape* over a fixture set
-where every surface detail differs — service, CVE, version range, asset, source
+where every surface detail differs: service, CVE, version range, asset, source
 IP, and log phrasing sharing no attack vocabulary with the original. It converged
 on the same evidence classes, score and action, with no scenario 2 vocabulary in
 its citations.
