@@ -1,0 +1,155 @@
+{
+  "_readme": "Configuration surfaces per asset: the controls that sit between an attacker and a successful exploit. A surface is 'preventing' only when it would stop THIS class of attack. This file does not know what the alert was - it describes the host. Deciding whether a surface actually blocks the observed attack is the agent's join to make, the same way patch status is.",
+  "SRV-WEB-01": {
+    "asset_id": "SRV-WEB-01",
+    "surfaces": [
+      {
+        "surface": "waf",
+        "kind": "web_application_firewall",
+        "state": "enabled",
+        "detail": "ModSecurity CRS v3.3 in DetectionOnly mode - logs, does not block.",
+        "prevents_exploitation": false
+      },
+      {
+        "surface": "db_account_grants",
+        "kind": "database_privilege",
+        "state": "broad",
+        "detail": "app_rw holds SELECT on all schemas including customers.",
+        "prevents_exploitation": false
+      }
+    ]
+  },
+  "SRV-DB-02": {
+    "asset_id": "SRV-DB-02",
+    "surfaces": [
+      {
+        "surface": "db_account_grants",
+        "kind": "database_privilege",
+        "state": "broad",
+        "detail": "svc_report holds SELECT on all schemas.",
+        "prevents_exploitation": false
+      },
+      {
+        "surface": "network_egress",
+        "kind": "egress_filter",
+        "state": "permissive",
+        "detail": "No egress ACL on the database VLAN.",
+        "prevents_exploitation": false
+      }
+    ]
+  },
+  "SRV-APP-03": {
+    "asset_id": "SRV-APP-03",
+    "surfaces": [
+      {
+        "surface": "waf",
+        "kind": "web_application_firewall",
+        "state": "absent",
+        "detail": "No WAF in front of the Tomcat connector.",
+        "prevents_exploitation": false
+      },
+      {
+        "surface": "db_account_grants",
+        "kind": "database_privilege",
+        "state": "broad",
+        "detail": "app_rw holds SELECT on the reports schema.",
+        "prevents_exploitation": false
+      }
+    ]
+  },
+  "SRV-WEB-04": {
+    "asset_id": "SRV-WEB-04",
+    "surfaces": [
+      {
+        "surface": "waf",
+        "kind": "web_application_firewall",
+        "state": "disabled",
+        "detail": "ModSecurity installed but SecRuleEngine Off.",
+        "prevents_exploitation": false
+      },
+      {
+        "surface": "db_account_grants",
+        "kind": "database_privilege",
+        "state": "broad",
+        "detail": "portal_app holds SELECT on portal_users.",
+        "prevents_exploitation": false
+      }
+    ]
+  },
+  "SRV-DB-05": {
+    "asset_id": "SRV-DB-05",
+    "surfaces": [
+      {
+        "surface": "db_account_grants",
+        "kind": "database_privilege",
+        "state": "broad",
+        "detail": "svc_batch holds SELECT on all schemas.",
+        "prevents_exploitation": false
+      }
+    ]
+  },
+  "SRV-FIN-07": {
+    "asset_id": "SRV-FIN-07",
+    "surfaces": [
+      {
+        "surface": "waf",
+        "kind": "web_application_firewall",
+        "state": "enabled",
+        "detail": "Vendor WAF in DetectionOnly mode - logs, does not block.",
+        "prevents_exploitation": false
+      },
+      {
+        "surface": "db_account_grants",
+        "kind": "database_privilege",
+        "state": "broad",
+        "detail": "fin_app holds SELECT on ledger and customers.",
+        "prevents_exploitation": false
+      }
+    ]
+  },
+  "SRV-DB-09": {
+    "asset_id": "SRV-DB-09",
+    "surfaces": [
+      {
+        "surface": "db_account_grants",
+        "kind": "database_privilege",
+        "state": "broad",
+        "detail": "repl_user holds SELECT on all schemas.",
+        "prevents_exploitation": false
+      },
+      {
+        "surface": "network_egress",
+        "kind": "egress_filter",
+        "state": "permissive",
+        "detail": "No egress ACL on the database VLAN.",
+        "prevents_exploitation": false
+      }
+    ]
+  },
+  "SRV-HR-11": {
+    "asset_id": "SRV-HR-11",
+    "surfaces": [
+      {
+        "surface": "waf",
+        "kind": "web_application_firewall",
+        "state": "detection_only",
+        "detail": "ModSecurity CRS v3.3 loaded, SecRuleEngine DetectionOnly. Rule 942100 alerts on SQLi but does NOT block; requests reach the application.",
+        "prevents_exploitation": false
+      },
+      {
+        "surface": "db_account_grants",
+        "kind": "database_privilege",
+        "state": "restricted",
+        "detail": "The portal connects as hr_portal_ro. Grants: SELECT on hr_public.* ONLY. hr_portal_ro holds NO privilege on hr_salary or on mysql.user. A UNION SELECT against either returns no rows to the caller regardless of syntax.",
+        "prevents_exploitation": true
+      },
+      {
+        "surface": "network_egress",
+        "kind": "egress_filter",
+        "state": "restrictive",
+        "detail": "Egress ACL permits 443 to the payroll vendor only. No route exists for bulk egress to an arbitrary external host.",
+        "prevents_exploitation": true
+      }
+    ]
+  }
+}

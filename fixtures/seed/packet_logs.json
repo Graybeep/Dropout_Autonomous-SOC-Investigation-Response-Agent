@@ -17,7 +17,10 @@
     "bytes_to_client": 2517483,
     "duration_ms": 41870,
     "tls": false,
-    "protocol_anomalies": ["mysql_response_size_outlier", "sustained_egress_off_hours"],
+    "protocol_anomalies": [
+      "mysql_response_size_outlier",
+      "sustained_egress_off_hours"
+    ],
     "exfil_indicators": true,
     "payload_entropy": 7.8,
     "notes": "2.4 MB returned to an external host over 41 seconds against a 3306 listener. Response volume is ~1400x the 30-day median for this asset. High-entropy payload consistent with base64-encoded bulk record export."
@@ -39,7 +42,10 @@
     "bytes_to_client": 1988342,
     "duration_ms": 33210,
     "tls": false,
-    "protocol_anomalies": ["mysql_response_size_outlier", "sustained_egress_off_hours"],
+    "protocol_anomalies": [
+      "mysql_response_size_outlier",
+      "sustained_egress_off_hours"
+    ],
     "exfil_indicators": true,
     "payload_entropy": 7.7,
     "notes": "1.9 MB returned to an external host. Volume far outside baseline for this asset."
@@ -50,7 +56,9 @@
     "bytes_to_client": 892,
     "duration_ms": 7420,
     "tls": false,
-    "protocol_anomalies": ["repeated_connection_resets"],
+    "protocol_anomalies": [
+      "repeated_connection_resets"
+    ],
     "exfil_indicators": false,
     "payload_entropy": 3.2,
     "notes": "28 short-lived connections to 3306 in 7 seconds, most reset. Pattern consistent with port/service enumeration. No meaningful data returned to the client on any flow."
@@ -61,7 +69,10 @@
     "bytes_to_client": 1743908,
     "duration_ms": 28940,
     "tls": false,
-    "protocol_anomalies": ["mysql_response_size_outlier", "credential_reuse_same_src"],
+    "protocol_anomalies": [
+      "mysql_response_size_outlier",
+      "credential_reuse_same_src"
+    ],
     "exfil_indicators": true,
     "payload_entropy": 7.6,
     "notes": "1.7 MB returned to 192.0.2.66, the same source that enumerated this asset earlier. High-entropy bulk transfer."
@@ -72,9 +83,22 @@
     "bytes_to_client": 3284119,
     "duration_ms": 52140,
     "tls": false,
-    "protocol_anomalies": ["mysql_response_size_outlier", "sustained_egress_off_hours"],
+    "protocol_anomalies": [
+      "mysql_response_size_outlier",
+      "sustained_egress_off_hours"
+    ],
     "exfil_indicators": true,
     "payload_entropy": 7.9,
     "notes": "3.1 MB returned to an external host over 52 seconds. Strong volumetric exfiltration signal."
+  },
+  "ALERT-7001": {
+    "alert_id": "ALERT-7001",
+    "protocol": "HTTP",
+    "bytes_to_server": 921,
+    "bytes_to_client": 1130,
+    "payload_entropy": 4.6,
+    "exfil_indicators": false,
+    "protocol_anomalies": [],
+    "notes": "Three injection attempts, each answered with a constant 1130-byte response identical to the benign id=7 request. Response size did not grow with the size of the requested column set."
   }
 }

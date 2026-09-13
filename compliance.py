@@ -251,8 +251,11 @@ def main() -> int:
            "4: the thinner S5 path keeps at least a 0.05 margin",
            f"margin {drop_path.score-0.75:+.2f}")
 
-    # Section 4 - exactly six scenarios, no seventh.
-    record(len(SCENARIOS) == 6, "4: exactly six scenarios",
+    # Section 4 says six and forbids a seventh; section 14 lists a seventh under
+    # "stop and ask". The question was put to the owner and answered yes, so the
+    # bound moved to seven - it did NOT become unbounded. An eighth still trips
+    # this, which is the point of keeping the assertion rather than deleting it.
+    record(len(SCENARIOS) == 7, "4: exactly seven scenarios (six + owner-approved S7)",
            f"found {len(SCENARIOS)}")
 
     failed = 0

@@ -1,4 +1,11 @@
-"""The six evidence scenarios - CLAUDE.md section 4. Do not add a seventh.
+"""The evidence scenarios - CLAUDE.md section 4.
+
+Section 4 says six and says do not add a seventh; section 14 lists a seventh
+under "stop and ask". Scenario 7 was added after that question was put to the
+owner and answered, behind a revert gate: if it perturbs scenarios 1-6 at all,
+it comes out. It exists because the problem statement requires correlating
+asset, vulnerability, CONFIGURATION and response, and configuration had no
+source in the original schema.
 
 Each scenario is a fixture set plus an expected trajectory. The scenario code
 below drives the OUTSIDE WORLD only (what evidence arrives when, which human
@@ -177,6 +184,20 @@ def run_s6(tr: trace_mod.Trace) -> dict[str, Any]:
     return {"cases": [case], "primary": case, "investigation": inv}
 
 
+
+# --- Scenario 7: configuration prevents exploitation -----------------------
+# The host IS vulnerable on paper and the logs DO look consistent with a
+# successful injection - the WAF ran in DetectionOnly and the statements reached
+# the database. Nothing in the alert, the version join or the logs distinguishes
+# this from scenario 2. Only the configuration does: the portal's database
+# account holds no privilege on the table the injection targets, so the read
+# returns nothing however well-formed it is.
+def run_s7(tr: trace_mod.Trace) -> dict[str, Any]:
+    case = _case("ALERT-7001", "SRV-HR-11", "198.51.100.203", "CASE-7001", "7")
+    inv = agent.investigate(case, tr)
+    return {"cases": [case], "primary": case, "investigation": inv}
+
+
 SCENARIOS: dict[str, Scenario] = {
     "1": Scenario(
         key="1", title="False alarm, patched host",
@@ -276,5 +297,31 @@ SCENARIOS: dict[str, Scenario] = {
             final_status="CONCLUDED", precautionary=True,
             notes="Degraded clamp must be cited as the reason for the ceiling."),
         fail_tools=["get_server_logs"],
+    ),
+    "7": Scenario(
+        key="7", title="Configuration prevents exploitation",
+        summary=("A critical SQLi signature fires against SRV-HR-11. The host runs "
+                 "MySQL 5.7.24, INSIDE CVE-2023-21980's range, and the logs show the "
+                 "injected UNION SELECT reaching the database - the WAF was in "
+                 "DetectionOnly and did not block. On version and logs alone this "
+                 "looks like scenario 2. The portal's database account holds SELECT "
+                 "on hr_public only and no privilege on the targeted table."),
+        run=run_s7,
+        expect=Expectation(
+            outcome="FAILED", action_fired=False, reconsideration_fired=False,
+            expected_tools=["get_alert", "get_asset_info", "get_vulnerabilities",
+                            "get_configuration", "get_server_logs",
+                            "submit_assessment"],
+            expected_tool_args=[
+                ("get_vulnerabilities", "service_name", "mysql", "pre_conclusion"),
+                ("get_configuration", "asset_id", "SRV-HR-11", "pre_conclusion"),
+            ],
+            final_status="CONCLUDED",
+            notes=("Stage 1 (tool only, no factor) is EXPECTED TO FAIL this "
+                   "expectation: with version_in_range and logs_consistent and no "
+                   "term for configuration, the scoring model can only reach "
+                   "SUCCEEDED. That failure is the diagnosis - it shows the "
+                   "missing term - and stage 2 adds the factor that closes it."),
+        ),
     ),
 }

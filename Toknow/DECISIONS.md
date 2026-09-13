@@ -2040,3 +2040,56 @@ to 422x79 and would not resize across three attempts, so zoom failed on
 viewport-bounds. Worked around with a fresh tab (1536x742) rather than retrying
 further. Local http.server was used because viewer.html fetches trace JSON and
 file:// fails CORS - worth knowing for any judge who double-clicks the file.
+
+---
+
+## Part 21 — final 18h gated plan
+
+### H0-H0:30 REFUSAL DENSITY (read-only). Number written down.
+
+11 refusals carrying 14 guard problems, across 7 real cases and 113 tool calls.
+6 of 7 cases fire at least one. Median 2 per case. 55% of all
+submit_assessment calls (11/20) are refused.
+
+| case | calls | submits | refused |
+|---|---|---|---|
+| CASE-1001 | 11 | 2 | 1 |
+| CASE-2001 | 11 | 3 | 2 |
+| CASE-3001 | 34 | 5 | 3 |
+| CASE-4001 | 12 | 3 | 2 |
+| CASE-5001 | 22 | 4 | 2 |
+| CASE-5002 | 10 | 1 | 0 |
+| CASE-6001 | 13 | 2 | 1 |
+
+Source breakdown (total, then per scenario S1..S6):
+  check_version_patched_coverage  5   1 0 2 1 1 0
+  check_preconditions             5   0 1 2 0 0 2
+  CONTRADICTIONS (validate)       3   0 1 0 1 1 0
+  check_negative_scope            1   0 0 0 0 0 1
+  check_sibling_verdict_conflict  0   - never fires in any trace (K-8)
+
+**N-13. The 3+ correlated-case trigger does not fire, but the conclusion holds
+anyway - the trigger was set on the wrong variable.** S5's cases are 2 and 0;
+only CASE-3001 reaches 3. The governing number is not per-case count, it is the
+55% submit-refusal rate: a judge watching ANY live scenario has better than even
+odds of seeing a refusal. So the narration gets ahead of it unconditionally,
+not conditionally on a correlated case.
+
+**N-14. Not every refusal is a guard.** The CONTRADICTIONS check in validate()
+fires 3 times - more often than check_negative_scope (1). It is a different
+mechanism from the four guard families. The planned line ("the bus refuses the
+FORM of a claim; the agent supplies the evidence") survives this: a contradiction
+is a form check - two mutually exclusive claims - not a content judgement.
+
+**N-15. Do not claim four guards visibly firing.** check_sibling_verdict_conflict
+fires 0 times across all six traces. Only three of the four families appear,
+plus validate(). Already recorded at K-8; restated here because the demo
+narration is where it would be overclaimed.
+
+**P-024. Counted it wrong twice before getting it right.** First pass reported 13
+cases: the scenario_meta header step carries a placeholder case_id ("CASE-1"),
+which is not a case. Second pass attributed the 3 contradiction refusals to
+check_negative_scope through a regex fallback that swallowed anything unmatched.
+Both found by reading the actual refusal strings instead of trusting the
+classifier. The per-family number is the one most likely to be quoted at a
+judge, so it was worth the third pass.

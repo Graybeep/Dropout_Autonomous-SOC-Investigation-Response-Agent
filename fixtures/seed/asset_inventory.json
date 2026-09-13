@@ -5,7 +5,11 @@
     "ip": "10.20.1.11",
     "criticality": "high",
     "os_version": "Ubuntu 22.04.4 LTS",
-    "service_versions": {"apache": "2.4.58", "mysql": "8.0.36", "openssh": "8.9p1"},
+    "service_versions": {
+      "apache": "2.4.58",
+      "mysql": "8.0.36",
+      "openssh": "8.9p1"
+    },
     "role": "Public-facing web front end",
     "last_patch_date": "2026-08-30"
   },
@@ -15,7 +19,10 @@
     "ip": "10.20.2.22",
     "criticality": "critical",
     "os_version": "Ubuntu 20.04.6 LTS",
-    "service_versions": {"mysql": "5.7.21", "openssh": "8.2p1"},
+    "service_versions": {
+      "mysql": "5.7.21",
+      "openssh": "8.2p1"
+    },
     "role": "Primary customer database",
     "last_patch_date": "2024-02-11"
   },
@@ -25,7 +32,11 @@
     "ip": "10.20.3.33",
     "criticality": "high",
     "os_version": "Ubuntu 22.04.3 LTS",
-    "service_versions": {"tomcat": "9.0.50", "mysql": "5.7.28", "openssh": "8.9p1"},
+    "service_versions": {
+      "tomcat": "9.0.50",
+      "mysql": "5.7.28",
+      "openssh": "8.9p1"
+    },
     "role": "Internal application tier",
     "last_patch_date": "2025-11-04"
   },
@@ -35,7 +46,11 @@
     "ip": "10.20.1.44",
     "criticality": "high",
     "os_version": "Ubuntu 20.04.6 LTS",
-    "service_versions": {"apache": "2.4.41", "mysql": "5.7.25", "openssh": "8.2p1"},
+    "service_versions": {
+      "apache": "2.4.41",
+      "mysql": "5.7.25",
+      "openssh": "8.2p1"
+    },
     "role": "Customer portal web tier",
     "last_patch_date": "2025-03-19"
   },
@@ -45,7 +60,10 @@
     "ip": "10.20.2.55",
     "criticality": "critical",
     "os_version": "Ubuntu 20.04.6 LTS",
-    "service_versions": {"mysql": "5.7.22", "openssh": "8.2p1"},
+    "service_versions": {
+      "mysql": "5.7.22",
+      "openssh": "8.2p1"
+    },
     "role": "Billing and payments database",
     "last_patch_date": "2024-06-02"
   },
@@ -55,7 +73,10 @@
     "ip": "10.20.4.77",
     "criticality": "critical",
     "os_version": "Ubuntu 20.04.6 LTS",
-    "service_versions": {"mysql": "5.7.19", "openssh": "8.2p1"},
+    "service_versions": {
+      "mysql": "5.7.19",
+      "openssh": "8.2p1"
+    },
     "role": "Finance reporting database",
     "last_patch_date": "2023-10-27"
   },
@@ -65,8 +86,23 @@
     "ip": "10.20.2.99",
     "criticality": "critical",
     "os_version": "Ubuntu 20.04.6 LTS",
-    "service_versions": {"mysql": "5.7.26", "openssh": "8.2p1"},
+    "service_versions": {
+      "mysql": "5.7.26",
+      "openssh": "8.2p1"
+    },
     "role": "HR and payroll database",
     "last_patch_date": "2025-01-15"
+  },
+  "SRV-HR-11": {
+    "asset_id": "SRV-HR-11",
+    "hostname": "hr-portal-11.corp.local",
+    "ip": "10.20.4.11",
+    "criticality": "high",
+    "os_version": "Ubuntu 22.04.3 LTS",
+    "service_versions": {
+      "apache": "2.4.52",
+      "mysql": "5.7.24",
+      "openssh": "8.9p1"
+    }
   }
 }

@@ -63,6 +63,23 @@ ANTHROPIC_TOOLS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "get_configuration",
+        "description": (
+            "Configuration surfaces on the host: WAF posture, database account "
+            "grants, egress filtering. This is the CONTROL layer - a host can be "
+            "running a vulnerable version and still be impossible to exploit "
+            "because a control sits in the way. Like the CVE knowledge base, this "
+            "source does NOT tell you whether the attack succeeded: it does not "
+            "know what the alert was. Compare the surfaces against the attack "
+            "class yourself and say which one blocks it."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"asset_id": {"type": "string", "description": "e.g. SRV-HR-11"}},
+            "required": ["asset_id"],
+        },
+    },
+    {
         "name": "get_vulnerabilities",
         "description": (
             "CVE entries for a service name (e.g. 'mysql', 'apache', 'tomcat'), "
@@ -294,7 +311,7 @@ _add_reason_param()
 # Tools available while gathering evidence vs. while acting on a conclusion.
 GATHER_TOOLS = [
     "get_alert", "get_packet_metadata", "get_asset_info", "get_vulnerabilities",
-    "get_server_logs", "get_related_alerts", "check_firewall_state",
+    "get_configuration", "get_server_logs", "get_related_alerts", "check_firewall_state",
     "submit_assessment",
 ]
 ACT_TOOLS = ["check_firewall_state", "block_ip", "unblock_ip"]

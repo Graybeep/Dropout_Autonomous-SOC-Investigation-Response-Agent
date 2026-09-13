@@ -57,9 +57,9 @@ def offline_selfcheck() -> int:
     section("sandbox")
     control.reset_sandbox()
     check("reset_sandbox creates fixtures/run", config.RUN_DIR.exists())
-    check("run copy has all 6 fixtures",
+    check("run copy has all 7 fixtures",
           len([p for p in config.RUN_DIR.glob("*.json")
-               if p.name != config.CASES]) == 6)
+               if p.name != config.CASES]) == 7)
     check("cases.json starts empty", sandbox.read_json(config.CASES) == {})
 
     # -- evidence tools --------------------------------------------------
@@ -467,7 +467,7 @@ def offline_selfcheck() -> int:
     # -- schemas ---------------------------------------------------------
     section("tool schemas")
     names = {t["name"] for t in schemas.ANTHROPIC_TOOLS}
-    check("all 10 agent-facing tools exposed", len(names) == 10)
+    check("all 11 agent-facing tools exposed", len(names) == 11)
     check("every schema has an implementation",
           names == set(tools.IMPLEMENTATIONS))
     check("every evidence tool requires a stated reason",

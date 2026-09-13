@@ -77,5 +77,14 @@
     "asset_id": "SRV-DB-05",
     "severity_label": "high",
     "sensor": "suricata-core-02"
+  },
+  "ALERT-7001": {
+    "id": "ALERT-7001",
+    "timestamp": "2026-09-11T07:31:04Z",
+    "signature": "ET WEB_SERVER SQL Injection UNION SELECT in URI",
+    "src_ip": "198.51.100.203",
+    "dst_ip": "10.20.4.11",
+    "asset_id": "SRV-HR-11",
+    "severity_label": "critical"
   }
 }

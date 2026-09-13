@@ -63,6 +63,38 @@ def get_asset_info(ctx: dict, asset_id: str) -> dict[str, Any]:
     return {"status": "ok", "asset": rec}
 
 
+def get_configuration(ctx: dict, asset_id: str) -> dict[str, Any]:
+    """Return the host's configuration surfaces. Does NOT resolve exploitability.
+
+    Deliberately parallel to get_vulnerabilities: this source describes the
+    host's controls, it does not know what the alert was, and it never says
+    whether THIS attack was stopped. Deciding that is the agent's join to make
+    and it has to be visible in the trace - the same rule section 5.1 applies
+    to patch status.
+    """
+    state = sandbox.read_json(config.CONFIG_STATE)
+    rec = state.get(asset_id)
+    if not rec:
+        known = [k for k in state if not k.startswith("_")]
+        return _no_data(
+            f"configuration for asset '{asset_id}'",
+            f"Assets with configuration data: {', '.join(known)}",
+        )
+    surfaces = rec.get("surfaces", [])
+    return {
+        "status": "ok",
+        "asset_id": asset_id,
+        "surface_count": len(surfaces),
+        "surfaces": surfaces,
+        "note": (
+            "These are the controls present on the host. This source does not "
+            "know which attack was attempted. To claim configuration prevented "
+            "exploitation you must say which surface blocks THIS attack class "
+            "and account for every surface listed above."
+        ),
+    }
+
+
 def get_vulnerabilities(ctx: dict, service_name: str) -> dict[str, Any]:
     """Return CVE entries for a service. Does NOT resolve patch status."""
     kb = sandbox.read_json(config.CVE_KB)
@@ -265,6 +297,7 @@ IMPLEMENTATIONS = {
     "get_alert": get_alert,
     "get_packet_metadata": get_packet_metadata,
     "get_asset_info": get_asset_info,
+    "get_configuration": get_configuration,
     "get_vulnerabilities": get_vulnerabilities,
     "get_server_logs": get_server_logs,
     "get_related_alerts": get_related_alerts,
