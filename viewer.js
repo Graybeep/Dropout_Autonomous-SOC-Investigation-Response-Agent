@@ -170,7 +170,7 @@ function render(s){
   if (k === "tool_failure"){
     const r = s.result || {};
     return `<div class="lbl">Tool failure ${pill(r.status || "unavailable","bad")}${tag}</div>
-      <div class="mono sig" style="color:var(--bad)">${esc(s.tool)}: ${esc(r.reason||"")}</div>
+      <div class="mono sig sig-fail">${esc(s.tool)}: ${esc(r.reason||"")}</div>
       <div class="reason">${esc(r.detail||"")}</div>`;
   }
 
@@ -179,21 +179,21 @@ function render(s){
       `<tr><td>${esc(f.label)}</td>
        <td class="d ${f.delta>0?"pos":"neg"}">${f.delta>0?"+":""}${f.delta.toFixed(2)}</td>
        <td>${esc(f.citation)}</td></tr>`).join("")
-      || `<tr><td colspan="3" style="color:var(--dim2)">no factors declared</td></tr>`;
+      || `<tr><td colspan="3" class="no-factors">no factors declared</td></tr>`;
     return `<div class="lbl">Deterministic scoring${tag}</div>
       <table><tr><th>Evidence finding</th><th>&Delta;</th><th>Citation</th></tr>${rows}</table>
-      <div class="reason" style="margin-top:9px">
+      <div class="reason score-line">
         base ${s.base.toFixed(2)} &rarr; raw <b>${s.raw_sum>0?"+":""}${s.raw_sum.toFixed(2)}</b>
         &rarr; score <b>${s.score.toFixed(2)}</b> &rarr; ${outcomePill(s.outcome)}
         confidence <b>${s.confidence.toFixed(2)}</b></div>
-      ${s.ceiling_note ? `<div class="reason" style="color:var(--warn);margin-top:7px">
+      ${s.ceiling_note ? `<div class="reason ceiling">
         <b>Ceiling:</b> ${esc(s.ceiling_note)}</div>` : ""}`;
   }
 
   if (k === "conclusion")
     return `<div class="lbl">Conclusion &middot; ${esc(s.label)}${tag}</div>
-      <div style="font-size:16px;font-weight:650">${outcomePill(s.outcome)}
-        <span style="color:var(--dim);font-size:13px">score ${s.score.toFixed(2)}
+      <div class="concl-head">${outcomePill(s.outcome)}
+        <span class="concl-meta">score ${s.score.toFixed(2)}
         &middot; confidence ${s.confidence.toFixed(2)}</span></div>
       <div class="reason"><b>Hypothesis:</b> ${md(s.hypothesis)}</div>
       ${s.sufficiency?`<div class="reason"><b>Sufficiency:</b> ${md(s.sufficiency)}</div>`:""}
@@ -219,25 +219,25 @@ function render(s){
       <div class="reason">Re-read firewall state from disk for <b>${esc(s.ip)}</b>:
         expected blocked <b>${esc(s.expected_blocked)}</b>,
         observed <b>${esc(s.blocked_after)}</b>.</div>
-      ${s.record?`<div class="reason mono" style="font-size:12px">rule: ${esc(s.record.rule)}
+      ${s.record?`<div class="reason mono rule-line">rule: ${esc(s.record.rule)}
         ${s.record.precautionary?pill("precautionary","warn"):""}</div>`:""}`;
   }
 
   if (k === "event")
     return `<div class="fork">${esc(s.event_kind || "event")}</div>
-            <div class="txt" style="margin-top:6px">${md(s.detail)}</div>`;
+            <div class="txt detail-gap">${md(s.detail)}</div>`;
 
   if (k === "reconsider"){
     const p = s.prior_conclusion;
     return `<div class="fork">Reconsider &middot; ${esc(s.trigger)}</div>
-      <div class="txt" style="margin-top:6px">${md(s.detail)}</div>
+      <div class="txt detail-gap">${md(s.detail)}</div>
       <div class="side">
         <div><div class="h">Prior conclusion</div>
-          ${p?`${outcomePill(p.outcome)} <span style="color:var(--dim)">
+          ${p?`${outcomePill(p.outcome)} <span class="prior-meta">
           confidence ${p.confidence.toFixed(2)}</span>
           <div class="reason">${esc(p.hypothesis)}</div>`:"<span style='color:var(--dim2)'>none</span>"}</div>
         <div><div class="h">After this trigger</div>
-          <span style="color:var(--dim)">re-entering HYPOTHESIZE:
+          <span class="prior-meta">re-entering HYPOTHESIZE:
           the agent gathers new evidence before re-scoring</span></div>
       </div>`;
   }
@@ -358,33 +358,35 @@ async function load(key){
   const exp = meta?.expectation;
   const notes = exp?.notes || "";
   const expHtml = !exp ? "" : (notes.length > 220
-    ? `<details style="margin-top:6px"><summary>Expected: ${esc(exp.outcome)}
+    ? `<details class="exp-wrap"><summary>Expected: ${esc(exp.outcome)}
          &middot; why this is declared</summary>
-       <div style="color:var(--dim2);margin-top:6px">${esc(notes)}</div></details>`
-    : `<br><span style="color:var(--dim2)">Expected: ${esc(exp.outcome)}${
+       <div class="exp-body">${esc(notes)}</div></details>`
+    : `<br><span class="exp-inline">Expected: ${esc(exp.outcome)}${
          notes ? " &middot; " + esc(notes) : ""}</span>`);
 
   $("summary").innerHTML = `<b>${esc(data.title || "")}</b><br>${esc(data.summary || "")}
     ${expHtml}
-    ${data.error ? `<br><span style="color:var(--bad)">Run error: ${esc(data.error)}</span>` : ""}`;
+    ${data.error ? `<br><span class="run-error">Run error: ${esc(data.error)}</span>` : ""}`;
 
   $("verdicts").innerHTML = (data.cases || []).map(c => {
     const last = c.conclusions?.[c.conclusions.length - 1];
     const act = (c.actions || []).map(a =>
       a.action + (a.precautionary ? " (precautionary)" : "")).join(", ") || "none";
-    const row = (k, v, color) =>
+    // Takes a CLASS, not a colour: an inline style attribute here would need
+    // style-src 'unsafe-inline' for the sake of one red word.
+    const row = (k, v, cls) =>
       `<div class="vr"><span class="vk">${k}</span>
-       <span class="vv"${color ? ` style="color:${color}"` : ""}>${v}</span></div>`;
+       <span class="vv${cls ? " " + cls : ""}">${v}</span></div>`;
     return `<div class="verdict">
       <div class="vhd"><span class="vid mono">${esc(c.case_id)}</span>
         ${last ? outcomePill(last.outcome) : pill("no conclusion","dim")}</div>
       ${row("status", esc(c.status))}
       ${row("action", esc(act))}
       ${last ? row("confidence",
-        `${Number(last.confidence).toFixed(2)} <span style="color:var(--dim2)">/ score ${
+        `${Number(last.confidence).toFixed(2)} <span class="exp-inline">/ score ${
           Number(last.score).toFixed(2)}</span>`) : ""}
       ${c.degraded_sources?.length
-        ? row("degraded", esc(c.degraded_sources.join(", ")), "var(--bad)") : ""}
+        ? row("degraded", esc(c.degraded_sources.join(", ")), "vv-bad") : ""}
     </div>`;
   }).join("");
 
@@ -416,7 +418,7 @@ async function load(key){
 
   $("crumb").innerHTML = `${esc(data.title || "Scenario " + key)}
     <i>&middot; scenario ${esc(key)}</i>`;
-  $("tlmeta").innerHTML = `<span style="color:var(--dim2);font-size:10.5px">${
+  $("tlmeta").innerHTML = `<span class="tl-meta">${
     steps.length} steps</span>`;
 
   paint();
@@ -439,9 +441,9 @@ addEventListener("hashchange", () => {
   if (k !== current) { current = k; setActive(k); load(k); }
 });
 $("foot").innerHTML =
-  `<b style="color:var(--dim)">${SCENARIOS.length} scenarios</b><br>` +
+  `<b class="foot-strong">${SCENARIOS.length} scenarios</b><br>` +
   `traces replayed from disk<br>` +
-  `<span style="color:var(--dim2)">no model runs in this view</span>`;
+  `<span class="foot-note">no model runs in this view</span>`;
 
 let current = fromHash();
 setActive(current);

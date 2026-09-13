@@ -1,0 +1,255 @@
+/* Dark Mode (OLED) + Minimalism - the "Developer Tools" template from
+     uupm.cc/demo/developer-tools, tokens read off the rendered demo rather
+     than eyeballed: ground #0D0D0D, panel #1E1E1E, zinc text, one neon-green
+     accent (#39FF14) on black.
+
+     Two deliberate departures from that demo, both because it is a LANDING
+     page and this is a dense 43-step trace:
+       - its airy hero spacing is not adopted; density stays Swiss-tight.
+       - neon green is reserved for brand + interaction + tool calls. Semantic
+         states use the Dracula set the demo itself uses in its code block, so
+         "this failed" never has to be told apart from "this is a button".
+     No webfont is loaded: IBM Plex Sans is requested and degrades to the
+     system stack, keeping the viewer at zero external references (L-2).
+
+     --dim2 is #8A8A94, not the demo's zinc-500 #71717A: measured on this
+     card ground that token gives 3.74:1, under AA for the uppercase micro
+     labels it colours. Lifted until it cleared 4.5:1. Measured, not eyeballed. */
+  :root{
+    --bg:#0D0D0D; --panel:#161616; --panel2:#0A0A0A; --line:rgba(255,255,255,.10);
+    --ink:#E4E4E7; --dim:#A1A1AA; --dim2:#8A8A94;
+    --accent:#39FF14; --accent-ink:#000000;
+    --ok:#50FA7B; --warn:#F1FA8C; --bad:#FF5555;
+    --purple:#BD93F9; --cyan:#8BE9FD;
+    --ok-bg:#0C1F12; --bad-bg:#24100F; --warn-bg:#211E0C; --dim-bg:#1E1E1E;
+    --r:6px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.55 "IBM Plex Sans",Inter,ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  code,pre,.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+
+  header{position:sticky;top:0;z-index:20;background:rgba(13,13,13,.94);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:14px 22px}
+  .bar{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  h1{font-size:16px;margin:0;font-weight:600;letter-spacing:-.2px}
+  h1 span{color:var(--dim);font-weight:400}
+  select,button{background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+    border-radius:var(--r);padding:7px 12px;font-size:13px;font-family:inherit;cursor:pointer}
+  select{min-width:290px}
+  button:hover:not(:disabled){border-color:var(--accent)}
+  button:disabled{opacity:.4;cursor:default}
+  button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:650}
+  .grow{flex:1}
+
+  .meta{margin:0}
+  .summary{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:var(--r);padding:13px 15px;color:var(--dim);font-size:13px;margin-top:14px}
+  .summary b{color:var(--ink)}
+
+  .verdicts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+  .verdict{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+    padding:11px 14px;min-width:172px;flex:1}
+  .verdict .k{font-size:10.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2)}
+  .verdict .v{font-size:19px;font-weight:600;margin-top:3px;letter-spacing:-.3px}
+  .vhd{display:flex;align-items:center;gap:9px;padding-bottom:8px;margin-bottom:8px;
+    border-bottom:1px solid var(--line)}
+  .vid{font-size:11.5px;color:var(--dim);letter-spacing:.3px}
+  .vr{display:flex;align-items:baseline;gap:10px;padding:2.5px 0}
+  .vk{flex:0 0 84px;font-size:10px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2)}
+  .vv{font-size:12.5px;color:var(--ink)}
+
+  main{min-width:0}
+  .tl{position:relative;padding-left:30px}
+  .tl::before{content:"";position:absolute;left:9px;top:6px;bottom:6px;width:2px;background:var(--line)}
+
+  .step{position:relative;margin:0 0 11px;opacity:0;transform:translateY(5px);
+    transition:opacity .3s,transform .3s}
+  .step.on{opacity:1;transform:none}
+  /* Base rail marker. This rule is load-bearing: a pseudo-element with no
+     `content` generates no box at all, so without it every .k-*::before and
+     [data-refused]::before rule below is dead CSS that paints nothing. The
+     default is a round dot on the rail; the kind rules override shape. */
+  .step::before{content:"";position:absolute;left:-24.5px;top:14px;width:9px;height:9px;
+    border-radius:50%;background:var(--line);z-index:1}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px 14px}
+  .lbl{font-size:10.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2);
+    display:flex;gap:9px;align-items:center;margin-bottom:5px}
+  .txt{white-space:pre-wrap}
+
+  /* kinds */
+  .k-state::before{background:var(--purple);width:13px;height:13px;left:-27px}
+  .k-state .card{background:transparent;border:0;padding:3px 0}
+  .k-state .name{font-size:11.5px;letter-spacing:1.7px;color:var(--purple);font-weight:700}
+  .k-state .note{color:var(--dim2);font-size:12.5px;margin-top:1px}
+
+  .k-thought::before,.k-sufficiency::before{background:var(--cyan)}
+  .k-thought .card,.k-sufficiency .card{border-left:3px solid var(--cyan)}
+  .k-sufficiency .lbl{color:var(--cyan)}
+
+  .k-tool_call::before{background:var(--accent)}
+  .k-tool_call .card{border-left:3px solid var(--accent)}
+  .sig{color:var(--accent);font-weight:600;background:var(--dim-bg);border:1px solid var(--line);
+    border-radius:4px;padding:1px 7px;display:inline-block}
+  .reason{color:var(--dim);margin-top:5px;font-size:13px}
+  .reason b{color:var(--dim2);font-weight:600}
+
+  .k-tool_result::before{background:var(--ok)}
+  .step[data-refused="1"]::before{background:var(--bad);border-radius:2px}
+  .step[data-refused="1"] .card{border-left:3px solid var(--bad);background:var(--bad-bg)}
+  .k-tool_result .card{border-left:3px solid #1F3D26;background:var(--panel2)}
+  .k-tool_failure::before{background:var(--bad)}
+  .k-tool_failure .card{border-left:3px solid var(--bad);background:var(--bad-bg)}
+  .k-error::before{background:var(--bad)}
+  .k-error .card{border-left:3px solid var(--bad);background:var(--bad-bg)}
+
+  .k-scoring::before{background:var(--warn)}
+  .k-scoring .card{border-left:3px solid var(--warn)}
+  .k-conclusion::before{background:var(--ok);width:13px;height:13px;left:-27px}
+  .k-conclusion .card{border-left:3px solid var(--ok);background:var(--ok-bg)}
+  .k-action::before{background:var(--warn)}
+  .k-action .card{border-left:3px solid var(--warn);background:var(--warn-bg)}
+  .k-verification::before{background:var(--ok)}
+  .k-verification .card{border-left:3px solid var(--ok)}
+
+  /* reconsideration fork */
+  .k-reconsider::before,.k-event::before{background:var(--purple);width:13px;height:13px;left:-27px}
+  .k-reconsider .card,.k-event .card{border:1px dashed var(--purple);background:#171528}
+  .fork{display:flex;align-items:center;gap:9px;color:var(--purple);font-weight:700;
+    font-size:11.5px;letter-spacing:1.3px;text-transform:uppercase}
+  .fork::before{content:"";flex:0 0 26px;height:2px;background:var(--purple);
+    box-shadow:0 -6px 0 var(--purple)}
+
+  /* Rail markers carry SHAPE as well as hue, so the kind survives greyscale,
+     projector colour shift and colour-blind viewers. Declared AFTER the kind
+     rules above so it wins on equal specificity. The card label repeats the
+     kind in words - the marker is reinforcement, never the only signal. */
+  .k-tool_failure::before,.k-error::before{border-radius:2px}
+  .k-conclusion::before,.k-scoring::before{border-radius:2px;transform:rotate(45deg)}
+  .k-reconsider::before,.k-event::before{background:var(--bg);border-radius:50%;
+    box-shadow:inset 0 0 0 3px var(--purple)}
+  .k-state::before{width:5px;height:18px;left:-23.5px;border-radius:2px;
+    background:var(--purple)}
+  .step[data-refused="1"]::before{background:var(--bad);border-radius:2px;
+    transform:rotate(45deg)}
+
+  table{border-collapse:collapse;width:100%;margin-top:8px;font-size:12.5px}
+  th,td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}
+  th{color:var(--dim2);font-weight:600;font-size:10.5px;letter-spacing:.7px;text-transform:uppercase}
+  td.d{white-space:nowrap;font-weight:650}
+  .pos{color:var(--ok)} .neg{color:var(--bad)}
+
+  .pill{display:inline-block;padding:1.5px 8px;border-radius:3px;font-size:11px;
+    font-weight:650;letter-spacing:.4px}
+  .p-ok{background:var(--ok-bg);color:var(--ok)} .p-bad{background:var(--bad-bg);color:var(--bad)}
+  .p-warn{background:var(--warn-bg);color:var(--warn)} .p-dim{background:var(--dim-bg);color:var(--dim)}
+
+  .side{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:9px}
+  .side>div{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:9px 11px}
+  .side .h{font-size:10.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2);margin-bottom:4px}
+
+  details{margin-top:7px}
+  .refusal{margin:8px 0 4px;border-left:2px solid var(--bad);padding-left:10px}
+  .refusal-item{color:var(--ink);font-size:12.5px;line-height:1.5;margin-bottom:6px}
+  .refusal-item:last-child{margin-bottom:0}
+  .refusal-meta{color:var(--dim2);font-size:11px;margin-top:6px}
+  summary{cursor:pointer;color:var(--dim2);font-size:12px;user-select:none}
+  summary:hover{color:var(--accent)}
+  pre{background:#000000;border:1px solid var(--line);border-radius:6px;padding:9px;
+    overflow:auto;font-size:11.5px;color:var(--dim);margin:6px 0 0;max-height:300px}
+  .txt code,.reason code{background:#000000;border:1px solid var(--line);
+    border-radius:4px;padding:0 4px;font-size:12px;color:var(--cyan)}
+  .txt strong,.reason strong{color:var(--ink);font-weight:650}
+  .mdh{display:block;color:var(--ink);font-weight:650;margin-top:4px}
+  .case-tag{margin-left:auto;font-size:10.5px;color:var(--dim2);letter-spacing:.5px}
+  .empty{color:var(--dim2);text-align:center;padding:60px 20px}
+  /* ---- SaaS app shell -------------------------------------------------
+     The uupm gallery demos are all marketing pages, so there was no app
+     layout to lift; this is the standard SaaS shell (fixed sidebar nav,
+     sticky topbar, KPI row, panelled content) built on the DevKit OLED
+     tokens above. The KPI grid is the one pattern taken from the gallery's
+     SaaS Analytics demo (4-up auto-fit cards, 12-16px gap). */
+  .app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+
+  .sidebar{background:#080808;border-right:1px solid var(--line);position:sticky;
+    top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+  .brand{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;
+    align-items:center;gap:10px;text-decoration:none;color:inherit}
+  .brand:hover .bs{color:var(--accent)}
+  .brand .dot{flex:0 0 9px;height:9px;background:var(--accent);border-radius:2px;
+    box-shadow:0 0 10px rgba(57,255,20,.5)}
+  .brand .bt{font-weight:600;font-size:13.5px;letter-spacing:-.2px;line-height:1.25}
+  .brand .bs{display:block;color:var(--dim2);font-weight:400;font-size:10.5px;
+    letter-spacing:.5px;text-transform:uppercase}
+  .nav-label{padding:15px 18px 7px;font-size:10px;letter-spacing:1.1px;
+    text-transform:uppercase;color:var(--dim2)}
+  .nav{padding:0 10px;flex:1}
+  .nav a{display:flex;gap:9px;align-items:center;padding:7px 9px;border-radius:var(--r);
+    color:var(--dim);text-decoration:none;font-size:12.5px;margin-bottom:2px;
+    border:1px solid transparent}
+  .nav a:hover{background:#131313;color:var(--ink)}
+  .nav a.active{background:#131313;color:var(--ink);border-color:var(--line)}
+  .nav a.active .n{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .nav .n{flex:0 0 19px;height:19px;display:grid;place-items:center;font-size:10.5px;
+    font-weight:650;border:1px solid var(--line);border-radius:4px;color:var(--dim2)}
+  .nav .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .nav .b{font-size:9px;letter-spacing:.4px;padding:1px 5px;border-radius:3px;
+    font-weight:700;border:1px solid transparent}
+  .sidebar-foot{padding:11px 18px;border-top:1px solid var(--line);font-size:10.5px;
+    color:var(--dim2);line-height:1.6}
+
+  .main-col{min-width:0;display:flex;flex-direction:column}
+  .topbar{position:sticky;top:0;z-index:20;background:rgba(13,13,13,.95);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+    padding:11px 24px;display:flex;gap:11px;align-items:center;flex-wrap:wrap}
+  .crumb{font-size:13.5px;font-weight:600;letter-spacing:-.2px}
+  .crumb i{color:var(--dim2);font-style:normal;font-weight:400}
+  .content{padding:20px 24px 120px;width:100%;max-width:1160px}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+    padding:12px 14px}
+  .stat .k{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--dim2)}
+  .stat .v{font-size:19px;font-weight:600;margin-top:5px;letter-spacing:-.4px}
+  .stat .s{font-size:11px;color:var(--dim2);margin-top:3px}
+
+  .panel{background:#111111;border:1px solid var(--line);border-radius:var(--r);margin-top:14px}
+  .panel-hd{padding:11px 16px;border-bottom:1px solid var(--line);font-size:10.5px;
+    letter-spacing:1.1px;text-transform:uppercase;color:var(--dim2);
+    display:flex;align-items:center;gap:9px}
+  .panel-hd .grow{flex:1}
+  .panel-bd{padding:16px}
+
+  @media(max-width:900px){
+    .app{grid-template-columns:1fr}
+    .sidebar{position:static;height:auto}
+    .nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px}
+    .sidebar-foot{display:none}
+  }
+  @media(max-width:640px){.side{grid-template-columns:1fr}select{min-width:0;width:100%}}
+
+  /* ---- classes replacing inline style= attributes -----------------------
+     CSP style-src 'unsafe-inline' covers BOTH <style> blocks and style=""
+     attributes, including ones written into innerHTML at runtime. Moving the
+     block out is not enough on its own; every attribute has to go too, which
+     is what these cover. Element.style.* assignments are CSSOM, not an
+     attribute, so fillBadges() is unaffected. */
+  .count{color:var(--dim2);font-size:12px}
+  .sig-fail{color:var(--bad)}
+  .no-factors{color:var(--dim2)}
+  .score-line{margin-top:9px}
+  .ceiling{color:var(--warn);margin-top:7px}
+  .concl-head{font-size:16px;font-weight:650}
+  .concl-meta{color:var(--dim);font-size:13px}
+  .rule-line{font-size:12px}
+  .detail-gap{margin-top:6px}
+  .prior-meta{color:var(--dim)}
+  .exp-wrap{margin-top:6px}
+  .exp-body{color:var(--dim2);margin-top:6px}
+  .exp-inline{color:var(--dim2)}
+  .run-error{color:var(--bad)}
+  .tl-meta{color:var(--dim2);font-size:10.5px}
+  .foot-strong{color:var(--dim)}
+  .foot-note{color:var(--dim2)}
+  .vv-bad{color:var(--bad)}

@@ -177,3 +177,16 @@
     .flow{padding-left:30px}
     .fstep::before{left:-30px}
   }
+
+  /* ---- classes replacing inline style= attributes -----------------------
+     Needed so the Content-Security-Policy can drop style-src 'unsafe-inline'.
+     A style="" attribute is covered by that directive exactly like a <style>
+     block, so the attributes had to go as well as the blocks. */
+  .gap-s{margin-top:12px}
+  .gap-m{margin-top:26px}
+  .gap-l{margin-top:30px}
+  .gap-xl{margin-top:34px}
+  .lead-lg{font-size:17.5px}
+  .measure{max-width:760px}
+  .legal-h{font-size:19px;margin:34px 0 12px}
+  .legal-h.first{margin:0 0 12px}
