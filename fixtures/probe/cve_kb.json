@@ -1,0 +1,31 @@
+{
+  "_readme": "Keyed by service name only. No per-host patch status - the join is the agent's.",
+  "postgres": [
+    {
+      "cve_id": "CVE-2021-32027",
+      "affected_versions": ">=13.0,<13.5",
+      "fixed_in": "13.5",
+      "cvss": 9.1,
+      "attack_class": "sql_injection",
+      "description": "Integer overflow in array subscripting permits a crafted stacked statement to read out-of-bounds relations, allowing an unauthenticated remote attacker to read arbitrary relations."
+    },
+    {
+      "cve_id": "CVE-2020-25695",
+      "affected_versions": ">=12.0,<12.5",
+      "fixed_in": "12.5",
+      "cvss": 8.8,
+      "attack_class": "privilege_escalation",
+      "description": "Unprivileged user may execute arbitrary SQL as superuser during index expression evaluation. Does not permit remote unauthenticated read."
+    }
+  ],
+  "openssh": [
+    {
+      "cve_id": "CVE-2024-6387",
+      "affected_versions": ">=9.0p1,<9.8p1",
+      "fixed_in": "9.8p1",
+      "cvss": 8.1,
+      "attack_class": "remote_code_execution",
+      "description": "regreSSHion. Signal handler race condition permitting unauthenticated RCE as root."
+    }
+  ]
+}

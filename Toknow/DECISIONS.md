@@ -2540,3 +2540,62 @@ guard runs while the agent is gathering; they only inspect an assessment it has
 already submitted, and they judge bookkeeping, never meaning. A refusal does
 re-enter the loop - it names which source is unread, never what that source will
 say.*
+
+---
+
+## Part 27 - Pre-rehearsal: wording settled, probe committed
+
+**N-39. Guard timing resolved as case (a); N-38's caveat was over-stated.**
+N-38 recorded that "guards never touch tool selection" was not literally true.
+Re-read against the two candidate cases, it is case **(a)**: a guard *observes*
+during GATHER_EVIDENCE and changes nothing. Proven, not assumed:
+
+- All four guard call sites are inside the `submit_assessment` branch.
+- The bookkeeping (`ok_tools`, `asset_services`, `services_checked`,
+  `packet_alerts`, `log_windows`, `related_alerts`) is **write-only on the
+  gather path**. The only read outside the submit branch is `related_alerts`
+  de-duplicating its own list; nothing reads the state to alter behaviour.
+- A non-submit call can never return `status: "rejected"` - verified by
+  searching the post-branch path for the literal.
+- `GATHER_TOOLS` and `ACT_TOOLS` are module constants, never narrowed.
+- Empirically, across every run, the only tool ever rejected is
+  `submit_assessment`.
+
+So the claim survives, in this exact form, now written into DEMO.md:
+**"Guards validate declared findings; they do not choose tools."**
+
+Two precisions stay attached to it, volunteered rather than conceded: a refusal
+re-enters the loop and the agent has answered one by calling the tool it
+skipped - the *agent* selected that, prompted by being told which source was
+unread, and the refusal names the unread source and never what it will say
+(zero version numbers, CVE ids or verdict words in any refusal message). And the
+one thing that does alter a gather-path result is Scenario 6's `fail_tools`,
+which is declared scenario config, not a guard.
+
+**N-40. Refusal narration replaced with the measured account.** "The agent
+supplies the evidence" is cut - true of 2 refusals in 11. Replaced with: it
+**gathers** when the remedy is a tool call it already knows how to make, it
+**drops the factor** when the remedy is anything else, and it has **never**
+resolved a refusal by rewording the same claim.
+
+The third leads, because it answers the sceptical reading directly. A model
+being corrected argues and rephrases; this one either fetches what it lacked or
+withdraws the claim, and never negotiates. It also composes with Gate 2 into the
+single rule worth stating: *a guard whose remedy costs more than abandonment
+gets the claim abandoned* - which is exactly what the reverted configuration
+guard demonstrated.
+
+**N-41. Density drift pinned as evidence, not apology.** Counts across three
+full runs: 10 / 11 / 16 over the same 8 cases, per-case max 2 -> 4,
+never-refused cases 0 -> 2, family mix 6/3/2 -> 8/2/4. The pinned answer:
+*the model picks its own tool sequence and declaration timing each run, so the
+refusal count is a property of the trajectory, not of the fixtures.* That turns
+the most variable number in the project into support for dynamic action
+selection, which is the characteristic with the weakest independent backing.
+Narration quotes "roughly one or two per case" and never a figure.
+
+**N-42. `fixtures/probe/` committed.** It ran and held, so by the stated rule it
+is committed with a README that states the permutation table, the result, and -
+importantly - what the result does *not* support. Leaving it untracked would
+have been clutter a judge could stumble on; deleting it would have discarded the
+only evidence addressing the reviewer's single remaining cap.

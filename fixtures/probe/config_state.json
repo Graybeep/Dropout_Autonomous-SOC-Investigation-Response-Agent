@@ -1,0 +1,20 @@
+{
+  "_readme": "Describes host controls only. Carries no prevents_exploitation verdict - that join is the agent's.",
+  "SRV-RPT-31": {
+    "asset_id": "SRV-RPT-31",
+    "surfaces": [
+      {
+        "surface": "db_account_grants",
+        "kind": "database_privilege",
+        "state": "broad",
+        "detail": "rpt_app connects with SELECT on every schema including billing."
+      },
+      {
+        "surface": "network_egress",
+        "kind": "egress_filter",
+        "state": "permissive",
+        "detail": "No egress ACL on the reporting VLAN."
+      }
+    ]
+  }
+}

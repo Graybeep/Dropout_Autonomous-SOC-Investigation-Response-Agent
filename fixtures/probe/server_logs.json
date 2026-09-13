@@ -1,0 +1,40 @@
+{
+  "SRV-RPT-31": [
+    {
+      "ts": "2026-09-11T22:14:07Z",
+      "source": "postgres/statement",
+      "event_type": "db_query",
+      "raw": "LOG:  statement: SELECT id,label FROM report_catalog WHERE ref = '7'; SELECT relname FROM pg_catalog.pg_class WHERE relkind = 'r'"
+    },
+    {
+      "ts": "2026-09-11T22:14:09Z",
+      "source": "postgres/statement",
+      "event_type": "db_query",
+      "raw": "LOG:  statement: SELECT nspname,relname FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE nspname = 'billing'"
+    },
+    {
+      "ts": "2026-09-11T22:14:44Z",
+      "source": "postgres/statement",
+      "event_type": "db_query",
+      "raw": "LOG:  statement: COPY (SELECT email_addr,pw_digest,legal_name,pan_last_four FROM billing.subscriber) TO STDOUT WITH CSV"
+    },
+    {
+      "ts": "2026-09-11T22:15:23Z",
+      "source": "postgres/duration",
+      "event_type": "db_query",
+      "raw": "LOG:  duration: 39118.442 ms  rows: 61804  statement: COPY (SELECT email_addr,pw_digest,legal_name,pan_last_four FROM billing.subscriber) TO STDOUT WITH CSV"
+    },
+    {
+      "ts": "2026-09-11T22:15:58Z",
+      "source": "postgres/statement",
+      "event_type": "db_query",
+      "raw": "LOG:  statement: COPY (SELECT token_ref,issuer,expiry FROM billing.stored_instrument) TO STDOUT WITH CSV"
+    },
+    {
+      "ts": "2026-09-11T22:16:31Z",
+      "source": "pgbouncer",
+      "event_type": "session_close",
+      "raw": "LOG  C-0x7f2a: closing session for 203.0.113.77 after 144.2s, 3181902 bytes transferred to client"
+    }
+  ]
+}

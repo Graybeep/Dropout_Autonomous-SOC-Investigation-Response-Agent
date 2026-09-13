@@ -303,6 +303,33 @@ two different correct responses:** it *gathered* what was missing, and *dropped*
 what it could not support. Both the refusal and the correction are steps in the
 evidence chain.
 
+### The settled wording on guard timing — say it exactly like this
+
+Verified in code before being said out loud. **Say:**
+
+> **Guards validate declared findings; they do not choose tools.**
+
+That is literally true, and here is what backs it if pressed. All four guard
+call sites sit inside the `submit_assessment` branch. During gathering the bus
+only *observes* — it records which tools returned `ok`, which services were
+looked up, which log windows were queried — and that bookkeeping is **write-only
+on the gather path**: nothing reads it, nothing alters a result, and a non-submit
+call can never come back `rejected`. `GATHER_TOOLS` is a module constant, never
+narrowed at runtime. Empirically, across every run, the only tool ever rejected
+is `submit_assessment`.
+
+Two precisions to volunteer rather than be caught on:
+
+- A refusal *does* re-enter the loop, and the agent has answered one by going
+  and calling `get_vulnerabilities` on the service it skipped. The guard did not
+  select that tool — the agent did, in response to being told which source was
+  unread. The refusal names **which source is unread, never what it will say**:
+  across every refusal message there are zero version numbers, zero CVE ids and
+  zero verdict words.
+- The one thing that *does* alter a gather-path result is Scenario 6's
+  `fail_tools`, and that is declared scenario config — fault injection we chose
+  to test recovery — not a guard.
+
 ### The one sentence, if asked "isn't the bus deciding the verdict?"
 
 > No — the bus refused the **form** of the claim, not its content. The agent said
@@ -332,30 +359,45 @@ Present it as the design:
 > Nearly every case gets refused at least once. That is the bus doing its job on
 > the normal path, not a stumble on one case.
 
-**Do not claim "it always responds by gathering more evidence."** It does not,
-and it should not — the correct response depends on which guard fired, and being
-precise about this is stronger than the tidy version:
+**Do not say "the bus refuses the form of a claim and the agent supplies the
+evidence."** The first half is right; the second is true of only 2 refusals in
+11. Use the measured three-way account instead — it is more precise and it is
+stronger:
 
-Family mix also moves run to run; the last full run was provenance 8,
-exhaustiveness 4, contradiction 2. What does not move is which response each
-family deserves:
+- **It gathers** when the remedy is a tool call it already knows how to make.
+  Refused for claiming a host is outside *all* affected ranges having checked
+  only some of its services, the next call is `get_vulnerabilities` on the one
+  it skipped. This is the scenario 1 set piece above.
+- **It drops the factor** when the remedy is anything else. Refused for citing
+  `related_alert_corroborates` from a lookup that came back empty, it stops
+  making the claim. That is the correct answer, not a retreat: the claim was
+  unfounded, and the honest fix is to withdraw it rather than go manufacture
+  corroboration.
+- **It has never once resolved a refusal by rewording the same claim.** Zero
+  occurrences, every run measured.
 
-- **Exhaustiveness** (`version_patched` claimed having checked only some of the
-  host's services) → the agent **gathers**: the next call is
-  `get_vulnerabilities` on the service it skipped. This is the scenario 1 set
-  piece above.
-- **Provenance** (`related_alert_corroborates` declared from a lookup that came
-  back empty) → the agent **drops the factor**, and that is the right answer.
-  The claim was unfounded; the honest fix is to stop making it, not to go
-  manufacture corroboration. Dropping here is the guard working.
-- **Contradiction** (`logs_clean` and `logs_consistent` together) → the agent
-  picks the side the evidence supports.
+Lead with the third. It is the direct answer to "isn't this just a model being
+corrected?" — a model being corrected argues, rephrases, tries the same claim in
+softer words. This one treats a refusal as a genuine constraint: it either goes
+and gets what it was missing, or it withdraws the claim. It never negotiates.
 
-The one case where dropping was the *wrong* response is the reverted
-configuration guard, and it is worth volunteering rather than hiding: there the
-claim was true and supportable, and the agent dropped it anyway because
-satisfying the guard meant filling in a schema field rather than calling a tool.
-That is what got the guard reverted — see the XFAIL section above.
+That composes with the Gate 2 finding, and the pair is the real lesson: **a
+guard whose remedy costs more than abandonment gets the claim abandoned.** The
+reverted configuration guard asked the agent to populate a schema field rather
+than call a tool, and on one run in two it dropped a claim that was true and
+supportable. Which response a refusal gets is a property of how the remedy is
+shaped, not of the agent's willingness.
+
+**If asked why identical fixtures give different counts — one line, pinned:**
+
+> The model picks its own tool sequence and declaration timing each run, so the
+> refusal count is a property of the trajectory, not of the fixtures.
+
+Volunteer that rather than concede it: it turns the most variable number in the
+project into evidence for dynamic action selection, the characteristic with the
+weakest independent support. Family mix moves the same way and for the same
+reason — provenance 6 / contradiction 3 / exhaustiveness 2 one run, 8 / 2 / 4
+the next. What does not move is which response each family deserves.
 
 The three shapes it refuses, worth naming because they are different failures:
 **exhaustiveness** (claiming "outside ALL ranges" having checked some),

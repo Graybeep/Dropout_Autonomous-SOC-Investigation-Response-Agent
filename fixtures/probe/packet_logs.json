@@ -1,0 +1,16 @@
+{
+  "ALERT-P001": {
+    "alert_id": "ALERT-P001",
+    "bytes_to_server": 3140,
+    "bytes_to_client": 3181902,
+    "duration_ms": 144200,
+    "tls": false,
+    "protocol_anomalies": [
+      "pgsql_response_size_outlier",
+      "bulk_transfer_outside_window"
+    ],
+    "exfil_indicators": true,
+    "payload_entropy": 7.6,
+    "notes": "3.0 MB returned to an external host over 144 seconds against a 5432 listener. Roughly 900x the 30-day median for this asset. Entropy consistent with CSV record export."
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "SRV-RPT-31": {
+    "asset_id": "SRV-RPT-31",
+    "hostname": "analytics-rpt-31.corp.local",
+    "ip": "10.40.6.31",
+    "criticality": "critical",
+    "os_version": "Debian 11.7",
+    "service_versions": {
+      "postgres": "13.4",
+      "openssh": "8.9p1"
+    },
+    "role": "Reporting warehouse",
+    "last_patch_date": "2024-05-02"
+  }
+}

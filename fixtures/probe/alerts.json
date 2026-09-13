@@ -1,0 +1,16 @@
+{
+  "_readme": "PROBE fixture. Scenario 2's SHAPE with every surface detail permuted. Never loaded by run_all.py.",
+  "ALERT-P001": {
+    "id": "ALERT-P001",
+    "timestamp": "2026-09-11T22:14:07Z",
+    "signature": "ET WEB_SERVER Possible SQL Injection - stacked query terminator in parameter",
+    "sid": 2011037,
+    "src_ip": "203.0.113.77",
+    "dst_ip": "10.40.6.31",
+    "dst_port": 5432,
+    "protocol": "TCP",
+    "asset_id": "SRV-RPT-31",
+    "severity_label": "critical",
+    "sensor": "suricata-edge-07"
+  }
+}
