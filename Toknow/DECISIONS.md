@@ -2338,3 +2338,40 @@ Unchanged by the restyle, and re-verified after it: the rail markers still
 carry shape as well as hue (L-5), refusals still render inline (N-21),
 `prefers-reduced-motion` still short-circuits, 82 steps render on scenario 3,
 105/105 offline, 22/22 guardrail.
+
+**N-27. The palette swap was not a redesign, and the owner said so.** The first
+pass changed tokens only - same header bar, same single column of cards - so it
+"looked the same". Correct diagnosis: a repaint is not a redesign. The second
+pass restructured the shell.
+
+The gallery could not supply that shell. All 39 uupm demos are **marketing
+pages**, including the one called "SaaS Analytics Dashboard" - it is a landing
+page *for* a dashboard product, with a hero and a pricing section. The only
+reusable pattern was its KPI grid (auto-fit cards, 12-16px gap). The app shell
+itself - fixed sidebar, sticky topbar, KPI row, panelled content - is standard
+SaaS structure built on the DevKit tokens, not lifted.
+
+What changed structurally: the `<select>` became a sidebar nav with per-scenario
+outcome badges; a six-figure KPI row was added (outcome, confidence, evidence
+calls, guard refusals, reconsiderations, wall clock) with every figure derived
+from the trace rather than written down; cases and the timeline each moved into
+a titled panel; case cards went from stacked key-over-value to compact rows.
+
+**P-030. I duplicated a colour mapping and inverted it.** The new sidebar badge
+carried its own `{SUCCEEDED:"ok", FAILED:"bad"}` table, which is backwards here -
+SUCCEEDED means the ATTACK succeeded, so it is the bad news and FAILED is the
+good news, exactly as `outcomePill` had it. For one commit the sidebar said
+green SUCC while the case pill two inches away said red SUCCEEDED.
+
+The fix is the lesson: `outcomeKind(o)` is now the single source and both the
+pill and the badge derive from it. The bug was not the inverted table, it was
+having a second table at all. Same shape as P-020 (copied source drifting from
+its original).
+
+**N-28. Long expectation notes collapse.** Scenario 7's notes are a full
+diagnosis paragraph; rendered inline they buried the summary under a grey wall
+and dominated the page. Anything over 220 characters now sits behind a
+"why this is declared" disclosure. Measured after the restructure, all new
+chrome clears AA: stat values 14.26, stat labels 5.29, nav idle 7.81, nav
+active 14.64, panel headers 5.52, case keys 5.29, breadcrumb 15.32. External
+requests still `[]`.

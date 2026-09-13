@@ -50,18 +50,24 @@
   button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:650}
   .grow{flex:1}
 
-  .meta{max-width:1080px;margin:22px auto 0;padding:0 22px}
+  .meta{margin:0}
   .summary{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
-    border-radius:var(--r);padding:14px 16px;color:var(--dim);font-size:13.5px}
+    border-radius:var(--r);padding:13px 15px;color:var(--dim);font-size:13px;margin-top:14px}
   .summary b{color:var(--ink)}
 
-  .verdicts{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+  .verdicts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
   .verdict{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
     padding:11px 14px;min-width:172px;flex:1}
   .verdict .k{font-size:10.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2)}
   .verdict .v{font-size:19px;font-weight:600;margin-top:3px;letter-spacing:-.3px}
+  .vhd{display:flex;align-items:center;gap:9px;padding-bottom:8px;margin-bottom:8px;
+    border-bottom:1px solid var(--line)}
+  .vid{font-size:11.5px;color:var(--dim);letter-spacing:.3px}
+  .vr{display:flex;align-items:baseline;gap:10px;padding:2.5px 0}
+  .vk{flex:0 0 84px;font-size:10px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2)}
+  .vv{font-size:12.5px;color:var(--ink)}
 
-  main{max-width:1080px;margin:0 auto;padding:22px 22px 120px}
+  main{min-width:0}
   .tl{position:relative;padding-left:30px}
   .tl::before{content:"";position:absolute;left:9px;top:6px;bottom:6px;width:2px;background:var(--line)}
 
@@ -165,27 +171,114 @@
   .mdh{display:block;color:var(--ink);font-weight:650;margin-top:4px}
   .case-tag{margin-left:auto;font-size:10.5px;color:var(--dim2);letter-spacing:.5px}
   .empty{color:var(--dim2);text-align:center;padding:60px 20px}
+  /* ---- SaaS app shell -------------------------------------------------
+     The uupm gallery demos are all marketing pages, so there was no app
+     layout to lift; this is the standard SaaS shell (fixed sidebar nav,
+     sticky topbar, KPI row, panelled content) built on the DevKit OLED
+     tokens above. The KPI grid is the one pattern taken from the gallery's
+     SaaS Analytics demo (4-up auto-fit cards, 12-16px gap). */
+  .app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+
+  .sidebar{background:#080808;border-right:1px solid var(--line);position:sticky;
+    top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+  .brand{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;
+    align-items:center;gap:10px}
+  .brand .dot{flex:0 0 9px;height:9px;background:var(--accent);border-radius:2px;
+    box-shadow:0 0 10px rgba(57,255,20,.5)}
+  .brand .bt{font-weight:600;font-size:13.5px;letter-spacing:-.2px;line-height:1.25}
+  .brand .bs{display:block;color:var(--dim2);font-weight:400;font-size:10.5px;
+    letter-spacing:.5px;text-transform:uppercase}
+  .nav-label{padding:15px 18px 7px;font-size:10px;letter-spacing:1.1px;
+    text-transform:uppercase;color:var(--dim2)}
+  .nav{padding:0 10px;flex:1}
+  .nav a{display:flex;gap:9px;align-items:center;padding:7px 9px;border-radius:var(--r);
+    color:var(--dim);text-decoration:none;font-size:12.5px;margin-bottom:2px;
+    border:1px solid transparent}
+  .nav a:hover{background:#131313;color:var(--ink)}
+  .nav a.active{background:#131313;color:var(--ink);border-color:var(--line)}
+  .nav a.active .n{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .nav .n{flex:0 0 19px;height:19px;display:grid;place-items:center;font-size:10.5px;
+    font-weight:650;border:1px solid var(--line);border-radius:4px;color:var(--dim2)}
+  .nav .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .nav .b{font-size:9px;letter-spacing:.4px;padding:1px 5px;border-radius:3px;
+    font-weight:700;border:1px solid transparent}
+  .sidebar-foot{padding:11px 18px;border-top:1px solid var(--line);font-size:10.5px;
+    color:var(--dim2);line-height:1.6}
+
+  .main-col{min-width:0;display:flex;flex-direction:column}
+  .topbar{position:sticky;top:0;z-index:20;background:rgba(13,13,13,.95);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+    padding:11px 24px;display:flex;gap:11px;align-items:center;flex-wrap:wrap}
+  .crumb{font-size:13.5px;font-weight:600;letter-spacing:-.2px}
+  .crumb i{color:var(--dim2);font-style:normal;font-weight:400}
+  .content{padding:20px 24px 120px;width:100%;max-width:1160px}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+    padding:12px 14px}
+  .stat .k{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--dim2)}
+  .stat .v{font-size:19px;font-weight:600;margin-top:5px;letter-spacing:-.4px}
+  .stat .s{font-size:11px;color:var(--dim2);margin-top:3px}
+
+  .panel{background:#111111;border:1px solid var(--line);border-radius:var(--r);margin-top:14px}
+  .panel-hd{padding:11px 16px;border-bottom:1px solid var(--line);font-size:10.5px;
+    letter-spacing:1.1px;text-transform:uppercase;color:var(--dim2);
+    display:flex;align-items:center;gap:9px}
+  .panel-hd .grow{flex:1}
+  .panel-bd{padding:16px}
+
+  @media(max-width:900px){
+    .app{grid-template-columns:1fr}
+    .sidebar{position:static;height:auto}
+    .nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px}
+    .sidebar-foot{display:none}
+  }
   @media(max-width:640px){.side{grid-template-columns:1fr}select{min-width:0;width:100%}}
 </style>
 </head>
 <body>
-<header>
-  <div class="bar">
-    <h1>SOC Agent <span>/ trace replay</span></h1>
-    <select id="pick"></select>
-    <button id="play" class="primary">Play</button>
-    <button id="all">Show all</button>
-    <button id="reset">Reset</button>
-    <span class="grow"></span>
-    <span id="count" class="mono" style="color:var(--dim2);font-size:12px"></span>
-  </div>
-</header>
+<div class="app">
 
-<div class="meta">
-  <div id="summary" class="summary"></div>
-  <div id="verdicts" class="verdicts"></div>
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="dot"></span>
+      <span class="bt">SOC Agent<span class="bs">trace replay</span></span>
+    </div>
+    <div class="nav-label">Scenarios</div>
+    <nav id="nav" class="nav"></nav>
+    <div class="sidebar-foot" id="foot"></div>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <span class="crumb" id="crumb">&nbsp;</span>
+      <span class="grow"></span>
+      <button id="play" class="primary">Play</button>
+      <button id="all">Show all</button>
+      <button id="reset">Reset</button>
+      <span id="count" class="mono" style="color:var(--dim2);font-size:12px"></span>
+    </header>
+
+    <div class="content">
+      <div id="stats" class="stats"></div>
+      <div class="meta">
+        <div id="summary" class="summary"></div>
+      </div>
+
+      <section class="panel">
+        <div class="panel-hd">Cases</div>
+        <div class="panel-bd"><div id="verdicts" class="verdicts"></div></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-hd">Investigation timeline<span class="grow"></span>
+          <span id="tlmeta"></span></div>
+        <div class="panel-bd"><main><div id="tl" class="tl"></div></main></div>
+      </section>
+    </div>
+  </div>
+
 </div>
-<main><div id="tl" class="tl"></div></main>
 
 <!-- Motion, vendored rather than pulled from a CDN. The demo runs from a local
      http.server and may have no internet; a CDN miss would leave `Motion`
@@ -248,14 +341,52 @@ function enter(el, i = 0) {
                   "0 0 0 0 rgba(220,38,38,0)"] }, { duration: 1.1 });
 }
 
-const pick = $("pick");
-SCENARIOS.forEach(([k, label]) => pick.add(new Option(label, k)));
+// Sidebar nav replaces the old <select>. Badges are filled in lazily after
+// the first trace renders (fillBadges), so a slow prefetch can never delay
+// the page the demo actually opens on.
+const SHORT = {
+  "1":"False alarm, patched", "2":"True positive, unpatched",
+  "3":"Delayed evidence", "4":"Human override",
+  "5":"Multi-alert correlation", "6":"Tool failure recovery",
+  "7":"Configuration prevents"
+};
+$("nav").innerHTML = SCENARIOS.map(([k]) =>
+  `<a href="#${k}" data-k="${k}"><span class="n">${k}</span>
+   <span class="t">${esc(SHORT[k] || "Scenario " + k)}</span>
+   <span class="b" data-badge="${k}"></span></a>`).join("");
 
-function outcomePill(o){
-  const k = o === "SUCCEEDED" ? "bad" : o === "FAILED" ? "ok"
-          : o === "INCONCLUSIVE" ? "warn" : "dim";
-  return pill(o, k);
+function setActive(k){
+  $("nav").querySelectorAll("a").forEach(a =>
+    a.classList.toggle("active", a.dataset.k === k));
 }
+
+const BADGE_TEXT = {SUCCEEDED:"SUCC", FAILED:"FAIL", INCONCLUSIVE:"INC"};
+async function fillBadges(){
+  for (const [k] of SCENARIOS){
+    try {
+      const r = await fetch(`traces/scenario_${k}.json`);
+      if (!r.ok) continue;
+      const d = await r.json();
+      const c = (d.cases || [])[0];
+      const o = c?.conclusions?.[c.conclusions.length - 1]?.outcome;
+      const el = $("nav").querySelector(`[data-badge="${k}"]`);
+      if (BADGE_TEXT[o] && el){
+        el.textContent = BADGE_TEXT[o];
+        el.style.color = `var(--${outcomeKind(o)})`;
+        el.style.borderColor = `var(--${outcomeKind(o)})`;
+      }
+    } catch (e) { /* a missing trace just leaves the badge blank */ }
+  }
+}
+
+// SUCCEEDED means the ATTACK succeeded, so it is the bad news and FAILED is
+// the good news. Everything that colours an outcome derives it from here -
+// the sidebar badge originally duplicated this mapping and inverted it.
+function outcomeKind(o){
+  return o === "SUCCEEDED" ? "bad" : o === "FAILED" ? "ok"
+       : o === "INCONCLUSIVE" ? "warn" : "dim";
+}
+function outcomePill(o){ return pill(o, outcomeKind(o)); }
 
 function argsOf(a){
   if (!a) return "";
@@ -474,32 +605,79 @@ async function load(key){
       <code>fetch</code> on <code>file://</code> URLs).`;
     $("tl").innerHTML = `<div class="empty">no trace loaded</div>`;
     $("count").textContent = "";
+    $("stats").innerHTML = "";
+    $("crumb").innerHTML = `Scenario ${esc(key)} <i>&middot; trace missing</i>`;
     return;
   }
 
   const meta = (data.steps || []).find(s => s.kind === "scenario_meta");
+  // Expectation notes run to a paragraph on the scenarios that need one
+  // (scenario 7 is a full diagnosis). Inline, that buries the summary under a
+  // grey wall, so anything long collapses behind a disclosure.
+  const exp = meta?.expectation;
+  const notes = exp?.notes || "";
+  const expHtml = !exp ? "" : (notes.length > 220
+    ? `<details style="margin-top:6px"><summary>Expected: ${esc(exp.outcome)}
+         &middot; why this is declared</summary>
+       <div style="color:var(--dim2);margin-top:6px">${esc(notes)}</div></details>`
+    : `<br><span style="color:var(--dim2)">Expected: ${esc(exp.outcome)}${
+         notes ? " &middot; " + esc(notes) : ""}</span>`);
+
   $("summary").innerHTML = `<b>${esc(data.title || "")}</b><br>${esc(data.summary || "")}
-    ${meta?.expectation ? `<br><span style="color:var(--dim2)">Expected: ${
-      esc(meta.expectation.outcome)} &middot; ${meta.expectation.notes
-      ? esc(meta.expectation.notes) : ""}</span>` : ""}
+    ${expHtml}
     ${data.error ? `<br><span style="color:var(--bad)">Run error: ${esc(data.error)}</span>` : ""}`;
 
   $("verdicts").innerHTML = (data.cases || []).map(c => {
     const last = c.conclusions?.[c.conclusions.length - 1];
     const act = (c.actions || []).map(a =>
       a.action + (a.precautionary ? " (precautionary)" : "")).join(", ") || "none";
-    return `<div class="verdict"><div class="k">${esc(c.case_id)}</div>
-      <div class="v">${last ? outcomePill(last.outcome) : pill("no conclusion","dim")}</div>
-      <div class="k" style="margin-top:7px">status</div>
-      <div style="font-size:13px">${esc(c.status)}</div>
-      <div class="k" style="margin-top:7px">action</div>
-      <div style="font-size:13px">${esc(act)}</div>
-      ${c.degraded_sources?.length ? `<div class="k" style="margin-top:7px">degraded</div>
-        <div style="font-size:13px;color:var(--bad)">${esc(c.degraded_sources.join(", "))}</div>` : ""}
+    const row = (k, v, color) =>
+      `<div class="vr"><span class="vk">${k}</span>
+       <span class="vv"${color ? ` style="color:${color}"` : ""}>${v}</span></div>`;
+    return `<div class="verdict">
+      <div class="vhd"><span class="vid mono">${esc(c.case_id)}</span>
+        ${last ? outcomePill(last.outcome) : pill("no conclusion","dim")}</div>
+      ${row("status", esc(c.status))}
+      ${row("action", esc(act))}
+      ${last ? row("confidence",
+        `${Number(last.confidence).toFixed(2)} <span style="color:var(--dim2)">/ score ${
+          Number(last.score).toFixed(2)}</span>`) : ""}
+      ${c.degraded_sources?.length
+        ? row("degraded", esc(c.degraded_sources.join(", ")), "var(--bad)") : ""}
     </div>`;
   }).join("");
 
   steps = data.steps || [];
+
+  // KPI row. Every figure is derived from the trace, never hardcoded.
+  const calls    = steps.filter(x => x.kind === "tool_call" && x.tool !== "submit_assessment").length;
+  const refusals = steps.filter(x => x.kind === "tool_result" && x.status === "rejected").length;
+  const recons   = steps.filter(x => x.kind === "reconsider").length;
+  const secs     = steps.length ? steps[steps.length - 1].t : 0;
+  const c0       = (data.cases || [])[0];
+  const concl    = c0?.conclusions?.[c0.conclusions.length - 1];
+  const degraded = [...new Set((data.cases || []).flatMap(c => c.degraded_sources || []))];
+
+  $("stats").innerHTML = [
+    [`Outcome`, concl ? outcomePill(concl.outcome) : pill("none","dim"),
+      (data.cases || []).length > 1 ? `${data.cases.length} cases` : (c0?.case_id || "")],
+    [`Confidence`, concl ? Number(concl.confidence).toFixed(2) : "&mdash;",
+      concl ? `score ${Number(concl.score).toFixed(2)}` : ""],
+    [`Evidence calls`, calls, `${steps.length} trace steps`],
+    [`Guard refusals`, refusals,
+      refusals ? "resolved before concluding" : "none on this case"],
+    [`Reconsiderations`, recons, recons ? "case re-opened" : "single pass"],
+    [`Wall clock`, `${secs.toFixed(1)}s`,
+      degraded.length ? `degraded: ${esc(degraded.join(", "))}` : "no source failed"],
+  ].map(([k, v, sub]) =>
+    `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div>
+     <div class="s">${sub || "&nbsp;"}</div></div>`).join("");
+
+  $("crumb").innerHTML = `${esc(data.title || "Scenario " + key)}
+    <i>&middot; scenario ${esc(key)}</i>`;
+  $("tlmeta").innerHTML = `<span style="color:var(--dim2);font-size:10.5px">${
+    steps.length} steps</span>`;
+
   paint();
   // Show the whole trace by default. Opening on an empty timeline (with the
   // hidden steps still occupying layout) reads as a broken page; Play restarts
@@ -514,13 +692,19 @@ function fromHash() {
   const k = location.hash.replace("#", "");
   return SCENARIOS.some(([v]) => v === k) ? k : SCENARIOS[0][0];
 }
-pick.onchange = () => { location.hash = pick.value; load(pick.value); };
+
 addEventListener("hashchange", () => {
   const k = fromHash();
-  if (k !== pick.value) { pick.value = k; load(k); }
+  if (k !== current) { current = k; setActive(k); load(k); }
 });
-pick.value = fromHash();
-load(pick.value);
+$("foot").innerHTML =
+  `<b style="color:var(--dim)">${SCENARIOS.length} scenarios</b><br>` +
+  `traces replayed from disk<br>` +
+  `<span style="color:var(--dim2)">no model runs in this view</span>`;
+
+let current = fromHash();
+setActive(current);
+load(current).then(fillBadges);
 </script>
 </body>
 </html>
