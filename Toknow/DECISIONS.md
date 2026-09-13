@@ -2285,3 +2285,56 @@ fresh clone reports 99/99 offline checks, the working tree reports 105/105. The
 six extra are the `scoring/` copy-drift checks, and `scoring/` is gitignored
 (N-7), so they cannot run in a clone. Recorded because the obvious reading is
 that one of the two numbers is stale.
+
+---
+
+## Part 23 - Viewer restyle #2: Dark Mode (OLED) + Minimalism
+
+**N-23. The owner rejected the Part 17 style and picked a template directly.**
+Part 17 resolved the style from the UI/UX Pro Max *database* (query returned
+Minimalism & Swiss Style) and deliberately rejected the gallery's showcase
+looks. The owner asked instead for a template from the gallery at
+`uupm.cc/#how-it-works` and chose **Developer Tools - Dark Mode (OLED) +
+Minimalism** over a data-dense trading dashboard and a Cyberpunk/Glass option.
+Recorded because it reverses L-1's reasoning, and the reversal was the owner's
+call, not a drift.
+
+**N-24. Tokens were read off the rendered demo, not eyeballed from a
+screenshot.** `getComputedStyle` against `uupm.cc/demo/developer-tools`:
+
+| token | value | source |
+|---|---|---|
+| ground | `#0D0D0D` | demo hero background |
+| panel | `#1E1E1E` | demo chip/card background |
+| text | `#E4E4E7` | zinc-200 |
+| muted | `#71717A` | zinc-500 |
+| accent | `#39FF14` on `#000` | primary button bg + fg |
+| radius | `6px` | primary button |
+| heading | IBM Plex Sans 600 | demo `h1` |
+
+**N-25. Two deliberate departures from the template, both because it is a
+landing page.** Its airy hero spacing was not adopted - a 43-step trace needs
+Swiss density, and adopting the hero rhythm would have pushed the timeline off
+the fold. And neon green is reserved for brand, interaction and tool calls;
+semantic states use the **Dracula set the demo itself uses in its code block**
+(`#FF5555` / `#50FA7B` / `#F1FA8C` / `#BD93F9` / `#8BE9FD`). Without that split,
+"this failed" and "this is a button" would have been the same green.
+
+**P-029. The template's own muted token failed AA here.** `#71717A` on the
+`#161616` card ground measures **3.74:1**, under 4.5 for the uppercase micro
+labels it colours. Lifted to `#8A8A94` -> **5.29:1**. Caught by computing
+contrast in the page rather than looking at it, which is the same method as
+L-4 and P-022. Post-change measurements on the live page: body text 14.26,
+dim 7.06, labels 5.29, refusal text 14.32, neon chip 12.30, negative deltas
+5.76, positive deltas 13.19, reconsideration fork 7.41.
+
+**N-26. Zero external references preserved (L-2 still holds).** IBM Plex Sans
+is named first in the stack and degrades to the system sans - no webfont is
+fetched. Verified in-page rather than asserted:
+`performance.getEntriesByType('resource')` filtered to non-same-origin returns
+`[]`. The only subresource remains `vendor/motion.js`.
+
+Unchanged by the restyle, and re-verified after it: the rail markers still
+carry shape as well as hue (L-5), refusals still render inline (N-21),
+`prefers-reduced-motion` still short-circuits, 82 steps render on scenario 3,
+105/105 offline, 22/22 guardrail.
