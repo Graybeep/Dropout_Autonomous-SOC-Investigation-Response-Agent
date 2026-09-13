@@ -298,8 +298,8 @@ const SCENARIOS = [
 ];
 
 const $ = id => document.getElementById(id);
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c =>
-  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const pill = (t, k) => `<span class="pill p-${k}">${esc(t)}</span>`;
 
 // The model writes light markdown in its prose (**bold**, `code`). Render just
@@ -501,7 +501,8 @@ function render(s){
     const ok = s.matches_policy;
     return `<div class="lbl">Verification ${pill(ok?"matches policy":"MISMATCH", ok?"ok":"bad")}${tag}</div>
       <div class="reason">Re-read firewall state from disk for <b>${esc(s.ip)}</b>:
-        expected blocked <b>${s.expected_blocked}</b>, observed <b>${s.blocked_after}</b>.</div>
+        expected blocked <b>${esc(s.expected_blocked)}</b>,
+        observed <b>${esc(s.blocked_after)}</b>.</div>
       ${s.record?`<div class="reason mono" style="font-size:12px">rule: ${esc(s.record.rule)}
         ${s.record.precautionary?pill("precautionary","warn"):""}</div>`:""}`;
   }
@@ -544,7 +545,9 @@ function paint(){
     const html = render(s);
     if (html === null) return;
     const d = document.createElement("div");
-    d.className = `step k-${s.kind}`;
+    // s.kind reaches the class attribute, so constrain it to the character set a
+    // kind can legitimately use rather than trusting whatever the file contains.
+    d.className = `step k-${String(s.kind || "unknown").replace(/[^a-z0-9_-]/gi, "")}`;
     // The guard refusal is the demo's set piece - flag it so it gets the one
     // extra animation the motion budget allows.
     if (s.kind === "tool_result" && s.status === "rejected") d.dataset.refused = "1";
