@@ -268,6 +268,12 @@
       "raw": "Query SELECT id,title FROM hr_public.notices WHERE id=7 UNION SELECT name,salary FROM hr_salary"
     },
     {
+      "ts": "2026-09-11T07:31:06Z",
+      "source": "mysql/error",
+      "event_type": "db_error",
+      "raw": "ERROR 1142 (42000): SELECT command denied to user 'hr_portal_ro'@'10.20.4.11' for table 'hr_salary'. Statement returned 0 rows to the caller."
+    },
+    {
       "ts": "2026-09-11T07:31:41Z",
       "source": "apache/access",
       "event_type": "http_request",
@@ -280,10 +286,22 @@
       "raw": "Query SELECT id,title FROM hr_public.notices WHERE id=7 UNION SELECT user,authentication_string FROM mysql.user"
     },
     {
+      "ts": "2026-09-11T07:31:42Z",
+      "source": "mysql/error",
+      "event_type": "db_error",
+      "raw": "ERROR 1142 (42000): SELECT command denied to user 'hr_portal_ro'@'10.20.4.11' for table 'user'. Statement returned 0 rows to the caller."
+    },
+    {
       "ts": "2026-09-11T07:32:20Z",
       "source": "mysql/general",
       "event_type": "db_query",
       "raw": "Query SELECT id,title FROM hr_public.notices WHERE id=7 UNION SELECT name,salary FROM hr_salary"
+    },
+    {
+      "ts": "2026-09-11T07:32:20Z",
+      "source": "mysql/error",
+      "event_type": "db_error",
+      "raw": "ERROR 1142 (42000): SELECT command denied to user 'hr_portal_ro'@'10.20.4.11' for table 'hr_salary'. Statement returned 0 rows to the caller."
     }
   ]
 }

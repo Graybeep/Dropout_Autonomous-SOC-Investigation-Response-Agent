@@ -1,0 +1,90 @@
+Model: ling-3.0-flash-fin-free  via https://router.bynara.id/v1 (style: openai)
+
+--- Scenario 1: False alarm, patched host
+    [PASS] outcome 'FAILED' == 'FAILED'
+    [PASS] action_fired False == False
+    [PASS] reconsideration_fired False == False
+    [PASS] expected tools called (missing: none)
+    [PASS] status 'CONCLUDED' == 'CONCLUDED'
+    [PASS] get_vulnerabilities(service_name='mysql') was called before concluding
+    [PASS] required factors established (missing: none)
+    [PASS] firewall verification matches policy
+
+--- Scenario 2: True positive, unpatched host
+    [PASS] outcome 'SUCCEEDED' == 'SUCCEEDED'
+    [PASS] action_fired True == True
+    [PASS] reconsideration_fired False == False
+    [PASS] expected tools called (missing: none)
+    [PASS] status 'CONCLUDED' == 'CONCLUDED'
+    [PASS] precautionary False == False
+    [PASS] firewall verification matches policy
+
+--- Scenario 3: Delayed evidence, re-hypothesise
+    [PASS] outcome 'SUCCEEDED' == 'SUCCEEDED'
+    [PASS] action_fired True == True
+    [PASS] reconsideration_fired True == True
+    [PASS] expected tools called (missing: none)
+    [PASS] status 'CONCLUDED' == 'CONCLUDED'
+    [PASS] get_vulnerabilities(service_name='mysql') was called before concluding
+    [PASS] get_asset_info(asset_id='SRV-DB-09') was called
+    [PASS] gathered NEW evidence after reconsidering (23 tool calls, not a bare re-score)
+    [PASS] initial outcome 'INCONCLUSIVE' == 'INCONCLUSIVE'
+    [PASS] required factors established (missing: none)
+    [PASS] firewall verification matches policy
+
+--- Scenario 4: Human override
+    [PASS] outcome 'SUCCEEDED' == 'SUCCEEDED'
+    [PASS] action_fired True == True
+    [PASS] reconsideration_fired True == True
+    [PASS] expected tools called (missing: none)
+    [PASS] status 'OVERRIDDEN_BENIGN' == 'OVERRIDDEN_BENIGN'
+    [PASS] firewall verification matches policy
+
+--- Scenario 5: Multi-alert correlation
+    [PASS] outcome 'SUCCEEDED' == 'SUCCEEDED'
+    [PASS] action_fired True == True
+    [PASS] reconsideration_fired True == True
+    [PASS] expected tools called (missing: none)
+    [PASS] status 'CONCLUDED' == 'CONCLUDED'
+    [PASS] get_related_alerts(asset_id='SRV-WEB-04') was called before concluding in CASE-5002
+    [PASS] gathered NEW evidence after reconsidering (15 tool calls, not a bare re-score)
+    [PASS] initial outcome 'INCONCLUSIVE' == 'INCONCLUSIVE'
+    [PASS] firewall verification matches policy
+
+--- Scenario 6: Tool failure, degraded recovery
+    [PASS] outcome 'INCONCLUSIVE' == 'INCONCLUSIVE'
+    [PASS] action_fired True == True
+    [PASS] reconsideration_fired False == False
+    [PASS] expected tools called (missing: none)
+    [PASS] status 'CONCLUDED' == 'CONCLUDED'
+    [PASS] precautionary True == True
+    [PASS] get_packet_metadata(alert_id='ALERT-6001') was called
+    [PASS] get_server_logs called >=2x before concluding (got 3)
+    [PASS] required factors established (missing: none)
+    [PASS] firewall verification matches policy
+
+--- Scenario 7: Configuration prevents exploitation
+    [FAIL] outcome 'INCONCLUSIVE' == 'FAILED'
+    [PASS] action_fired False == False
+    [PASS] reconsideration_fired False == False
+    [PASS] expected tools called (missing: none)
+    [PASS] status 'CONCLUDED' == 'CONCLUDED'
+    [PASS] get_vulnerabilities(service_name='mysql') was called before concluding
+    [PASS] get_configuration(asset_id='SRV-HR-11') was called before concluding
+    [PASS] firewall verification matches policy
+
+==============================================================================
+Scenario  Title                             Checks      Result
+------------------------------------------------------------------------------
+1         False alarm, patched host         8/8         PASS
+2         True positive, unpatched host     7/7         PASS
+3         Delayed evidence, re-hypothesise  11/11       PASS
+4         Human override                    6/6         PASS
+5         Multi-alert correlation           9/9         PASS
+6         Tool failure, degraded recovery   10/10       PASS
+7         Configuration prevents exploitat  7/8         FAIL
+==============================================================================
+
+Traces  -> D:\EXPERIMENTS\Autonomous SOC Investigation & Response Agent\traces
+Reports -> D:\EXPERIMENTS\Autonomous SOC Investigation & Response Agent\reports
+Viewer  -> open viewer.html and pick a scenario

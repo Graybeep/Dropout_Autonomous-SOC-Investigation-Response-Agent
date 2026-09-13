@@ -39,6 +39,10 @@ class ToolBus:
         self.services_checked: set[str] = set()
         # Scope tracking for the universal/provenance guards on the negatives.
         self.packet_alerts: set[str] = set()
+        # Surfaces get_configuration returned per asset, so the universal
+        # claim config_prevents_exploitation can be checked for universal
+        # coverage. See confidence.check_config_surface_coverage.
+        self.config_surfaces: dict[str, list[str]] = {}
         self.log_windows: list[str | None] = []
         # Related alerts this case has actually been told about, with their
         # timestamps and any stored verdict. Once these are known, "the
@@ -88,6 +92,14 @@ class ToolBus:
                       if not k.startswith("_")]
                 problems += confidence.check_version_patched_coverage(
                     self.asset_services, self.services_checked, kb)
+            if "config_prevents_exploitation" in declared:
+                aid = self.ctx.get("asset_id", "")
+                accounted: set[str] = set()
+                for f in args.get("factors", []):
+                    if f.get("factor") == "config_prevents_exploitation":
+                        accounted |= {str(x) for x in (f.get("surfaces_accounted") or [])}
+                problems += confidence.check_config_surface_coverage(
+                    aid, self.config_surfaces.get(aid, []), accounted)
             case_alert = self.ctx.get("alert_id", "")
             alert_rec = sandbox.read_json(config.ALERTS).get(case_alert) or {}
             problems += confidence.check_negative_scope(
@@ -237,6 +249,11 @@ class ToolBus:
                 if a.get("asset_id"):
                     self.asset_services[a["asset_id"]] = list(
                         (a.get("service_versions") or {}).keys())
+            elif name == "get_configuration":
+                aid = result.get("asset_id")
+                if aid:
+                    self.config_surfaces[aid] = [
+                        str(su.get("surface", "")) for su in result.get("surfaces") or []]
             elif name == "get_vulnerabilities":
                 self.services_checked.add(str(result.get("service", "")).lower())
             elif name == "get_packet_metadata":

@@ -2093,3 +2093,45 @@ check_negative_scope through a regex fallback that swallowed anything unmatched.
 Both found by reading the actual refusal strings instead of trusting the
 classifier. The per-family number is the one most likely to be quoted at a
 judge, so it was worth the third pass.
+
+### P-025 - A killed run wedged the sandbox permanently (lock liveness, 4th in this family)
+
+The Gate 1 run was killed mid-scenario-3 and left `.soc_run.lock` behind. Every
+subsequent `reset_sandbox()` then died with:
+
+    SystemError: <built-in function kill> returned a result with an exception set
+
+`_pid_alive` caught `(OSError, PermissionError)`. On Windows, CPython raises
+**SystemError** - not OSError - for certain dead pids, so the exception escaped
+the except clause entirely, `_check_free` propagated it, and the line that
+removes a stale lock (`p.unlink()`) was never reached. One killed run wedged the
+sandbox for every future run, with no path to recovery short of deleting the
+file by hand.
+
+This is the fourth incident in the same family (P-014, P-017, K-3, P-025) and
+the first where the lock itself was the failure rather than its absence.
+
+Two fixes, because either alone is insufficient:
+1. `SystemError` is caught and answered **alive**. Alive/dead is genuinely
+   unknown at that point, and the asymmetry is not close: refusing to reset is
+   recoverable, wiping a live run's fixtures is not.
+2. Answering "alive" on ambiguity would wedge things forever on its own, so the
+   lock now also expires by age - `LOCK_STALE_AFTER_S = 2h`, far longer than any
+   real run. That is what guarantees eventual recovery.
+
+Verified: `_pid_alive(18912)` (the dead owner) now returns False, the stale lock
+is removed, and `reset_sandbox()` succeeds.
+
+**P-026. Two self-inflicted errors in the same Gate 1 run, recorded because both
+are process failures rather than code failures.**
+(a) `timeout 3000` killed a seven-scenario run at 50 minutes. Six scenarios took
+~20 min; seven with a larger toolset does not fit in the old budget. Re-run had
+no timeout.
+(b) The run was piped to `tail -45`, so Python block-buffered stdout and the
+kill discarded the entire buffer - traces 1 and 2 were on disk but the console
+output was lost, and the run looked like it had produced nothing while exiting
+0. Re-run used `python -u` straight to a file.
+(c) Nearly repeated K-3: started a guard-ablation subprocess while the live run
+held the sandbox. It crashed on the lock rather than wiping anything - which is
+how P-025 was found - but the correct behaviour is not to run anything against
+the sandbox during a live run, and the second attempt did not.

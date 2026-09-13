@@ -317,11 +317,16 @@ SCENARIOS: dict[str, Scenario] = {
                 ("get_configuration", "asset_id", "SRV-HR-11", "pre_conclusion"),
             ],
             final_status="CONCLUDED",
-            notes=("Stage 1 (tool only, no factor) is EXPECTED TO FAIL this "
-                   "expectation: with version_in_range and logs_consistent and no "
-                   "term for configuration, the scoring model can only reach "
-                   "SUCCEEDED. That failure is the diagnosis - it shows the "
-                   "missing term - and stage 2 adds the factor that closes it."),
+            required_factors=["config_prevents_exploitation"],
+            notes=("The outcome alone does not prove this scenario works, which is "
+                   "why config_prevents_exploitation is a REQUIRED factor. Stage 1 "
+                   "(tool present, no scoring term) already reached INCONCLUSIVE at "
+                   "0.40 - version_in_range +0.25, logs_clean -0.25, packet_benign "
+                   "-0.10 - because a UNION SELECT that returns zero rows is "
+                   "logs_clean by the schema's own definition, not logs_consistent. "
+                   "So FAILED could in principle be reached without ever consulting "
+                   "the configuration. Requiring the factor is what makes this a "
+                   "test of the four-way correlation rather than of the arithmetic."),
         ),
     ),
 }

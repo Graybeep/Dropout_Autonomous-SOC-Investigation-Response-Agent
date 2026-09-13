@@ -10,6 +10,7 @@ check_firewall_state verification loop real rather than theatre (guardrail 4).
 """
 from __future__ import annotations
 
+import datetime
 import json
 import os
 import shutil
@@ -57,6 +58,17 @@ def release() -> None:
         p.unlink()
 
 
+def _lock_age_s(started) -> float:
+    """Seconds since the lock was taken; 0.0 if the stamp is unreadable."""
+    if not isinstance(started, str):
+        return 0.0
+    try:
+        ts = datetime.datetime.strptime(started, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        return 0.0
+    return (datetime.datetime.utcnow() - ts).total_seconds()
+
+
 def _check_free(force: bool) -> None:
     p = _lock_path()
     if not p.exists() or force:
@@ -66,6 +78,9 @@ def _check_free(force: bool) -> None:
     except (OSError, json.JSONDecodeError):
         return
     if info.get("pid") == os.getpid():
+        return
+    if _lock_age_s(info.get("started")) > LOCK_STALE_AFTER_S:
+        p.unlink()  # older than any real run; the owner is not coming back
         return
     if _pid_alive(info.get("pid")):
         raise SandboxBusy(
@@ -77,14 +92,31 @@ def _check_free(force: bool) -> None:
     p.unlink()  # stale lock from a crashed run
 
 
+# A killed run leaves its lock behind. If liveness can never be resolved the
+# sandbox is wedged for every future run, so the lock also expires by age.
+# Generous: a full seven-scenario run is well under an hour.
+LOCK_STALE_AFTER_S = 2 * 3600
+
+
 def _pid_alive(pid) -> bool:
     """True if a pid is still running. Stdlib only, no psutil dependency."""
-    if not isinstance(pid, int):
+    if not isinstance(pid, int) or pid <= 0:
         return False
     try:
         os.kill(pid, 0)
-    except (OSError, PermissionError) as exc:
-        return isinstance(exc, PermissionError)
+    except PermissionError:
+        return True          # exists, owned by someone else
+    except OSError:
+        return False         # ESRCH - definitely gone
+    except SystemError:
+        # CPython on Windows raises SystemError, NOT OSError, for some dead
+        # pids. This escaped the old except clause entirely, so _check_free
+        # propagated it and the stale lock could never be removed - one killed
+        # run wedged the sandbox permanently (Toknow P-025). Alive/dead is
+        # genuinely unknown here, so answer ALIVE: refusing to reset is
+        # recoverable, wiping a live run's fixtures is not. The age expiry
+        # below is what guarantees we do not stay wedged.
+        return True
     return True
 
 

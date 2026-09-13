@@ -1,5 +1,5 @@
 {
-  "_readme": "Configuration surfaces per asset: the controls that sit between an attacker and a successful exploit. A surface is 'preventing' only when it would stop THIS class of attack. This file does not know what the alert was - it describes the host. Deciding whether a surface actually blocks the observed attack is the agent's join to make, the same way patch status is.",
+  "_readme": "Configuration surfaces per asset: the controls that sit between an attacker and a successful exploit. This file describes the HOST - it does not know what the alert was, and it does not say whether any surface stopped it. Whether a control actually blocks the observed attack is the join the agent must make and show, exactly as section 5.1 requires for patch status: the CVE KB carries no `patched` boolean and this file carries no `prevents_exploitation` boolean.",
   "SRV-WEB-01": {
     "asset_id": "SRV-WEB-01",
     "surfaces": [
@@ -7,15 +7,13 @@
         "surface": "waf",
         "kind": "web_application_firewall",
         "state": "enabled",
-        "detail": "ModSecurity CRS v3.3 in DetectionOnly mode - logs, does not block.",
-        "prevents_exploitation": false
+        "detail": "ModSecurity CRS v3.3 in DetectionOnly mode - logs, does not block."
       },
       {
         "surface": "db_account_grants",
         "kind": "database_privilege",
         "state": "broad",
-        "detail": "app_rw holds SELECT on all schemas including customers.",
-        "prevents_exploitation": false
+        "detail": "app_rw holds SELECT on all schemas including customers."
       }
     ]
   },
@@ -26,15 +24,13 @@
         "surface": "db_account_grants",
         "kind": "database_privilege",
         "state": "broad",
-        "detail": "svc_report holds SELECT on all schemas.",
-        "prevents_exploitation": false
+        "detail": "svc_report holds SELECT on all schemas."
       },
       {
         "surface": "network_egress",
         "kind": "egress_filter",
         "state": "permissive",
-        "detail": "No egress ACL on the database VLAN.",
-        "prevents_exploitation": false
+        "detail": "No egress ACL on the database VLAN."
       }
     ]
   },
@@ -45,15 +41,13 @@
         "surface": "waf",
         "kind": "web_application_firewall",
         "state": "absent",
-        "detail": "No WAF in front of the Tomcat connector.",
-        "prevents_exploitation": false
+        "detail": "No WAF in front of the Tomcat connector."
       },
       {
         "surface": "db_account_grants",
         "kind": "database_privilege",
         "state": "broad",
-        "detail": "app_rw holds SELECT on the reports schema.",
-        "prevents_exploitation": false
+        "detail": "app_rw holds SELECT on the reports schema."
       }
     ]
   },
@@ -64,15 +58,13 @@
         "surface": "waf",
         "kind": "web_application_firewall",
         "state": "disabled",
-        "detail": "ModSecurity installed but SecRuleEngine Off.",
-        "prevents_exploitation": false
+        "detail": "ModSecurity installed but SecRuleEngine Off."
       },
       {
         "surface": "db_account_grants",
         "kind": "database_privilege",
         "state": "broad",
-        "detail": "portal_app holds SELECT on portal_users.",
-        "prevents_exploitation": false
+        "detail": "portal_app holds SELECT on portal_users."
       }
     ]
   },
@@ -83,8 +75,7 @@
         "surface": "db_account_grants",
         "kind": "database_privilege",
         "state": "broad",
-        "detail": "svc_batch holds SELECT on all schemas.",
-        "prevents_exploitation": false
+        "detail": "svc_batch holds SELECT on all schemas."
       }
     ]
   },
@@ -95,15 +86,13 @@
         "surface": "waf",
         "kind": "web_application_firewall",
         "state": "enabled",
-        "detail": "Vendor WAF in DetectionOnly mode - logs, does not block.",
-        "prevents_exploitation": false
+        "detail": "Vendor WAF in DetectionOnly mode - logs, does not block."
       },
       {
         "surface": "db_account_grants",
         "kind": "database_privilege",
         "state": "broad",
-        "detail": "fin_app holds SELECT on ledger and customers.",
-        "prevents_exploitation": false
+        "detail": "fin_app holds SELECT on ledger and customers."
       }
     ]
   },
@@ -114,15 +103,13 @@
         "surface": "db_account_grants",
         "kind": "database_privilege",
         "state": "broad",
-        "detail": "repl_user holds SELECT on all schemas.",
-        "prevents_exploitation": false
+        "detail": "repl_user holds SELECT on all schemas."
       },
       {
         "surface": "network_egress",
         "kind": "egress_filter",
         "state": "permissive",
-        "detail": "No egress ACL on the database VLAN.",
-        "prevents_exploitation": false
+        "detail": "No egress ACL on the database VLAN."
       }
     ]
   },
@@ -133,22 +120,19 @@
         "surface": "waf",
         "kind": "web_application_firewall",
         "state": "detection_only",
-        "detail": "ModSecurity CRS v3.3 loaded, SecRuleEngine DetectionOnly. Rule 942100 alerts on SQLi but does NOT block; requests reach the application.",
-        "prevents_exploitation": false
+        "detail": "ModSecurity CRS v3.3 loaded, SecRuleEngine DetectionOnly. Rule 942100 alerts on SQLi but does NOT block; requests reach the application."
       },
       {
         "surface": "db_account_grants",
         "kind": "database_privilege",
         "state": "restricted",
-        "detail": "The portal connects as hr_portal_ro. Grants: SELECT on hr_public.* ONLY. hr_portal_ro holds NO privilege on hr_salary or on mysql.user. A UNION SELECT against either returns no rows to the caller regardless of syntax.",
-        "prevents_exploitation": true
+        "detail": "The portal connects as hr_portal_ro. Grants: SELECT on hr_public.* ONLY. hr_portal_ro holds NO privilege on hr_salary or on mysql.user. A UNION SELECT against either returns no rows to the caller regardless of syntax."
       },
       {
         "surface": "network_egress",
         "kind": "egress_filter",
         "state": "restrictive",
-        "detail": "Egress ACL permits 443 to the payroll vendor only. No route exists for bulk egress to an arbitrary external host.",
-        "prevents_exploitation": true
+        "detail": "Egress ACL permits 443 to the payroll vendor only. No route exists for bulk egress to an arbitrary external host."
       }
     ]
   }

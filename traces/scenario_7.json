@@ -1,0 +1,776 @@
+{
+  "case_id": "CASE-7001",
+  "scenario": "7",
+  "steps": [
+    {
+      "seq": 1,
+      "t": 0.0,
+      "kind": "scenario_meta",
+      "case_id": "CASE-7",
+      "title": "Configuration prevents exploitation",
+      "summary": "A critical SQLi signature fires against SRV-HR-11. The host runs MySQL 5.7.24, INSIDE CVE-2023-21980's range, and the logs show the injected UNION SELECT reaching the database - the WAF was in DetectionOnly and did not block. On version and logs alone this looks like scenario 2. The portal's database account holds SELECT on hr_public only and no privilege on the targeted table.",
+      "expectation": {
+        "outcome": "FAILED",
+        "action_fired": false,
+        "reconsideration_fired": false,
+        "notes": "The outcome alone does not prove this scenario works, which is why config_prevents_exploitation is a REQUIRED factor. Stage 1 (tool present, no scoring term) already reached INCONCLUSIVE at 0.40 - version_in_range +0.25, logs_clean -0.25, packet_benign -0.10 - because a UNION SELECT that returns zero rows is logs_clean by the schema's own definition, not logs_consistent. So FAILED could in principle be reached without ever consulting the configuration. Requiring the factor is what makes this a test of the four-way correlation rather than of the arithmetic."
+      }
+    },
+    {
+      "seq": 2,
+      "t": 0.0,
+      "kind": "state_change",
+      "case_id": "CASE-7001",
+      "state": "INGEST_ALERT",
+      "note": "Case CASE-7001 opened for alert ALERT-7001."
+    },
+    {
+      "seq": 3,
+      "t": 0.001,
+      "kind": "state_change",
+      "case_id": "CASE-7001",
+      "state": "HYPOTHESIZE",
+      "note": "Agent forms a hypothesis and decides what to check."
+    },
+    {
+      "seq": 4,
+      "t": 0.001,
+      "kind": "state_change",
+      "case_id": "CASE-7001",
+      "state": "GATHER_EVIDENCE",
+      "note": "Agent chooses tools at runtime; order is not scripted."
+    },
+    {
+      "seq": 5,
+      "t": 2.764,
+      "kind": "thought",
+      "case_id": "CASE-7001",
+      "text": "I'll start by pulling the alert record to understand what we're investigating, then form a hypothesis and gather evidence",
+      "turn": 1,
+      "stop_reason": "tool_calls"
+    },
+    {
+      "seq": 6,
+      "t": 2.764,
+      "kind": "tool_call",
+      "case_id": "CASE-7001",
+      "tool": "get_alert",
+      "args": {
+        "alert_id": "ALERT-7001"
+      },
+      "attempt": 1,
+      "reason": "Get the alert details: signature, source/destination IP, target asset, and severity_label to understand what kind of attack was detected and form an initial hypothesis."
+    },
+    {
+      "seq": 7,
+      "t": 2.765,
+      "kind": "tool_result",
+      "case_id": "CASE-7001",
+      "tool": "get_alert",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "alert": {
+          "id": "ALERT-7001",
+          "timestamp": "2026-09-11T07:31:04Z",
+          "signature": "ET WEB_SERVER SQL Injection UNION SELECT in URI",
+          "src_ip": "198.51.100.203",
+          "dst_ip": "10.20.4.11",
+          "asset_id": "SRV-HR-11",
+          "severity_label": "critical"
+        }
+      }
+    },
+    {
+      "seq": 8,
+      "t": 7.985,
+      "kind": "sufficiency",
+      "case_id": "CASE-7001",
+      "text": "**Initial Hypothesis**: The SQL injection attack (UNION SELECT in URI) against SRV-HR-11 **succeeded** \u2014 meaning the payload executed, returned data, and potentially exfiltrated information.\n\n**What would confirm it**: The host runs a vulnerable version of the targeted service, server logs show the malicious query actually executed and returned rows, and/or packet metadata shows significant outbound data.\n\n**What would falsify it**: The host runs a patched version, logs show the query was blocked/errored/returned zero rows, or a control (WAF, DB permissions) made exploitation impossible.\n\nLet me gather all the independent evidence sources",
+      "turn": 2,
+      "stop_reason": "tool_calls"
+    },
+    {
+      "seq": 9,
+      "t": 7.985,
+      "kind": "tool_call",
+      "case_id": "CASE-7001",
+      "tool": "get_asset_info",
+      "args": {
+        "asset_id": "SRV-HR-11"
+      },
+      "attempt": 1,
+      "reason": "Determine what service and version SRV-HR-11 is running, to check if it's vulnerable to the SQL injection signature."
+    },
+    {
+      "seq": 10,
+      "t": 7.986,
+      "kind": "tool_result",
+      "case_id": "CASE-7001",
+      "tool": "get_asset_info",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "asset": {
+          "asset_id": "SRV-HR-11",
+          "hostname": "hr-portal-11.corp.local",
+          "ip": "10.20.4.11",
+          "criticality": "high",
+          "os_version": "Ubuntu 22.04.3 LTS",
+          "service_versions": {
+            "apache": "2.4.52",
+            "mysql": "5.7.24",
+            "openssh": "8.9p1"
+          }
+        }
+      }
+    },
+    {
+      "seq": 11,
+      "t": 7.986,
+      "kind": "tool_call",
+      "case_id": "CASE-7001",
+      "tool": "get_server_logs",
+      "args": {
+        "asset_id": "SRV-HR-11"
+      },
+      "attempt": 1,
+      "reason": "Check host-side logs for evidence the SQL injection query actually executed, returned rows, or spawned processes."
+    },
+    {
+      "seq": 12,
+      "t": 8.001,
+      "kind": "tool_result",
+      "case_id": "CASE-7001",
+      "tool": "get_server_logs",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "asset_id": "SRV-HR-11",
+        "time_range": "all",
+        "entry_count": 10,
+        "entries": [
+          {
+            "ts": "2026-09-11T07:30:58Z",
+            "source": "apache/access",
+            "event_type": "http_request",
+            "raw": "198.51.100.203 - - [11/Sep/2026:07:30:58] \"GET /portal/reports?id=7 HTTP/1.1\" 200 1130"
+          },
+          {
+            "ts": "2026-09-11T07:31:04Z",
+            "source": "modsecurity",
+            "event_type": "waf_alert",
+            "raw": "[id \"942100\"] SQL Injection Attack Detected via libinjection - DetectionOnly mode, request PASSED to application, logged only."
+          },
+          {
+            "ts": "2026-09-11T07:31:05Z",
+            "source": "apache/access",
+            "event_type": "http_request",
+            "raw": "198.51.100.203 - - [11/Sep/2026:07:31:05] \"GET /portal/reports?id=7%20UNION%20SELECT%20name,salary%20FROM%20hr_salary HTTP/1.1\" 200 1130"
+          },
+          {
+            "ts": "2026-09-11T07:31:06Z",
+            "source": "mysql/general",
+            "event_type": "db_query",
+            "raw": "Query SELECT id,title FROM hr_public.notices WHERE id=7 UNION SELECT name,salary FROM hr_salary"
+          },
+          {
+            "ts": "2026-09-11T07:31:06Z",
+            "source": "mysql/error",
+            "event_type": "db_error",
+            "raw": "ERROR 1142 (42000): SELECT command denied to user 'hr_portal_ro'@'10.20.4.11' for table 'hr_salary'. Statement returned 0 rows to the caller."
+          },
+          {
+            "ts": "2026-09-11T07:31:41Z",
+            "source": "apache/access",
+            "event_type": "http_request",
+            "raw": "198.51.100.203 - - [11/Sep/2026:07:31:41] \"GET /portal/reports?id=7%20UNION%20SELECT%20user,authentication_string%20FROM%20mysql.user HTTP/1.1\" 200 1130"
+          },
+          {
+            "ts": "2026-09-11T07:31:42Z",
+            "source": "mysql/general",
+            "event_type": "db_query",
+            "raw": "Query SELECT id,title FROM hr_public.notices WHERE id=7 UNION SELECT user,authentication_string FROM mysql.user"
+          },
+          {
+            "ts": "2026-09-11T07:31:42Z",
+            "source": "mysql/error",
+            "event_type": "db_error",
+            "raw": "ERROR 1142 (42000): SELECT command denied to user 'hr_portal_ro'@'10.20.4.11' for table 'user'. Statement returned 0 rows to the caller."
+          },
+          {
+            "ts": "2026-09-11T07:32:20Z",
+            "source": "mysql/general",
+            "event_type": "db_query",
+            "raw": "Query SELECT id,title FROM hr_public.notices WHERE id=7 UNION SELECT name,salary FROM hr_salary"
+          },
+          {
+            "ts": "2026-09-11T07:32:20Z",
+            "source": "mysql/error",
+            "event_type": "db_error",
+            "raw": "ERROR 1142 (42000): SELECT command denied to user 'hr_portal_ro'@'10.20.4.11' for table 'hr_salary'. Statement returned 0 rows to the caller."
+          }
+        ]
+      }
+    },
+    {
+      "seq": 13,
+      "t": 8.001,
+      "kind": "tool_call",
+      "case_id": "CASE-7001",
+      "tool": "get_packet_metadata",
+      "args": {
+        "alert_id": "ALERT-7001"
+      },
+      "attempt": 1,
+      "reason": "Check packet-level metadata for exfiltration indicators, payload size, and whether significant data left the host."
+    },
+    {
+      "seq": 14,
+      "t": 8.003,
+      "kind": "tool_result",
+      "case_id": "CASE-7001",
+      "tool": "get_packet_metadata",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "packet_metadata": {
+          "alert_id": "ALERT-7001",
+          "protocol": "HTTP",
+          "bytes_to_server": 921,
+          "bytes_to_client": 1130,
+          "payload_entropy": 4.6,
+          "exfil_indicators": false,
+          "protocol_anomalies": [],
+          "notes": "Three injection attempts, each answered with a constant 1130-byte response identical to the benign id=7 request. Response size did not grow with the size of the requested column set."
+        }
+      }
+    },
+    {
+      "seq": 15,
+      "t": 8.003,
+      "kind": "tool_call",
+      "case_id": "CASE-7001",
+      "tool": "get_related_alerts",
+      "args": {
+        "asset_id": "SRV-HR-11"
+      },
+      "attempt": 1,
+      "reason": "Check if there are other alerts on this asset that corroborate or contradict the current alert."
+    },
+    {
+      "seq": 16,
+      "t": 8.004,
+      "kind": "tool_result",
+      "case_id": "CASE-7001",
+      "tool": "get_related_alerts",
+      "status": "no_data",
+      "result": {
+        "status": "no_data",
+        "detail": "No other alerts recorded against asset 'SRV-HR-11'.",
+        "asset_id": "SRV-HR-11"
+      }
+    },
+    {
+      "seq": 17,
+      "t": 8.004,
+      "kind": "tool_call",
+      "case_id": "CASE-7001",
+      "tool": "get_configuration",
+      "args": {
+        "asset_id": "SRV-HR-11"
+      },
+      "attempt": 1,
+      "reason": "Check WAF posture, database account grants, and egress filtering to determine if controls could have prevented exploitation."
+    },
+    {
+      "seq": 18,
+      "t": 8.005,
+      "kind": "tool_result",
+      "case_id": "CASE-7001",
+      "tool": "get_configuration",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "asset_id": "SRV-HR-11",
+        "surface_count": 3,
+        "surfaces": [
+          {
+            "surface": "waf",
+            "kind": "web_application_firewall",
+            "state": "detection_only",
+            "detail": "ModSecurity CRS v3.3 loaded, SecRuleEngine DetectionOnly. Rule 942100 alerts on SQLi but does NOT block; requests reach the application."
+          },
+          {
+            "surface": "db_account_grants",
+            "kind": "database_privilege",
+            "state": "restricted",
+            "detail": "The portal connects as hr_portal_ro. Grants: SELECT on hr_public.* ONLY. hr_portal_ro holds NO privilege on hr_salary or on mysql.user. A UNION SELECT against either returns no rows to the caller regardless of syntax."
+          },
+          {
+            "surface": "network_egress",
+            "kind": "egress_filter",
+            "state": "restrictive",
+            "detail": "Egress ACL permits 443 to the payroll vendor only. No route exists for bulk egress to an arbitrary external host."
+          }
+        ],
+        "note": "These are the controls present on the host. This source does not know which attack was attempted. To claim configuration prevented exploitation you must say which surface blocks THIS attack class and account for every surface listed above."
+      }
+    },
+    {
+      "seq": 19,
+      "t": 31.94,
+      "kind": "sufficiency",
+      "case_id": "CASE-7001",
+      "text": "Now let me check the CVE information for the services running on this host to complete the vulnerability",
+      "turn": 3,
+      "stop_reason": "tool_calls"
+    },
+    {
+      "seq": 20,
+      "t": 31.94,
+      "kind": "tool_call",
+      "case_id": "CASE-7001",
+      "tool": "get_vulnerabilities",
+      "args": {
+        "service_name": "apache"
+      },
+      "attempt": 1,
+      "reason": "Check if Apache 2.4.52 is inside any CVE's affected range, since the attack targeted a web server."
+    },
+    {
+      "seq": 21,
+      "t": 31.942,
+      "kind": "tool_result",
+      "case_id": "CASE-7001",
+      "tool": "get_vulnerabilities",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "service": "apache",
+        "cves": [
+          {
+            "cve_id": "CVE-2021-41773",
+            "affected_versions": ">=2.4.49,<=2.4.50",
+            "fixed_in": "2.4.51",
+            "cvss": 7.5,
+            "attack_class": "path_traversal",
+            "description": "Path traversal and file disclosure in Apache HTTP Server 2.4.49/2.4.50 when files outside the document root are not protected by 'require all denied'."
+          }
+        ],
+        "note": "This knowledge base does not know which version any host is running. To decide whether a host is affected, compare that host's running version (from get_asset_info) against affected_versions above."
+      }
+    },
+    {
+      "seq": 22,
+      "t": 31.942,
+      "kind": "tool_call",
+      "case_id": "CASE-7001",
+      "tool": "get_vulnerabilities",
+      "args": {
+        "service_name": "mysql"
+      },
+      "attempt": 2,
+      "reason": "Check if MySQL 5.7.24 is inside any CVE's affected range, since the attack targeted MySQL queries."
+    },
+    {
+      "seq": 23,
+      "t": 31.942,
+      "kind": "tool_result",
+      "case_id": "CASE-7001",
+      "tool": "get_vulnerabilities",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "service": "mysql",
+        "cves": [
+          {
+            "cve_id": "CVE-2023-21980",
+            "affected_versions": ">=5.7.0,<5.7.30",
+            "fixed_in": "5.7.30",
+            "cvss": 9.8,
+            "attack_class": "sql_injection",
+            "description": "Improper neutralisation of crafted UNION payloads in the MySQL Server parser component. Permits authentication bypass and arbitrary read of arbitrary tables by an unauthenticated remote attacker."
+          },
+          {
+            "cve_id": "CVE-2022-21444",
+            "affected_versions": ">=8.0.0,<8.0.30",
+            "fixed_in": "8.0.30",
+            "cvss": 7.5,
+            "attack_class": "denial_of_service",
+            "description": "Improper input validation in the MySQL Server replication subsystem permitting remote denial of service. Does not permit data disclosure."
+          }
+        ],
+        "note": "This knowledge base does not know which version any host is running. To decide whether a host is affected, compare that host's running version (from get_asset_info) against affected_versions above."
+      }
+    },
+    {
+      "seq": 24,
+      "t": 41.025,
+      "kind": "sufficiency",
+      "case_id": "CASE-7001",
+      "text": "I now have all the evidence needed. Let me synthesize the findings.\n\n**Key findings:**\n\n1. **Vulnerability**: SRV-HR-11 runs MySQL 5.7.24, which falls inside CVE-2023-21980's affected range (`>=5.7.0,<5.7.30`). The host IS vulnerable to the SQL injection attack class.\n\n2. **Attack reached the database**: The WAF was in DetectionOnly mode (logged but did NOT block), and the malicious query was forwarded to MySQL. The query `SELECT id,title FROM hr_public.notices WHERE id=7 UNION SELECT name,salary FROM hr_salary` was executed.\n\n3. **But the attack FAILED**: MySQL returned `ERROR 1142 (42000): SELECT command denied to user 'hr_portal_ro'@'10.20.4.11' for table 'hr_salary'. Statement returned 0 rows to the caller.` The same happened for the second attempt against `mysql.user`.\n\n4. **No exfiltration**: Packet metadata shows `exfil_indicators: false`, constant 1130-byte responses identical to the benign request, and no payload growth despite larger column sets being requested.\n\n5. **Configuration**: The DB account `hr_portal_ro` holds SELECT on `hr_public.*` ONLY \u2014 no privilege on `hr_salary` or `mysql.user`. This control made the UNION SELECT return zero rows regardless of syntax.",
+      "turn": 4,
+      "stop_reason": "tool_calls"
+    },
+    {
+      "seq": 25,
+      "t": 41.025,
+      "kind": "tool_call",
+      "case_id": "CASE-7001",
+      "tool": "submit_assessment",
+      "args": {
+        "hypothesis": "The SQL injection attack (UNION SELECT) against SRV-HR-11 was ATTEMPTED but did NOT SUCCEED. The host was vulnerable (MySQL 5.7.24 is inside CVE-2023-21980's range), the WAF was in DetectionOnly mode and did not block, and the malicious query reached MySQL. However, the database account hr_portal_ro lacks SELECT privileges on hr_salary and mysql.user, causing all UNION SELECT queries to return 0 rows. No data was exfiltrated.",
+        "factors": [
+          {
+            "factor": "version_in_range",
+            "citation": "get_asset_info: SRV-HR-11 runs mysql 5.7.24; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.24 is inside the affected range. The host IS vulnerable to this attack class.",
+            "rationale": "The running MySQL version falls within the CVE-2023-21980 affected range, so the vulnerability exists."
+          },
+          {
+            "factor": "logs_clean",
+            "citation": "get_server_logs: MySQL returned ERROR 1142 (42000): SELECT command denied to user 'hr_portal_ro'@'10.20.4.11' for table 'hr_salary'. Statement returned 0 rows to the caller. Same error for the mysql.user table attempt. All injection attempts returned 0 rows.",
+            "rationale": "The malicious queries were executed by MySQL but returned zero rows due to privilege denial. The attack did not succeed in reading data."
+          },
+          {
+            "factor": "packet_benign",
+            "citation": "get_packet_metadata: exfil_indicators: false, bytes_to_client: 1130 (constant across all three attempts, identical to the benign id=7 request). Response size did not grow with the size of the requested column set.",
+            "rationale": "No data left the host. The response was identical to a benign request, confirming no exfiltration occurred."
+          },
+          {
+            "factor": "config_prevents_exploitation",
+            "citation": "get_configuration: db_account_grants: hr_portal_ro holds SELECT on hr_public.* ONLY. No privilege on hr_salary or mysql.user. A UNION SELECT against either returns no rows to the caller regardless of syntax. WAF is in DetectionOnly mode (does not block). Egress ACL permits only 443 to payroll vendor.",
+            "rationale": "The database account grants are the control that prevented exploitation. The WAF (DetectionOnly) did NOT block the attack, but the DB account's lack of SELECT privilege on the targeted tables made the UNION SELECT queries return zero rows. The egress filter is a secondary control preventing bulk exfiltration even if queries had succeeded. All three surfaces accounted for: WAF (no block), DB grants (blocks data read), egress (blocks bulk exfil).",
+            "surfaces_accounted": [
+              "waf",
+              "db_account_grants",
+              "network_egress"
+            ]
+          }
+        ],
+        "sufficiency": "Sufficient to classify. The host was vulnerable (version_in_range), but the attack did not succeed because the database account lacked the necessary privileges (config_prevents_exploitation), the logs show 0 rows returned and access denied errors (logs_clean), and packet metadata confirms no exfiltration (packet_benign). The WAF's DetectionOnly mode means it did not block, but the DB account grants were the effective control."
+      },
+      "attempt": 1,
+      "reason": "(no stated reason)"
+    },
+    {
+      "seq": 26,
+      "t": 41.026,
+      "kind": "tool_result",
+      "case_id": "CASE-7001",
+      "tool": "submit_assessment",
+      "status": "accepted",
+      "result": {
+        "status": "accepted",
+        "hypothesis": "The SQL injection attack (UNION SELECT) against SRV-HR-11 was ATTEMPTED but did NOT SUCCEED. The host was vulnerable (MySQL 5.7.24 is inside CVE-2023-21980's range), the WAF was in DetectionOnly mode and did not block, and the malicious query reached MySQL. However, the database account hr_portal_ro lacks SELECT privileges on hr_salary and mysql.user, causing all UNION SELECT queries to return 0 rows. No data was exfiltrated.",
+        "factors": [
+          {
+            "factor": "version_in_range",
+            "citation": "get_asset_info: SRV-HR-11 runs mysql 5.7.24; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.24 is inside the affected range. The host IS vulnerable to this attack class.",
+            "rationale": "The running MySQL version falls within the CVE-2023-21980 affected range, so the vulnerability exists."
+          },
+          {
+            "factor": "logs_clean",
+            "citation": "get_server_logs: MySQL returned ERROR 1142 (42000): SELECT command denied to user 'hr_portal_ro'@'10.20.4.11' for table 'hr_salary'. Statement returned 0 rows to the caller. Same error for the mysql.user table attempt. All injection attempts returned 0 rows.",
+            "rationale": "The malicious queries were executed by MySQL but returned zero rows due to privilege denial. The attack did not succeed in reading data."
+          },
+          {
+            "factor": "packet_benign",
+            "citation": "get_packet_metadata: exfil_indicators: false, bytes_to_client: 1130 (constant across all three attempts, identical to the benign id=7 request). Response size did not grow with the size of the requested column set.",
+            "rationale": "No data left the host. The response was identical to a benign request, confirming no exfiltration occurred."
+          },
+          {
+            "factor": "config_prevents_exploitation",
+            "citation": "get_configuration: db_account_grants: hr_portal_ro holds SELECT on hr_public.* ONLY. No privilege on hr_salary or mysql.user. A UNION SELECT against either returns no rows to the caller regardless of syntax. WAF is in DetectionOnly mode (does not block). Egress ACL permits only 443 to payroll vendor.",
+            "rationale": "The database account grants are the control that prevented exploitation. The WAF (DetectionOnly) did NOT block the attack, but the DB account's lack of SELECT privilege on the targeted tables made the UNION SELECT queries return zero rows. The egress filter is a secondary control preventing bulk exfiltration even if queries had succeeded. All three surfaces accounted for: WAF (no block), DB grants (blocks data read), egress (blocks bulk exfil).",
+            "surfaces_accounted": [
+              "waf",
+              "db_account_grants",
+              "network_egress"
+            ]
+          }
+        ],
+        "sufficiency": "Sufficient to classify. The host was vulnerable (version_in_range), but the attack did not succeed because the database account lacked the necessary privileges (config_prevents_exploitation), the logs show 0 rows returned and access denied errors (logs_clean), and packet metadata confirms no exfiltration (packet_benign). The WAF's DetectionOnly mode means it did not block, but the DB account grants were the effective control.",
+        "disconfirming_evidence_checked": ""
+      }
+    },
+    {
+      "seq": 27,
+      "t": 41.026,
+      "kind": "state_change",
+      "case_id": "CASE-7001",
+      "state": "DETERMINE_OUTCOME",
+      "note": "Confidence computed in Python from declared factors."
+    },
+    {
+      "seq": 28,
+      "t": 41.026,
+      "kind": "scoring",
+      "case_id": "CASE-7001",
+      "base": 0.5,
+      "raw_sum": 0.1,
+      "score": 0.1,
+      "outcome": "FAILED",
+      "confidence": 0.9,
+      "applied_factors": [
+        {
+          "factor": "version_in_range",
+          "label": "Running version falls inside a CVE's affected range",
+          "delta": 0.25,
+          "citation": "get_asset_info: SRV-HR-11 runs mysql 5.7.24; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.24 is inside the affected range. The host IS vulnerable to this attack class.",
+          "rationale": "The running MySQL version falls within the CVE-2023-21980 affected range, so the vulnerability exists."
+        },
+        {
+          "factor": "logs_clean",
+          "label": "Server logs clean across the relevant window",
+          "delta": -0.25,
+          "citation": "get_server_logs: MySQL returned ERROR 1142 (42000): SELECT command denied to user 'hr_portal_ro'@'10.20.4.11' for table 'hr_salary'. Statement returned 0 rows to the caller. Same error for the mysql.user table attempt. All injection attempts returned 0 rows.",
+          "rationale": "The malicious queries were executed by MySQL but returned zero rows due to privilege denial. The attack did not succeed in reading data."
+        },
+        {
+          "factor": "packet_benign",
+          "label": "Packet metadata benign",
+          "delta": -0.1,
+          "citation": "get_packet_metadata: exfil_indicators: false, bytes_to_client: 1130 (constant across all three attempts, identical to the benign id=7 request). Response size did not grow with the size of the requested column set.",
+          "rationale": "No data left the host. The response was identical to a benign request, confirming no exfiltration occurred."
+        },
+        {
+          "factor": "config_prevents_exploitation",
+          "label": "A configuration control prevents the observed attack from succeeding",
+          "delta": -0.3,
+          "citation": "get_configuration: db_account_grants: hr_portal_ro holds SELECT on hr_public.* ONLY. No privilege on hr_salary or mysql.user. A UNION SELECT against either returns no rows to the caller regardless of syntax. WAF is in DetectionOnly mode (does not block). Egress ACL permits only 443 to payroll vendor.",
+          "rationale": "The database account grants are the control that prevented exploitation. The WAF (DetectionOnly) did NOT block the attack, but the DB account's lack of SELECT privilege on the targeted tables made the UNION SELECT queries return zero rows. The egress filter is a secondary control preventing bulk exfiltration even if queries had succeeded. All three surfaces accounted for: WAF (no block), DB grants (blocks data read), egress (blocks bulk exfil)."
+        }
+      ],
+      "ignored_factors": [],
+      "degraded": false,
+      "degraded_sources": [],
+      "ceiling_note": ""
+    },
+    {
+      "seq": 29,
+      "t": 41.027,
+      "kind": "conclusion",
+      "case_id": "CASE-7001",
+      "label": "initial",
+      "outcome": "FAILED",
+      "confidence": 0.9,
+      "score": 0.1,
+      "hypothesis": "The SQL injection attack (UNION SELECT) against SRV-HR-11 was ATTEMPTED but did NOT SUCCEED. The host was vulnerable (MySQL 5.7.24 is inside CVE-2023-21980's range), the WAF was in DetectionOnly mode and did not block, and the malicious query reached MySQL. However, the database account hr_portal_ro lacks SELECT privileges on hr_salary and mysql.user, causing all UNION SELECT queries to return 0 rows. No data was exfiltrated.",
+      "sufficiency": "Sufficient to classify. The host was vulnerable (version_in_range), but the attack did not succeed because the database account lacked the necessary privileges (config_prevents_exploitation), the logs show 0 rows returned and access denied errors (logs_clean), and packet metadata confirms no exfiltration (packet_benign). The WAF's DetectionOnly mode means it did not block, but the DB account grants were the effective control.",
+      "disconfirming_evidence_checked": "",
+      "scoring": {
+        "base": 0.5,
+        "raw_sum": 0.1,
+        "score": 0.1,
+        "outcome": "FAILED",
+        "confidence": 0.9,
+        "applied_factors": [
+          {
+            "factor": "version_in_range",
+            "label": "Running version falls inside a CVE's affected range",
+            "delta": 0.25,
+            "citation": "get_asset_info: SRV-HR-11 runs mysql 5.7.24; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.24 is inside the affected range. The host IS vulnerable to this attack class.",
+            "rationale": "The running MySQL version falls within the CVE-2023-21980 affected range, so the vulnerability exists."
+          },
+          {
+            "factor": "logs_clean",
+            "label": "Server logs clean across the relevant window",
+            "delta": -0.25,
+            "citation": "get_server_logs: MySQL returned ERROR 1142 (42000): SELECT command denied to user 'hr_portal_ro'@'10.20.4.11' for table 'hr_salary'. Statement returned 0 rows to the caller. Same error for the mysql.user table attempt. All injection attempts returned 0 rows.",
+            "rationale": "The malicious queries were executed by MySQL but returned zero rows due to privilege denial. The attack did not succeed in reading data."
+          },
+          {
+            "factor": "packet_benign",
+            "label": "Packet metadata benign",
+            "delta": -0.1,
+            "citation": "get_packet_metadata: exfil_indicators: false, bytes_to_client: 1130 (constant across all three attempts, identical to the benign id=7 request). Response size did not grow with the size of the requested column set.",
+            "rationale": "No data left the host. The response was identical to a benign request, confirming no exfiltration occurred."
+          },
+          {
+            "factor": "config_prevents_exploitation",
+            "label": "A configuration control prevents the observed attack from succeeding",
+            "delta": -0.3,
+            "citation": "get_configuration: db_account_grants: hr_portal_ro holds SELECT on hr_public.* ONLY. No privilege on hr_salary or mysql.user. A UNION SELECT against either returns no rows to the caller regardless of syntax. WAF is in DetectionOnly mode (does not block). Egress ACL permits only 443 to payroll vendor.",
+            "rationale": "The database account grants are the control that prevented exploitation. The WAF (DetectionOnly) did NOT block the attack, but the DB account's lack of SELECT privilege on the targeted tables made the UNION SELECT queries return zero rows. The egress filter is a secondary control preventing bulk exfiltration even if queries had succeeded. All three surfaces accounted for: WAF (no block), DB grants (blocks data read), egress (blocks bulk exfil)."
+          }
+        ],
+        "ignored_factors": [],
+        "degraded": false,
+        "degraded_sources": [],
+        "ceiling_note": ""
+      },
+      "at": "2026-09-13T04:26:58Z"
+    },
+    {
+      "seq": 30,
+      "t": 41.027,
+      "kind": "state_change",
+      "case_id": "CASE-7001",
+      "state": "ACT",
+      "note": "Policy: none - Outcome FAILED does not justify an action."
+    },
+    {
+      "seq": 31,
+      "t": 60.926,
+      "kind": "thought",
+      "case_id": "CASE-7001",
+      "text": "The deterministic scoring produced **FAILED** with a score of 0.10. Per the action policy (section 7.3), a **FAILED** outcome means **no action**. Let me verify the current firewall state to confirm nothing was changed.",
+      "turn": 1,
+      "stop_reason": "tool_calls"
+    },
+    {
+      "seq": 32,
+      "t": 60.926,
+      "kind": "tool_call",
+      "case_id": "CASE-7001",
+      "tool": "check_firewall_state",
+      "args": {
+        "ip": "198.51.100.203"
+      },
+      "attempt": 1,
+      "reason": "Case CASE-7001, ALERT-7001: scoring outcome FAILED (score 0.10, confidence 0.90). Policy dictates no action. Checking current firewall state to confirm no block exists for this IP."
+    },
+    {
+      "seq": 33,
+      "t": 60.926,
+      "kind": "tool_result",
+      "case_id": "CASE-7001",
+      "tool": "check_firewall_state",
+      "status": "ok",
+      "result": {
+        "status": "ok",
+        "ip": "198.51.100.203",
+        "blocked": false,
+        "record": null,
+        "total_blocked": 0,
+        "read_from": "D:/EXPERIMENTS/Autonomous SOC Investigation & Response Agent/fixtures/run/firewall_state.json"
+      }
+    },
+    {
+      "seq": 34,
+      "t": 65.029,
+      "kind": "sufficiency",
+      "case_id": "CASE-7001",
+      "text": "**Summary:**\n\n- **Case:** CASE-7001 | **Alert:** ALERT-7001 | **Source IP:** 198.51.100.203 | **Asset:** SRV-HR-11 (high criticality)\n- **Scoring outcome:** FAILED (score 0.10, confidence 0.90)\n- **Policy applied:** Per section 7.3, a **FAILED** outcome \u2192 **no action**.\n- **Verification:** Checked the firewall state from disk (`firewall_state.json`). IP **198.51.100.203 is not blocked** (`blocked: false`, `total_blocked: 0`). No DROP rule was ever added, which is consistent with the no-action policy.\n\nNo further action is warranted. The low score (0.10) indicates the alert did not meet the threshold for any intervention, and the firewall remains unchanged.",
+      "turn": 2,
+      "stop_reason": "stop"
+    },
+    {
+      "seq": 35,
+      "t": 65.029,
+      "kind": "state_change",
+      "case_id": "CASE-7001",
+      "state": "VERIFY",
+      "note": "Re-reading firewall state from disk."
+    },
+    {
+      "seq": 36,
+      "t": 65.029,
+      "kind": "verification",
+      "case_id": "CASE-7001",
+      "ip": "198.51.100.203",
+      "policy_action": "none",
+      "precautionary": false,
+      "blocked_before": false,
+      "blocked_after": false,
+      "expected_blocked": false,
+      "matches_policy": true,
+      "record": null,
+      "read_from": "D:/EXPERIMENTS/Autonomous SOC Investigation & Response Agent/fixtures/run/firewall_state.json"
+    }
+  ],
+  "title": "Configuration prevents exploitation",
+  "summary": "A critical SQLi signature fires against SRV-HR-11. The host runs MySQL 5.7.24, INSIDE CVE-2023-21980's range, and the logs show the injected UNION SELECT reaching the database - the WAF was in DetectionOnly and did not block. On version and logs alone this looks like scenario 2. The portal's database account holds SELECT on hr_public only and no privilege on the targeted table.",
+  "cases": [
+    {
+      "case_id": "CASE-7001",
+      "alert_id": "ALERT-7001",
+      "asset_id": "SRV-HR-11",
+      "src_ip": "198.51.100.203",
+      "scenario": "7",
+      "status": "CONCLUDED",
+      "conclusions": [
+        {
+          "label": "initial",
+          "outcome": "FAILED",
+          "confidence": 0.9,
+          "score": 0.1,
+          "hypothesis": "The SQL injection attack (UNION SELECT) against SRV-HR-11 was ATTEMPTED but did NOT SUCCEED. The host was vulnerable (MySQL 5.7.24 is inside CVE-2023-21980's range), the WAF was in DetectionOnly mode and did not block, and the malicious query reached MySQL. However, the database account hr_portal_ro lacks SELECT privileges on hr_salary and mysql.user, causing all UNION SELECT queries to return 0 rows. No data was exfiltrated.",
+          "sufficiency": "Sufficient to classify. The host was vulnerable (version_in_range), but the attack did not succeed because the database account lacked the necessary privileges (config_prevents_exploitation), the logs show 0 rows returned and access denied errors (logs_clean), and packet metadata confirms no exfiltration (packet_benign). The WAF's DetectionOnly mode means it did not block, but the DB account grants were the effective control.",
+          "disconfirming_evidence_checked": "",
+          "scoring": {
+            "base": 0.5,
+            "raw_sum": 0.1,
+            "score": 0.1,
+            "outcome": "FAILED",
+            "confidence": 0.9,
+            "applied_factors": [
+              {
+                "factor": "version_in_range",
+                "label": "Running version falls inside a CVE's affected range",
+                "delta": 0.25,
+                "citation": "get_asset_info: SRV-HR-11 runs mysql 5.7.24; get_vulnerabilities: CVE-2023-21980 affects >=5.7.0,<5.7.30 \u2014 5.7.24 is inside the affected range. The host IS vulnerable to this attack class.",
+                "rationale": "The running MySQL version falls within the CVE-2023-21980 affected range, so the vulnerability exists."
+              },
+              {
+                "factor": "logs_clean",
+                "label": "Server logs clean across the relevant window",
+                "delta": -0.25,
+                "citation": "get_server_logs: MySQL returned ERROR 1142 (42000): SELECT command denied to user 'hr_portal_ro'@'10.20.4.11' for table 'hr_salary'. Statement returned 0 rows to the caller. Same error for the mysql.user table attempt. All injection attempts returned 0 rows.",
+                "rationale": "The malicious queries were executed by MySQL but returned zero rows due to privilege denial. The attack did not succeed in reading data."
+              },
+              {
+                "factor": "packet_benign",
+                "label": "Packet metadata benign",
+                "delta": -0.1,
+                "citation": "get_packet_metadata: exfil_indicators: false, bytes_to_client: 1130 (constant across all three attempts, identical to the benign id=7 request). Response size did not grow with the size of the requested column set.",
+                "rationale": "No data left the host. The response was identical to a benign request, confirming no exfiltration occurred."
+              },
+              {
+                "factor": "config_prevents_exploitation",
+                "label": "A configuration control prevents the observed attack from succeeding",
+                "delta": -0.3,
+                "citation": "get_configuration: db_account_grants: hr_portal_ro holds SELECT on hr_public.* ONLY. No privilege on hr_salary or mysql.user. A UNION SELECT against either returns no rows to the caller regardless of syntax. WAF is in DetectionOnly mode (does not block). Egress ACL permits only 443 to payroll vendor.",
+                "rationale": "The database account grants are the control that prevented exploitation. The WAF (DetectionOnly) did NOT block the attack, but the DB account's lack of SELECT privilege on the targeted tables made the UNION SELECT queries return zero rows. The egress filter is a secondary control preventing bulk exfiltration even if queries had succeeded. All three surfaces accounted for: WAF (no block), DB grants (blocks data read), egress (blocks bulk exfil)."
+              }
+            ],
+            "ignored_factors": [],
+            "degraded": false,
+            "degraded_sources": [],
+            "ceiling_note": ""
+          },
+          "at": "2026-09-13T04:26:58Z"
+        }
+      ],
+      "actions": [],
+      "verifications": [
+        {
+          "ip": "198.51.100.203",
+          "policy_action": "none",
+          "precautionary": false,
+          "blocked_before": false,
+          "blocked_after": false,
+          "expected_blocked": false,
+          "matches_policy": true,
+          "record": null,
+          "read_from": "D:/EXPERIMENTS/Autonomous SOC Investigation & Response Agent/fixtures/run/firewall_state.json"
+        }
+      ],
+      "reconsiderations": [],
+      "overrides": [],
+      "degraded_sources": [],
+      "tools_called": [
+        "get_alert",
+        "get_asset_info",
+        "get_server_logs",
+        "get_packet_metadata",
+        "get_related_alerts",
+        "get_configuration",
+        "get_vulnerabilities",
+        "submit_assessment",
+        "check_firewall_state"
+      ]
+    }
+  ]
+}

@@ -88,6 +88,19 @@ established, and never a factor together with its opposite.
                               same evidence twice
   packet_benign               THIS alert's packet metadata looks benign
   related_alert_corroborates  another alert on this asset corroborates
+  config_prevents_exploitation
+                              a control on the host made this attack UNABLE TO
+                              SUCCEED - e.g. the account the app connects as
+                              holds no privilege on the table the injection
+                              targeted, so the query returns no rows whatever
+                              its syntax. This is about CAPABILITY, not about
+                              whether the attempt was detected: a WAF in
+                              DetectionOnly mode logs the request and lets it
+                              through, so it prevents nothing. This claims the
+                              configuration AS A WHOLE left no path open, so
+                              list EVERY surface get_configuration returned in
+                              'surfaces_accounted' and say why each one does or
+                              does not leave a way through.
 
 Omitting a factor is normal and correct when you did not establish it. An
 INCONCLUSIVE result is a legitimate, sometimes correct answer - do not inflate
