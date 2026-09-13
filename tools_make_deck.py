@@ -13,7 +13,7 @@ from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 # Fill these in and re-run `python tools_make_deck.py`. While a value is empty the
 # slide shows "[Insert Link]"; once set, the URL is written as a real hyperlink on
 # the text AND on the whole card, so it is clickable in slideshow mode.
-GITHUB_URL = ""
+GITHUB_URL = "https://github.com/Graybeep/Dropout_Autonomous-SOC-Investigation-Response-Agent"
 VIDEO_URL = ""
 
 INK = RGBColor(0x1C, 0x1C, 0x1E)
@@ -133,7 +133,7 @@ card(s, Inches(.85), Inches(5.0), Inches(5.5), Inches(1.35), accent=ORNG)
 box(s, Inches(1.18), Inches(5.2), Inches(4.9), Inches(.3), "TEAM",
     size=11, color=MUTED, bold=True)
 box(s, Inches(1.18), Inches(5.53), Inches(4.9), Inches(.6),
-    "[ your team name here ]", size=19, color=INK, bold=True)
+    "Dropout", size=19, color=INK, bold=True)
 card(s, Inches(6.6), Inches(5.0), Inches(5.85), Inches(1.35))
 box(s, Inches(6.93), Inches(5.2), Inches(5.3), Inches(.3), "LIVE PROTOTYPE",
     size=11, color=MUTED, bold=True)
@@ -521,7 +521,7 @@ box(s, Inches(.85), Inches(6.45), Inches(11.6), Inches(.5),
 
 # --------------------------------------------------------------- 8. Guardrails
 s = slide()
-header(s, "Robustness and guardrails", "What stops it doing something stupid", "10%")
+header(s, "Robustness and guardrails", "What stops it doing something wrong", "10%")
 guards = [
     ("It cannot cite what it did not read",
      "A factor drawn from a lookup that returned no data is refused before it can ever reach the score."),
