@@ -313,15 +313,15 @@ evidence chain.
 
 ### If a judge notices refusals everywhere — get ahead of this, do not defend it
 
-Measured across all seven shipped traces: **10 refusals over 8 cases; 7 of the
-8 cases are refused at least once, and no case takes more than 2.** Refusal is
-the normal operating mode here, not an exception, so do not present it as a rare
-catch.
+Measured across the seven shipped traces: **11 refusals over 8 cases; 6 of the 8
+are refused at least once; the busiest case takes 4.** Refusal is the normal
+operating mode here, not an exception, so do not present it as a rare catch.
 
-Quote that as "roughly one to two per case", not as a fixed figure — it is
-run-dependent, and an earlier run measured 16 over the same 8 cases with a max
-of 3. The shape is stable; the count is not. To recount against whatever traces
-are on disk:
+Quote that as **"roughly one or two per case"**, never as a fixed figure. Three
+separate full runs measured 10, 11 and 16 over the same 8 cases, with the
+per-case maximum moving between 2 and 4 and the number of untouched cases
+between 0 and 2. The shape is stable; the count is not. To recount against
+whatever traces are on disk:
 
 ```bash
 python -c "import json,glob;print(sum(1 for p in glob.glob('traces/*.json') for s in json.load(open(p))['steps'] if s.get('tool')=='submit_assessment' and s.get('status')=='rejected'))"
@@ -335,6 +335,10 @@ Present it as the design:
 **Do not claim "it always responds by gathering more evidence."** It does not,
 and it should not — the correct response depends on which guard fired, and being
 precise about this is stronger than the tidy version:
+
+Family mix also moves run to run; the last full run was provenance 8,
+exhaustiveness 4, contradiction 2. What does not move is which response each
+family deserves:
 
 - **Exhaustiveness** (`version_patched` claimed having checked only some of the
   host's services) → the agent **gathers**: the next call is

@@ -2476,3 +2476,67 @@ which is what the Windows console encodes to, so `print` raised
 The block is ASCII-only now, matching the rest of the harness output. Found by
 running the summary over saved traces before wiring it in, rather than
 discovering it during a 35-minute live run.
+
+---
+
+## Part 26 - Final full run, and the generalisation probe
+
+**N-36. Final full run: 1-6 PASS 51/51, 7 XFAIL 7/8, exit 0.** All seven traces
+written in one contiguous pass (14:11-14:35), so the shipped set is coherent
+again - traces 1 and 7 had been newer than the rest after single-scenario runs
+during the summary work. This is also the first time `_summarise` ran inside a
+full run rather than a single-scenario run or a saved-trace replay.
+
+**P-034. Refusal density moves more than the doc claimed.** Three full runs now
+measured **10, 11 and 16** refusals over the same 8 cases. The per-case maximum
+moved 2 -> 4 and the number of never-refused cases moved 0 -> 2. The family mix
+moves too: the last run was provenance 8, exhaustiveness 4, contradiction 2,
+against provenance 6, contradiction 3, exhaustiveness 2 the run before.
+
+DEMO.md had pinned "10 refusals, 7 of 8 cases, no case takes more than 2" as
+though it were fixed. It is not, and it was stale within one run of being
+written. Restated as a range with the recount command beside it. **Quote
+"roughly one or two per case", never a figure.**
+
+What does NOT move, across every run measured: which response each guard family
+deserves, and the fact that the agent never once resolved a refusal by rewording
+the same claim. Those are the claims worth making.
+
+**N-37. Generalisation probe: converged exactly, and it is not in the suite.**
+Scenario 2's shape over `fixtures/probe/` with every surface detail permuted -
+postgres 13.4 not mysql 5.7.21, CVE-2021-32027 not CVE-2023-21980, stacked
+queries and `COPY ... TO STDOUT` not `UNION SELECT`, different asset, host and
+source IP. Shared vocabulary with S2's logs reduced to `after, bytes, from,
+select, where`.
+
+Result: same three factors (`version_in_range`, `logs_consistent`,
+`exfil_indicators`), same raw 1.15 -> 0.95, same SUCCEEDED, same `block_ip`,
+same tool order, same single provenance refusal. Zero S2 vocabulary anywhere in
+the probe's citations, and it selected the sql_injection CVE over the
+privilege-escalation one whose range did not match - a real version join on a
+service it had not seen. So `logs_consistent` is read semantically, not
+substring-matched against fixture phrasing.
+
+**The claim this supports, stated narrowly:** the evidence classes generalise
+beyond the fixtures we wrote. It does **not** support dynamic action selection -
+identical tool ordering is evidence of consistency, not adaptivity. The adaptive
+evidence is scenarios 3 and 6, where the ordering genuinely diverges. Citing the
+probe for autonomy would be overclaiming from a result that says something else.
+
+`fixtures/probe/` is deliberately not in `run_all.py`, not a scenario, and was
+not tuned. Suites unaffected: 105/105, 22/22.
+
+**N-38. Guard timing verified in code before it is said out loud.** All four
+guard call sites sit inside the `submit_assessment` branch; `GATHER_TOOLS` and
+`ACT_TOOLS` are module constants, never mutated or narrowed; and empirically
+only `submit_assessment` has ever been rejected. Stronger: across every refusal
+message, **zero version numbers, zero CVE ids, zero verdict words** - they name
+unread sources and malformed claims, never evidence content.
+
+But "guards never touch tool selection" is **not literally true** and must not be
+said that way. A refusal re-enters the loop, and the agent has answered one by
+calling `get_vulnerabilities` on the service it skipped. The accurate form: *no
+guard runs while the agent is gathering; they only inspect an assessment it has
+already submitted, and they judge bookkeeping, never meaning. A refusal does
+re-enter the loop - it names which source is unread, never what that source will
+say.*
