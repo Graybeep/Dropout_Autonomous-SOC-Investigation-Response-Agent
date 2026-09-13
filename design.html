@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Why it is built this way: SOC Agent</title>
+<title>Why trust it: SOC Agent</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="site.css">
 </head>
@@ -13,57 +13,71 @@
   <div class="wrap nav-in">
     <a class="brand" href="index.html"><span class="dot"></span>SOC Agent</a>
     <a class="l" href="how-it-works.html">How it works</a>
-    <a class="l" href="scenarios.html">Scenarios</a>
-    <a class="l active" href="design.html">Why it is built this way</a>
+    <a class="l active" href="design.html">Why trust it</a>
+    <a class="l" href="scenarios.html">See it in action</a>
     <span class="sp"></span>
-    <a class="btn sm" href="viewer.html">Open the viewer</a>
+    <a class="btn sm" href="viewer.html">Watch an investigation</a>
   </div>
 </nav>
 
 <header class="pagehead wrap">
-  <h1>Why it is built this way</h1>
-  <p class="sub">The score is arithmetic. The reasoning is the agent's.</p>
+  <h1>Why trust it</h1>
+  <p class="sub">An agent that confidently gets it wrong is worse than no agent. Six things keep
+    this one honest.</p>
 </header>
 
 <section class="wrap first">
-  <div class="two" style="margin-top:28px">
-    <div class="story">
-      <p>The agent never emits a confidence number. It declares which <em>classes</em> of evidence it
-        established and cites the tool result behind each one; a fixed table turns those into a score.
-        Ask where <code>0.95</code> came from and there is a one-line answer, and the same evidence
-        scores the same way every time.</p>
-      <p>Submissions pass through a checker that can refuse them. It never decides whether a version
-        falls in a range; that is the agent's call. It refuses the <em>form</em> of a claim:
-        saying a host is outside <em>all</em> affected ranges having looked up only some of its
-        services, or citing a source that came back empty.</p>
-      <p>Refusal is routine rather than exceptional, and both the refusal and the correction stay in
-        the trace. Scenario 1 is the clearest case: the agent is refused on two counts at once,
-        then resolves each differently: it fetches the data it was missing, and drops the claim it
-        could not support.</p>
-    </div>
-    <div class="panelbox">
-      <h3>What a trace records</h3>
-      <div class="kv"><b>Every call</b><span>and the reason given before making it</span></div>
-      <div class="kv"><b>Every refusal</b><span>what was wrong, and how it was fixed</span></div>
-      <div class="kv"><b>The score</b><span>itemised factor by factor, with citations</span></div>
-      <div class="kv"><b>Reconsiderations</b><span>prior conclusion beside the new one, never overwritten</span></div>
-      <div class="kv"><b>Degraded sources</b><span>anything that failed, and the ceiling it imposed</span></div>
-      <p style="margin:18px 0 0;font-size:14.5px">That record is the single source of truth: the
-        viewer and the written case reports are both rendered from it.</p>
-    </div>
+  <div class="steps six">
+    <div class="step"><div class="n">1</div><h3>It shows its evidence</h3>
+      <p>Every verdict names the facts behind it. Nothing is claimed without something to point
+        at.</p></div>
+    <div class="step"><div class="n">2</div><h3>It cannot invent</h3>
+      <p>If it claims something it has not actually checked, the claim is rejected and it has to
+        go and check.</p></div>
+    <div class="step"><div class="n">3</div><h3>Confidence is calculated</h3>
+      <p>The agent never picks its own confidence number. That is worked out from the evidence it
+        found, the same way every time.</p></div>
+    <div class="step"><div class="n">4</div><h3>It checks its own actions</h3>
+      <p>After blocking an attacker it goes back and confirms the block really happened, instead
+        of assuming.</p></div>
+    <div class="step"><div class="n">5</div><h3>It admits when it cannot tell</h3>
+      <p>If evidence is missing or something breaks mid-investigation, it says so and lowers its
+        confidence rather than guessing.</p></div>
+    <div class="step"><div class="n">6</div><h3>A person always wins</h3>
+      <p>An analyst can overrule any verdict. The agent obeys, records both views, and does not
+        quietly undo the decision.</p></div>
   </div>
 </section>
 
-<div class="wrap">
-  <div class="pagenav"><a class="btn ghost sm" href="scenarios.html">&larr; The seven scenarios</a><span class="sp"></span><a class="btn sm" href="viewer.html">Open the viewer &rarr;</a></div>
-</div>
+<section class="wrap">
+  <div class="eyebrow">The one that matters most</div>
+  <h2>It never assumes its own action worked</h2>
+  <p class="sub">Asking for something to happen and it actually happening are two different
+    things.</p>
+
+  <div class="chain">
+    <div class="clink"><div class="k">1. Decide</div>
+      <div class="v">The evidence says this attack was real</div></div>
+    <div class="clink"><div class="k">2. Act</div>
+      <div class="v">Block the attacker</div></div>
+    <div class="clink key"><div class="k">3. Go back and look</div>
+      <div class="v">Check whether the block is genuinely in place</div></div>
+    <div class="clink key"><div class="k">4. Record the truth</div>
+      <div class="v">If it did not take effect, the case says so</div></div>
+  </div>
+
+  <div class="pagenav">
+    <a class="btn ghost sm" href="how-it-works.html">How it works</a>
+    <span class="sp"></span>
+    <a class="btn ghost sm" href="scenarios.html">See it in action</a>
+  </div>
+</section>
 
 <footer class="wrap">
-  <h2>Watch an investigation unfold</h2>
-  <p class="sub">The viewer replays a saved trace step by step: each decision, the reason
-    behind it, and the evidence that produced the verdict.</p>
-  <div class="cta"><a class="btn" href="viewer.html">Open the trace viewer</a></div>
-  <p class="fine">Traces are replayed from disk. To regenerate them, run <code>python run_all.py</code>.</p>
+  <h2>Watch it investigate</h2>
+  <p class="sub">Follow a real case from the first alarm to the final answer, one step at a time.</p>
+  <div class="cta"><a class="btn" href="viewer.html">Watch an investigation</a></div>
+  <p class="fine">A hackathon prototype. The full technical write-up lives in the project README.</p>
   <p class="fine"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms of use</a></p>
 </footer>
 

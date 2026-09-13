@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Scenarios: SOC Agent</title>
+<title>See it in action: SOC Agent</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="site.css">
 </head>
@@ -13,69 +13,77 @@
   <div class="wrap nav-in">
     <a class="brand" href="index.html"><span class="dot"></span>SOC Agent</a>
     <a class="l" href="how-it-works.html">How it works</a>
-    <a class="l active" href="scenarios.html">Scenarios</a>
-    <a class="l" href="design.html">Why it is built this way</a>
+    <a class="l" href="design.html">Why trust it</a>
+    <a class="l active" href="scenarios.html">See it in action</a>
     <span class="sp"></span>
-    <a class="btn sm" href="viewer.html">Open the viewer</a>
+    <a class="btn sm" href="viewer.html">Watch an investigation</a>
   </div>
 </nav>
 
 <header class="pagehead wrap">
-  <h1>Seven scenarios</h1>
-  <p class="sub">Each one is a different way to be wrong. Every scenario runs the same loop over different evidence, and the outcome shown is what the scoring function produced. <strong>SUCCEEDED</strong> means the attack worked, so it is the bad news, and <strong>FAILED</strong> is the good news.</p>
+  <h1>See it in action</h1>
+  <p class="sub">Seven investigations you can replay from start to finish. They were chosen
+    because they are not all clean wins.</p>
 </header>
 
 <section class="wrap first">
+  <div class="spread">
+    <div class="sp1"><div class="n">1</div><div class="l"><strong>False alarm</strong><br>
+      loud warning, nothing actually happened</div></div>
+    <div class="sp1"><div class="n">4</div><div class="l"><strong>Real attacks</strong><br>
+      confirmed, with the attacker blocked</div></div>
+    <div class="sp1"><div class="n">2</div><div class="l"><strong>Genuinely unclear</strong><br>
+      the agent says so instead of guessing</div></div>
+  </div>
 
   <div class="cards">
-    <div class="sc"><div class="sc-hd"><span class="sc-n">1</span><h3>False alarm, patched host</h3></div>
-      <p>A critical-labelled injection alert against a host running a version outside every affected
-        range, whose logs show the request was blocked before it reached the database.</p>
-      <span class="tag t-fail">FAILED: attack did not work</span></div>
+    <div class="sc"><div class="sc-hd"><span class="sc-n">1</span><h3>A false alarm</h3></div>
+      <p>An urgent warning about a machine that was already protected. The attempt never got
+        through.</p>
+      <span class="tag t-fail">Nothing happened</span></div>
 
-    <div class="sc"><div class="sc-hd"><span class="sc-n">2</span><h3>True positive, unpatched host</h3></div>
-      <p>The same signature, a vulnerable version, and logs showing the query ran and data left the
-        host. The source IP is blocked, then the block is verified from disk.</p>
-      <span class="tag t-succ">SUCCEEDED: attack worked</span></div>
+    <div class="sc"><div class="sc-hd"><span class="sc-n">2</span><h3>A real break-in</h3></div>
+      <p>An outdated machine, an attack that worked, and data leaving the building. The attacker
+        was blocked.</p>
+      <span class="tag t-succ">Attack succeeded</span></div>
 
-    <div class="sc"><div class="sc-hd"><span class="sc-n">3</span><h3>Delayed evidence</h3></div>
-      <p>Ambiguous at first. New evidence arrives naming a second host, so the agent forms a fresh
-        hypothesis and goes and investigates that host rather than just re-scoring.</p>
-      <span class="tag t-succ">SUCCEEDED: after re-opening</span></div>
+    <div class="sc"><div class="sc-hd"><span class="sc-n">3</span><h3>New evidence arrives</h3></div>
+      <p>Unclear at first. Later evidence pointed at a second machine, so the agent reopened the
+        case and went to look.</p>
+      <span class="tag t-succ">Reopened, then confirmed</span></div>
 
-    <div class="sc"><div class="sc-hd"><span class="sc-n">4</span><h3>Human override</h3></div>
-      <p>An analyst overrules the verdict. The agent unblocks, records the override beside its own
-        prior conclusion, and does not re-block on its own.</p>
-      <span class="tag t-succ">SUCCEEDED: then overridden</span></div>
+    <div class="sc"><div class="sc-hd"><span class="sc-n">4</span><h3>A person disagrees</h3></div>
+      <p>An analyst overrules the verdict. The agent removes the block, keeps both views on
+        record, and does not put it back.</p>
+      <span class="tag t-succ">Overruled by a human</span></div>
 
-    <div class="sc"><div class="sc-hd"><span class="sc-n">5</span><h3>Multi-alert correlation</h3></div>
-      <p>A second alert on the same asset opens its own case, discovers the first, and both
-        conclusions move on the strength of the other.</p>
-      <span class="tag t-succ">SUCCEEDED: two cases</span></div>
+    <div class="sc"><div class="sc-hd"><span class="sc-n">5</span><h3>Two alarms, one story</h3></div>
+      <p>A second alarm on the same machine turns out to be connected to the first. Each one
+        changes how the other reads.</p>
+      <span class="tag t-succ">Connected cases</span></div>
 
-    <div class="sc"><div class="sc-hd"><span class="sc-n">6</span><h3>Tool failure</h3></div>
-      <p>The log source fails. The agent notices, retries, routes to another source, and refuses to
-        treat missing evidence as evidence that nothing happened.</p>
-      <span class="tag t-inc">INCONCLUSIVE: capped on purpose</span></div>
+    <div class="sc"><div class="sc-hd"><span class="sc-n">6</span><h3>Something breaks</h3></div>
+      <p>A source of evidence fails mid-investigation. The agent notices, works around it, and
+        refuses to treat missing evidence as proof that nothing happened.</p>
+      <span class="tag t-inc">Not enough evidence</span></div>
 
-    <div class="sc"><div class="sc-hd"><span class="sc-n">7</span><h3>Configuration prevents it</h3></div>
-      <p>Vulnerable version, attack visible in the logs, but the database account cannot read
-        the targeted table. The agent establishes this and says so; the scoring model has no term for
-        it, so the case is left short of a verdict.</p>
-      <span class="tag t-inc">INCONCLUSIVE: declared limitation</span></div>
+    <div class="sc"><div class="sc-hd"><span class="sc-n">7</span><h3>A limit we left visible</h3></div>
+      <p>The agent works out why this attack failed, but cannot yet turn that reasoning into a
+        final verdict. We left this one unsolved on purpose rather than hiding it.</p>
+      <span class="tag t-inc">Known limitation</span></div>
+  </div>
+
+  <div class="cta" style="margin-top:30px">
+    <a class="btn" href="viewer.html">Replay these investigations</a>
+    <a class="btn ghost" href="design.html">Why trust it</a>
   </div>
 </section>
 
-<div class="wrap">
-  <div class="pagenav"><a class="btn ghost sm" href="how-it-works.html">&larr; How it works</a><span class="sp"></span><a class="btn ghost sm" href="design.html">Why it is built this way &rarr;</a></div>
-</div>
-
 <footer class="wrap">
-  <h2>Watch an investigation unfold</h2>
-  <p class="sub">The viewer replays a saved trace step by step: each decision, the reason
-    behind it, and the evidence that produced the verdict.</p>
-  <div class="cta"><a class="btn" href="viewer.html">Open the trace viewer</a></div>
-  <p class="fine">Traces are replayed from disk. To regenerate them, run <code>python run_all.py</code>.</p>
+  <h2>Watch it investigate</h2>
+  <p class="sub">Follow a real case from the first alarm to the final answer, one step at a time.</p>
+  <div class="cta"><a class="btn" href="viewer.html">Watch an investigation</a></div>
+  <p class="fine">A hackathon prototype. The full technical write-up lives in the project README.</p>
   <p class="fine"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms of use</a></p>
 </footer>
 

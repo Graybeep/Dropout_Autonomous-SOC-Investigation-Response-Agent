@@ -13,66 +13,83 @@
   <div class="wrap nav-in">
     <a class="brand" href="index.html"><span class="dot"></span>SOC Agent</a>
     <a class="l" href="how-it-works.html">How it works</a>
-    <a class="l" href="scenarios.html">Scenarios</a>
-    <a class="l" href="design.html">Why it is built this way</a>
+    <a class="l" href="design.html">Why trust it</a>
+    <a class="l" href="scenarios.html">See it in action</a>
     <span class="sp"></span>
-    <a class="btn sm" href="viewer.html">Open the viewer</a>
+    <a class="btn sm" href="viewer.html">Watch an investigation</a>
   </div>
 </nav>
 
 <header class="hero wrap" id="top">
-  <span class="kicker">Autonomous investigation &amp; response</span>
+  <span class="kicker">Security alert investigation</span>
   <h1>An alert says you were attacked.<br><em>Did it actually work?</em></h1>
-  <p class="lede">This agent takes a simulated intrusion-detection alert and decides whether the
-    attack <strong>actually succeeded</strong>, by correlating it against asset, vulnerability,
-    configuration and log evidence, instead of trusting the alert's own severity label.</p>
+  <p class="lede">Most security alerts turn out to be nothing. This agent investigates each one
+    and answers the question that actually matters: did the attack succeed? And it shows the
+    evidence behind every answer.</p>
   <div class="cta">
-    <a class="btn" href="viewer.html">Open the trace viewer</a>
-    <a class="btn ghost" href="how-it-works.html">See how it works</a>
+    <a class="btn" href="viewer.html">Watch an investigation</a>
+    <a class="btn ghost" href="how-it-works.html">How it works</a>
   </div>
-  <p class="note">This viewer replays traces from real agent runs. Every step shown was
-    produced by the live system, not simulated. The agent itself runs locally: clone the
-    repo, set an API key from whichever provider you like, and run
-    <code>python run_all.py</code>. It speaks both the OpenAI and Anthropic APIs, so
-    switching provider is one line of config.</p>
+  <p class="note">Everything here came from real runs of the system, not mock-ups.</p>
 </header>
 
 <section class="wrap">
-  <div class="eyebrow">The short version</div>
-  <h2>A severity label is an opinion, not a finding</h2>
-  <p class="sub">A &ldquo;critical&rdquo; injection alert against a host patched two years ago, whose
-    logs show the request was blocked, is a false alarm. A quieter alert against an unpatched host
-    that then shipped two megabytes outbound is a breach. The label does not decide which is which
-    the correlated evidence does, and the agent has to go and get it.</p>
+  <div class="eyebrow">The problem</div>
+  <h2>Alarms are cheap. Answers are not.</h2>
 
-  <div class="steps" style="margin-top:34px">
+  <div class="steps six" style="margin-top:30px">
+    <div class="step"><div class="n">1</div><h3>The alarm goes off</h3>
+      <p>Security tools shout whenever traffic <em>looks</em> dangerous.</p></div>
+    <div class="step"><div class="n">2</div><h3>Nobody knows if it is real</h3>
+      <p>The alarm cannot tell you whether anything was actually broken into.</p></div>
+    <div class="step"><div class="n">3</div><h3>A person has to check</h3>
+      <p>Someone gathers evidence and decides. Then does it again, thousands of times.</p></div>
+  </div>
+
+  <p class="sub" style="margin-top:26px;font-size:17.5px">That checking is the job this agent
+    does, and it does it the way a careful analyst would.</p>
+</section>
+
+<section class="wrap">
+  <div class="eyebrow">In one line</div>
+  <h2>It investigates, decides, acts, then checks its own work</h2>
+
+  <nav class="pipe" aria-label="What the agent does">
+    <a href="how-it-works.html">Alert</a><span class="arw">&rsaquo;</span>
+    <a href="how-it-works.html">Question</a><span class="arw">&rsaquo;</span>
+    <a href="how-it-works.html">Evidence</a><span class="arw">&rsaquo;</span>
+    <a href="how-it-works.html">Verdict</a><span class="arw">&rsaquo;</span>
+    <a href="how-it-works.html">Action</a><span class="arw">&rsaquo;</span>
+    <a href="how-it-works.html">Double check</a>
+  </nav>
+
+  <div class="steps six" style="margin-top:34px">
     <div class="step">
       <div class="n">1</div><h3>How it works</h3>
-      <p>Six stages, and the agent picks its own path through them, including which tools to
-        call and when it has enough to conclude.</p>
-      <p style="margin-top:12px"><a href="how-it-works.html">Read the walkthrough &rarr;</a></p>
+      <p>Six simple steps, from the alarm going off to the agent confirming its own action
+        actually took effect.</p>
+      <p style="margin-top:12px"><a href="how-it-works.html">See the six steps</a></p>
     </div>
     <div class="step">
-      <div class="n">2</div><h3>Seven scenarios</h3>
-      <p>A false alarm, a real breach, delayed evidence, a human override, two correlated cases, a
-        failed tool, and one declared limitation.</p>
-      <p style="margin-top:12px"><a href="scenarios.html">See the scenarios &rarr;</a></p>
+      <div class="n">2</div><h3>Why trust it</h3>
+      <p>It has to show its evidence, its confidence is calculated rather than guessed, and a
+        person can always overrule it.</p>
+      <p style="margin-top:12px"><a href="design.html">See why</a></p>
     </div>
     <div class="step">
-      <div class="n">3</div><h3>Why it is built this way</h3>
-      <p>The agent never emits a confidence number, and a checker can refuse the form of a claim
-        without ever judging the evidence itself.</p>
-      <p style="margin-top:12px"><a href="design.html">Read the reasoning &rarr;</a></p>
+      <div class="n">3</div><h3>See it in action</h3>
+      <p>Seven real investigations you can replay step by step, including the ones where the
+        answer was "this was nothing".</p>
+      <p style="margin-top:12px"><a href="scenarios.html">See the cases</a></p>
     </div>
   </div>
 </section>
 
 <footer class="wrap">
-  <h2>Watch an investigation unfold</h2>
-  <p class="sub">The viewer replays a saved trace step by step: each decision, the reason
-    behind it, and the evidence that produced the verdict.</p>
-  <div class="cta"><a class="btn" href="viewer.html">Open the trace viewer</a></div>
-  <p class="fine">Traces are replayed from disk. To regenerate them, run <code>python run_all.py</code>.</p>
+  <h2>Watch it investigate</h2>
+  <p class="sub">Follow a real case from the first alarm to the final answer, one step at a time.</p>
+  <div class="cta"><a class="btn" href="viewer.html">Watch an investigation</a></div>
+  <p class="fine">A hackathon prototype. The full technical write-up lives in the project README.</p>
   <p class="fine"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms of use</a></p>
 </footer>
 
