@@ -42,7 +42,7 @@
 
   header.hero{padding:76px 0 64px}
   .kicker{display:inline-block;background:var(--cream2);border:1px solid var(--line);
-    color:var(--muted);border-radius:99px;padding:5px 13px;font-size:12.5px;
+    color:var(--muted);border-radius:4px;padding:5px 13px;font-size:12.5px;
     letter-spacing:.5px;text-transform:uppercase;margin-bottom:20px}
   h1{font-size:clamp(36px,5.4vw,60px);font-weight:700}
   h1 em{font-style:normal;color:var(--orange-dk)}
@@ -81,7 +81,7 @@
   .sc h3{font-size:16.5px}
   .sc p{margin:0;font-size:14.5px}
   .tag{align-self:flex-start;margin-top:auto;font-size:11.5px;font-weight:700;
-    letter-spacing:.4px;border-radius:99px;padding:3px 10px;border:1px solid}
+    letter-spacing:.4px;border-radius:4px;padding:3px 10px;border:1px solid}
   .t-fail{color:#0B6B44;border-color:#0B6B44;background:#E8F6EF}
   .t-succ{color:#A82D16;border-color:#A82D16;background:#FCEDE9}
   .t-inc{color:#8A5E00;border-color:#8A5E00;background:#FFF4DC}

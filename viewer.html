@@ -147,7 +147,7 @@
   td.d{white-space:nowrap;font-weight:650}
   .pos{color:var(--ok)} .neg{color:var(--bad)}
 
-  .pill{display:inline-block;padding:1.5px 8px;border-radius:99px;font-size:11px;
+  .pill{display:inline-block;padding:1.5px 8px;border-radius:3px;font-size:11px;
     font-weight:650;letter-spacing:.4px}
   .p-ok{background:var(--ok-bg);color:var(--ok)} .p-bad{background:var(--bad-bg);color:var(--bad)}
   .p-warn{background:var(--warn-bg);color:var(--warn)} .p-dim{background:var(--dim-bg);color:var(--dim)}
@@ -236,6 +236,7 @@
   }
   @media(max-width:640px){.side{grid-template-columns:1fr}select{min-width:0;width:100%}}
 </style>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
 <div class="app">
@@ -453,7 +454,7 @@ function render(s){
   if (k === "tool_failure"){
     const r = s.result || {};
     return `<div class="lbl">Tool failure ${pill(r.status || "unavailable","bad")}${tag}</div>
-      <div class="mono sig" style="color:var(--bad)">${esc(s.tool)} &mdash; ${esc(r.reason||"")}</div>
+      <div class="mono sig" style="color:var(--bad)">${esc(s.tool)}: ${esc(r.reason||"")}</div>
       <div class="reason">${esc(r.detail||"")}</div>`;
   }
 
@@ -519,7 +520,7 @@ function render(s){
           confidence ${p.confidence.toFixed(2)}</span>
           <div class="reason">${esc(p.hypothesis)}</div>`:"<span style='color:var(--dim2)'>none</span>"}</div>
         <div><div class="h">After this trigger</div>
-          <span style="color:var(--dim)">re-entering HYPOTHESIZE &mdash;
+          <span style="color:var(--dim)">re-entering HYPOTHESIZE:
           the agent gathers new evidence before re-scoring</span></div>
       </div>`;
   }
@@ -662,7 +663,7 @@ async function load(key){
   $("stats").innerHTML = [
     [`Outcome`, concl ? outcomePill(concl.outcome) : pill("none","dim"),
       (data.cases || []).length > 1 ? `${data.cases.length} cases` : (c0?.case_id || "")],
-    [`Confidence`, concl ? Number(concl.confidence).toFixed(2) : "&mdash;",
+    [`Confidence`, concl ? Number(concl.confidence).toFixed(2) : "n/a",
       concl ? `score ${Number(concl.score).toFixed(2)}` : ""],
     [`Evidence calls`, calls, `${steps.length} trace steps`],
     [`Guard refusals`, refusals,

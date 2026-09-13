@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privacy: SOC Agent</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="brand" href="index.html"><span class="dot"></span>SOC Agent</a>
+    <a class="l" href="how-it-works.html">How it works</a>
+    <a class="l" href="scenarios.html">Scenarios</a>
+    <a class="l" href="design.html">Why it is built this way</a>
+    <span class="sp"></span>
+    <a class="btn sm" href="viewer.html">Open the viewer</a>
+  </div>
+</nav>
+
+<header class="pagehead wrap">
+  <h1>Privacy</h1>
+  <p class="sub">Short, because this site does very little. It serves static files and
+    nothing else.</p>
+</header>
+
+<section class="wrap first">
+  <div class="panelbox" style="max-width:760px">
+    <h3>What this site collects</h3>
+    <div class="kv"><b>Accounts</b><span>None. There is nothing to sign in to.</span></div>
+    <div class="kv"><b>Cookies</b><span>None set by this site.</span></div>
+    <div class="kv"><b>Analytics</b><span>None. No tracking or measurement script runs.</span></div>
+    <div class="kv"><b>Forms</b><span>None. There is no input field anywhere on the site.</span></div>
+    <div class="kv"><b>Third parties</b><span>None. Every script, style and font falls back to
+      local or system resources, so no request leaves the page.</span></div>
+  </div>
+
+  <h3 style="font-size:19px;margin:34px 0 12px">Browser storage</h3>
+  <p style="max-width:760px">The trace viewer keeps nothing in <code>localStorage</code>,
+    <code>sessionStorage</code> or IndexedDB. Which scenario you are looking at is held in the
+    page URL, so it stays in your browser history exactly as any other URL does.</p>
+
+  <h3 style="font-size:19px;margin:34px 0 12px">Hosting</h3>
+  <p style="max-width:760px">The site is hosted on Vercel. Like any web host, Vercel receives
+    the requests your browser makes in order to serve the files, and may log them according to
+    its own policies. That is outside this project's control and is the only place a record of
+    your visit could exist.</p>
+
+  <h3 style="font-size:19px;margin:34px 0 12px">The data you can see here</h3>
+  <p style="max-width:760px">Every hostname, IP address, CVE reference, log line and account
+    name in the traces is <strong>synthetic</strong>. They were written as fixtures for this
+    project. No real network, host, person or organisation is described anywhere on this site.</p>
+
+  <div class="pagenav"><a class="btn ghost sm" href="index.html">Back to the overview</a>
+    <span class="sp"></span><a class="btn ghost sm" href="terms.html">Terms of use</a></div>
+</section>
+
+<footer class="wrap">
+  <p class="fine">Static site. No cookies, no analytics, no accounts.
+    <a href="terms.html">Terms of use</a> &middot; <a href="index.html">Overview</a></p>
+</footer>
+
+</body>
+</html>

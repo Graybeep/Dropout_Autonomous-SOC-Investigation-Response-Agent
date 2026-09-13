@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="SOC Agent">
+  <rect width="32" height="32" rx="6" fill="#0D0D0D"/>
+  <path d="M16 5l8 3v7.2c0 5.2-3.3 9.6-8 11.3-4.7-1.7-8-6.1-8-11.3V8l8-3z" fill="#FF6B35"/>
+  <path d="M12 16.2l2.9 2.9L20.4 13" fill="none" stroke="#0D0D0D" stroke-width="2.6"
+        stroke-linecap="square" stroke-linejoin="miter"/>
+</svg>

@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Why it is built this way — SOC Agent</title>
+<title>Why it is built this way: SOC Agent</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="site.css">
 </head>
 <body>
@@ -32,11 +33,11 @@
         Ask where <code>0.95</code> came from and there is a one-line answer, and the same evidence
         scores the same way every time.</p>
       <p>Submissions pass through a checker that can refuse them. It never decides whether a version
-        falls in a range &mdash; that is the agent's call. It refuses the <em>form</em> of a claim:
+        falls in a range; that is the agent's call. It refuses the <em>form</em> of a claim:
         saying a host is outside <em>all</em> affected ranges having looked up only some of its
         services, or citing a source that came back empty.</p>
       <p>Refusal is routine rather than exceptional, and both the refusal and the correction stay in
-        the trace. Scenario 1 is the clearest case &mdash; the agent is refused on two counts at once,
+        the trace. Scenario 1 is the clearest case: the agent is refused on two counts at once,
         then resolves each differently: it fetches the data it was missing, and drops the claim it
         could not support.</p>
     </div>
@@ -59,10 +60,11 @@
 
 <footer class="wrap">
   <h2>Watch an investigation unfold</h2>
-  <p class="sub">The viewer replays a saved trace step by step &mdash; each decision, the reason
+  <p class="sub">The viewer replays a saved trace step by step: each decision, the reason
     behind it, and the evidence that produced the verdict.</p>
   <div class="cta"><a class="btn" href="viewer.html">Open the trace viewer</a></div>
   <p class="fine">Traces are replayed from disk. To regenerate them, run <code>python run_all.py</code>.</p>
+  <p class="fine"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms of use</a></p>
 </footer>
 
 </body>

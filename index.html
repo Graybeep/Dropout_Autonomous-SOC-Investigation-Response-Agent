@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SOC Agent — did the attack actually succeed?</title>
+<title>SOC Agent: did the attack actually succeed?</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="site.css">
 </head>
 <body>
@@ -23,13 +24,13 @@
   <span class="kicker">Autonomous investigation &amp; response</span>
   <h1>An alert says you were attacked.<br><em>Did it actually work?</em></h1>
   <p class="lede">This agent takes a simulated intrusion-detection alert and decides whether the
-    attack <strong>actually succeeded</strong> &mdash; by correlating it against asset, vulnerability,
+    attack <strong>actually succeeded</strong>, by correlating it against asset, vulnerability,
     configuration and log evidence, instead of trusting the alert's own severity label.</p>
   <div class="cta">
     <a class="btn" href="viewer.html">Open the trace viewer</a>
     <a class="btn ghost" href="how-it-works.html">See how it works</a>
   </div>
-  <p class="note">This viewer replays traces from real agent runs &mdash; every step shown was
+  <p class="note">This viewer replays traces from real agent runs. Every step shown was
     produced by the live system, not simulated. The agent itself runs locally: clone the
     repo, set <code>ANTHROPIC_API_KEY</code>, and run <code>python run_all.py</code>.</p>
 </header>
@@ -40,12 +41,12 @@
   <p class="sub">A &ldquo;critical&rdquo; injection alert against a host patched two years ago, whose
     logs show the request was blocked, is a false alarm. A quieter alert against an unpatched host
     that then shipped two megabytes outbound is a breach. The label does not decide which is which
-    &mdash; the correlated evidence does, and the agent has to go and get it.</p>
+    the correlated evidence does, and the agent has to go and get it.</p>
 
   <div class="steps" style="margin-top:34px">
     <div class="step">
       <div class="n">1</div><h3>How it works</h3>
-      <p>Six stages, and the agent picks its own path through them &mdash; including which tools to
+      <p>Six stages, and the agent picks its own path through them, including which tools to
         call and when it has enough to conclude.</p>
       <p style="margin-top:12px"><a href="how-it-works.html">Read the walkthrough &rarr;</a></p>
     </div>
@@ -66,10 +67,11 @@
 
 <footer class="wrap">
   <h2>Watch an investigation unfold</h2>
-  <p class="sub">The viewer replays a saved trace step by step &mdash; each decision, the reason
+  <p class="sub">The viewer replays a saved trace step by step: each decision, the reason
     behind it, and the evidence that produced the verdict.</p>
   <div class="cta"><a class="btn" href="viewer.html">Open the trace viewer</a></div>
   <p class="fine">Traces are replayed from disk. To regenerate them, run <code>python run_all.py</code>.</p>
+  <p class="fine"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms of use</a></p>
 </footer>
 
 </body>

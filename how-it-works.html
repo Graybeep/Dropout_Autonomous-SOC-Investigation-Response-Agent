@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>How it works — SOC Agent</title>
+<title>How it works: SOC Agent</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="site.css">
 </head>
 <body>
@@ -21,7 +22,7 @@
 
 <header class="pagehead wrap">
   <h1>How it works</h1>
-  <p class="sub">The alert arrives with no verdict attached. Everything that follows is the agent's own decision — which evidence to pull, in what order, and when it has enough to stop.</p>
+  <p class="sub">The alert arrives with no verdict attached. Everything that follows is the agent's own decision: which evidence to pull, in what order, and when it has enough to stop.</p>
 </header>
 
 <section class="wrap first">
@@ -30,7 +31,7 @@
     <div class="step"><div class="n">1</div><h3>Ingest</h3>
       <p>An alert opens a case. Its severity label is recorded as the sensor's opinion, never as a finding.</p></div>
     <div class="step"><div class="n">2</div><h3>Hypothesise</h3>
-      <p>The agent states what would confirm the attack succeeded &mdash; and what would falsify it.</p></div>
+      <p>The agent states what would confirm the attack succeeded, and what would falsify it.</p></div>
     <div class="step"><div class="n">3</div><h3>Gather</h3>
       <p>It chooses tool calls one at a time, giving a reason before each, and judges after each whether it has enough.</p></div>
     <div class="step"><div class="n">4</div><h3>Score</h3>
@@ -45,13 +46,13 @@
     <div class="story">
       <h3 style="font-size:19px;margin-bottom:12px">The correlation that matters</h3>
       <p>The vulnerability database is keyed by service name and holds no per-host patch status
-        &mdash; a real CVE feed does not know what your host runs. So the agent has to join two
+        A real CVE feed does not know what your host runs, so the agent has to join two
         independent facts and show its working:</p>
       <div class="quote"><p><code>get_asset_info</code> &rarr; the host runs MySQL 5.7.21<br>
         <code>get_vulnerabilities</code> &rarr; CVE-2023-21980 affects <code>&gt;=5.7.0,&lt;5.7.30</code><br>
         &rarr; 5.7.21 is inside that range &rarr; vulnerable</p></div>
       <p style="margin-top:15px">The configuration source follows the same rule. It describes controls
-        &mdash; which tables an account may read, whether the web firewall blocks or merely logs &mdash;
+        (which tables an account may read, whether the web firewall blocks or merely logs)
         and never says whether they stopped <em>this</em> attack. That judgement stays the agent's, and
         it is visible in the trace.</p>
     </div>
@@ -80,10 +81,11 @@
 
 <footer class="wrap">
   <h2>Watch an investigation unfold</h2>
-  <p class="sub">The viewer replays a saved trace step by step &mdash; each decision, the reason
+  <p class="sub">The viewer replays a saved trace step by step: each decision, the reason
     behind it, and the evidence that produced the verdict.</p>
   <div class="cta"><a class="btn" href="viewer.html">Open the trace viewer</a></div>
   <p class="fine">Traces are replayed from disk. To regenerate them, run <code>python run_all.py</code>.</p>
+  <p class="fine"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms of use</a></p>
 </footer>
 
 </body>
