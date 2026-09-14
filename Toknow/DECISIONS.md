@@ -2816,3 +2816,26 @@ verdicts, different paths.
 each is a check that reported a result about itself rather than about the thing
 that mattered. A label toggling is not playback working, shapes inside a slide
 are not a readable slide, and a screenshot 390px wide is not a 390px layout.
+
+---
+
+## Part 31 - Accessibility and link previews
+
+**P-046. The primary buttons failed contrast, and had never been measured.** The
+dark viewer's contrast was measured early on; the warm landing palette never was.
+Computed from the actual color values, white text on the orange buttons was
+2.84:1 against the WCAG AA minimum of 4.5:1, on every "Watch an investigation"
+button, and the large orange numerals were 2.84:1 against the 3:1 large-text
+minimum. Buttons now use the brightest orange that passes (#C94C1B, 4.63:1) and
+numerals #E0561F (3.80:1). The original orange is kept for decoration only.
+
+**N-53. Keyboard focus, a page heading, link previews and a 404 page.** Neither
+stylesheet styled focus, so keyboard users saw the browser default; both now have
+:focus-visible rings (4.45:1 light, 14.33:1 dark). The viewer page had no h1; the
+breadcrumb is now the h1, visually unchanged. Every page gained a meta
+description and Open Graph tags with a 1200x630 preview image, so the submission
+link previews properly instead of showing a bare URL. A custom 404.html with
+root-absolute asset paths replaces Vercel's generic error, verified live to
+return status 404 with the site's styling even for nested bad paths. A structural
+HTML check over all eight pages found no mismatched tags, unclosed elements or
+duplicate ids.
