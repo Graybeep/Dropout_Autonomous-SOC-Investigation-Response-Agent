@@ -8,7 +8,12 @@
   :root{
     --cream:#FFFAF0; --cream2:#FFF3E4; --card:#FFFFFF;
     --ink:#3B2A1F; --body:#6B5344; --muted:#7D6553;
-    --orange:#FF6B35; --orange-dk:#C4491A; --line:rgba(107,83,68,.18);
+    --orange:#FF6B35; --orange-dk:#C4491A;
+    /* Contrast-safe oranges for anything carrying text. #FF6B35 with white text is
+       2.84:1, under WCAG AA 4.5:1; --orange-btn is the brightest orange that passes
+       (4.63:1). --orange-num is for large numerals, where 3:1 applies (3.80:1).
+       --orange itself stays for decoration: the logo dot and borders. */
+    --orange-btn:#C94C1B; --orange-btn-hover:#A83C14; --orange-num:#E0561F; --line:rgba(107,83,68,.18);
     --r:12px;
   }
   *{box-sizing:border-box}
@@ -32,10 +37,10 @@
   .nav-in .sp{flex:1}
   .nav-in a.l{color:var(--body);text-decoration:none;font-size:14.5px}
   .nav-in a.l:hover{color:var(--orange-dk)}
-  .btn{display:inline-block;background:var(--orange);color:#fff;text-decoration:none;
+  .btn{display:inline-block;background:var(--orange-btn);color:#fff;text-decoration:none;
     border-radius:var(--r);padding:11px 20px;font-weight:700;font-size:15px;
-    border:1px solid var(--orange);transition:background .15s}
-  .btn:hover{background:var(--orange-dk);border-color:var(--orange-dk);color:#fff}
+    border:1px solid var(--orange-btn);transition:background .15s}
+  .btn:hover{background:var(--orange-btn-hover);border-color:var(--orange-btn-hover);color:#fff}
   .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
   .btn.ghost:hover{background:var(--cream2);color:var(--ink)}
   .btn.sm{padding:8px 15px;font-size:14px}
@@ -72,7 +77,7 @@
   .sc{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
     padding:20px;display:flex;flex-direction:column;gap:9px}
   .sc-hd{display:flex;align-items:baseline;gap:10px}
-  .sc-n{font-family:"Playfair Display SC",Georgia,serif;font-size:26px;color:var(--orange);
+  .sc-n{font-family:"Playfair Display SC",Georgia,serif;font-size:26px;color:var(--orange-num);
     font-weight:700;line-height:1}
   .sc h3{font-size:16.5px}
   .sc p{margin:0;font-size:14.5px}
@@ -130,7 +135,7 @@
     border:1px solid var(--line);color:var(--orange-dk);font-weight:700;
     font-size:13px;display:grid;place-items:center}
   .fstep:target{border-color:var(--orange)}
-  .fstep:target::before{background:var(--orange);color:#fff;border-color:var(--orange)}
+  .fstep:target::before{background:var(--orange-btn);color:#fff;border-color:var(--orange-btn)}
   .fstep h3{font-size:18px;margin-bottom:4px}
   .fstep .what{margin:8px 0 0;font-size:15px}
   .fstep .why{margin:10px 0 0;font-size:14px;color:var(--muted);
@@ -190,3 +195,9 @@
   .measure{max-width:760px}
   .legal-h{font-size:19px;margin:34px 0 12px}
   .legal-h.first{margin:0 0 12px}
+
+  /* Keyboard focus. :focus-visible shows the ring for keyboard users without
+     flashing it on every mouse click. Orange-btn keeps it above 3:1 on cream. */
+  a:focus-visible, button:focus-visible, summary:focus-visible{
+    outline:3px solid var(--orange-btn); outline-offset:3px; border-radius:6px}
+  .btn:focus-visible{outline-offset:4px}

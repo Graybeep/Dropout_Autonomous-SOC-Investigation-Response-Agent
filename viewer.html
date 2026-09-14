@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SOC Agent - Trace Replay</title>
 
+<meta name="description" content="Replay a recorded investigation step by step: every tool call, guard refusal, reconsideration and verified action.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SOC Agent">
+<meta property="og:title" content="SOC Agent: trace viewer">
+<meta property="og:description" content="Replay a recorded investigation step by step: every tool call, guard refusal, reconsideration and verified action.">
+<meta property="og:url" content="https://soc-agent-trace-viewer.vercel.app/viewer.html">
+<meta property="og:image" content="https://soc-agent-trace-viewer.vercel.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="viewer.css">
 </head>
@@ -23,7 +33,7 @@
 
   <div class="main-col">
     <header class="topbar">
-      <span class="crumb" id="crumb">&nbsp;</span>
+      <h1 class="crumb" id="crumb">&nbsp;</h1>
       <span class="grow"></span>
       <button id="play" class="primary">Start</button>
       <button id="all">Show all</button>
