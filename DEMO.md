@@ -24,16 +24,16 @@ Have a second terminal ready in the project root.
 python run_all.py 1
 ```
 
-**The live slot is Scenario 1, 2 or 6 — never 3, 4 or 5.** This is a deliberate
+**The live slot is Scenario 1, 2 or 6, never 3, 4 or 5.** This is a deliberate
 choice, not a preference. Section 10 of the spec says demo from saved replay with
 one live run to prove the loop is real; the live run should therefore be a
 scenario whose outcome is structurally pinned rather than one that turns on a
-judgement call:
+judgment call:
 
 | | why it is safe live |
 |---|---|
-| **S1** | `FAILED` at 0.05 — clamped hard against the floor |
-| **S2** | `SUCCEEDED` at 0.95 — clamped hard against the ceiling |
+| **S1** | `FAILED` at 0.05, clamped hard against the floor |
+| **S2** | `SUCCEEDED` at 0.95, clamped hard against the ceiling |
 | **S6** | forced `INCONCLUSIVE` by the degraded-evidence clamp regardless of what the agent finds |
 
 Scenario 5 case A is the one case in the suite whose verdict moves on a single
@@ -47,7 +47,7 @@ Then show the guardrails are checkable, not just claimed:
 
 ```bash
 python compliance.py     # 12 structural checks
-python selfcheck.py      # 84 behavioural checks
+python selfcheck.py      # 84 behavioral checks
 ```
 
 > "No outcome branches on scenario identity. No code branches on the alert's
@@ -58,7 +58,7 @@ python selfcheck.py      # 84 behavioural checks
 ## Ordering: open on autonomy, arrive at verification
 
 The strongest single frame in the project is Scenario 6's degraded-evidence
-ceiling. **Do not open on it.** It proves verification and robustness — a 10%
+ceiling. **Do not open on it.** It proves verification and robustness, a 10%
 criterion you have already maxed. Autonomy is 25%, and it is proved by a
 different frame entirely:
 
@@ -79,7 +79,7 @@ Order: **1 → 2 → 3 → 6**, with 4 and 5 if time allows.
 
 ---
 
-## 1. The core thesis — Scenario 1 vs Scenario 2 (2 min)
+## 1. The core thesis: Scenario 1 vs Scenario 2 (2 min)
 
 Open **Scenario 1** in the viewer. Press **Play**.
 
@@ -90,7 +90,7 @@ Point at the `get_asset_info` → `get_vulnerabilities` pair, then the scoring
 table:
 
 > "This is the join the whole problem is about. The CVE database doesn't know
-> what this host runs — it only knows that CVE-2023-21980 affects versions below
+> what this host runs; it only knows that CVE-2023-21980 affects versions below
 > 5.7.30. The inventory says this host runs 8.0.36. The agent has to put those
 > two facts together itself, and you can see it doing it in the citation."
 
@@ -98,7 +98,7 @@ Verdict: **FAILED**, confidence 0.95, no action taken.
 
 Switch to **Scenario 2**. Same signature, different host.
 
-> "Same attack signature. This host runs 5.7.21 — inside the range. Logs show
+> "Same attack signature. This host runs 5.7.21, inside the range. Logs show
 > the query executed and returned 48,000 customer rows. 2.4 MB left the host."
 
 Verdict: **SUCCEEDED** → blocks the IP → **verifies** it.
@@ -115,13 +115,13 @@ cat fixtures/run/firewall_state.json
 
 ---
 
-## 2. Adaptation — Scenario 3 (2 min)
+## 2. Adaptation: Scenario 3 (2 min)
 
 > "This is the one I'd actually watch."
 
 Play until the first conclusion: **INCONCLUSIVE, 0.40**.
 
-> "The injection attempt is right there in the logs — but it threw a SQL syntax
+> "The injection attempt is right there in the logs, but it threw a SQL syntax
 > error and returned zero rows. Attempted, not succeeded. The agent declines to
 > call it either way, and on a non-critical asset that means no action. An
 > inconclusive answer is a legitimate answer."
@@ -131,7 +131,7 @@ Continue past the purple **reconsider** fork.
 > "Now delayed log shipping delivers two entries that name a *second host*.
 > Here's the part that matters: the agent doesn't just re-score what it already
 > had. It re-enters at hypothesis formation, and goes and investigates
-> SRV-DB-09 — asset info, logs, related alerts — a host it had never looked at."
+> SRV-DB-09 (asset info, logs, related alerts), a host it had never looked at."
 
 Land on **SUCCEEDED, 0.95**, and the side-by-side prior/new block.
 
@@ -139,45 +139,45 @@ Land on **SUCCEEDED, 0.95**, and the side-by-side prior/new block.
 
 ---
 
-## 3. Failure recovery — Scenario 6 (1.5 min)
+## 3. Failure recovery: Scenario 6 (1.5 min)
 
 > "The log collector is down for this one."
 
 Point at the two red `tool_failure` cards.
 
 > "It notices, retries once, fails again, and routes to packet metadata and
-> related alerts instead. Critically, it does *not* record 'logs were clean' —
-> a broken tool is not evidence that nothing happened."
+> related alerts instead. Critically, it does *not* record 'logs were clean',
+> because a broken tool is not evidence that nothing happened."
 
 Then the scoring block:
 
-> "Here's my favourite number in the whole project. The evidence it *did* gather
-> scores 0.90 — that's SUCCEEDED. But one source failed, so the degraded-evidence
+> "Here's my favorite number in the whole project. The evidence it *did* gather
+> scores 0.90. That's SUCCEEDED. But one source failed, so the degraded-evidence
 > clamp pulls it to 0.65 and the verdict to INCONCLUSIVE. The agent doesn't get
 > to claim a confident verdict on a half-read evidence base. And because the
-> asset is critical, it still contains the threat — tagged **precautionary**,
+> asset is critical, it still contains the threat, tagged **precautionary**,
 > explicitly containment under uncertainty rather than a verdict."
 
 ---
 
-## 4. Human authority — Scenario 4 (1 min)
+## 4. Human authority: Scenario 4 (1 min)
 
 > "Agent concludes SUCCEEDED and blocks. Then a human analyst says: that was our
 > own red team."
 
 Show the unblock, the `OVERRIDDEN_BENIGN` status, and section 6 of the report.
 
-> "Both views are kept side by side — the machine's conclusion is not erased by
+> "Both views are kept side by side. The machine's conclusion is not erased by
 > being overruled. And the agent will not re-block without a new trigger."
 
 ---
 
-## 5. Correlation — Scenario 5 (1 min, optional if time is short)
+## 5. Correlation: Scenario 5 (1 min, optional if time is short)
 
 > "Two alerts on one asset, two separate cases. While working the second case
 > the agent calls `get_related_alerts`, finds the first case and reads its
-> stored conclusion — and the first case then reconsiders on the strength of the
-> second. 0.40 to 0.80."
+> stored conclusion, and the first case then reconsiders on the strength of the
+> second. 0.40 to 0.95."
 
 ---
 
@@ -191,7 +191,7 @@ ls reports/
 > for each step, the itemised scoring, the action, the verification, any
 > reconsideration side by side, and any degraded-evidence ceiling."
 
-Open `Toknow/DECISIONS.md` if asked about process — every decision and every
+Open `Toknow/DECISIONS.md` if asked about process: every decision and every
 problem hit during the build is logged there, including two cases where a
 scenario passed its assertions but was demonstrating nothing, and how that was
 caught.
@@ -202,16 +202,16 @@ caught.
 
 **"Where does 0.85 come from?"**
 `soc_agent/confidence.py`. Fixed table, base 0.50, each factor applied at most
-once, clamped. The model never emits a confidence number — it declares which
+once, clamped. The model never emits a confidence number. It declares which
 evidence classes it established, with citations, and Python does the arithmetic.
 
 **"How do you know it isn't scripted?"**
 `python compliance.py`. Also: tool *ordering* is deliberately not asserted by the
-harness, because pinning a sequence is exactly the scripted behaviour the design
+harness, because pinning a sequence is exactly the scripted behavior the design
 forbids. Run the same scenario twice and the order differs; the outcome doesn't.
 
 **"What stops it inventing evidence?"**
-Factor preconditions — a factor can't be declared unless the source that would
+Factor preconditions: a factor can't be declared unless the source that would
 establish it returned `ok`. `no_data` and `unavailable` don't count. It fired for
 real on Scenario 1: the agent claimed corroboration from an empty lookup, the
 tool rejected the submission, and it resubmitted correctly. That exchange is in
@@ -220,26 +220,26 @@ the trace.
 **"Why this model / why not Claude?"**
 See `Toknow/DECISIONS.md` D-002. The architecture is Claude-native tool use. The
 account is on a free plan with zero credits, so every Claude model returns
-"Insufficient credits" — verified by probing each one, not assumed.
+"Insufficient credits", verified by probing each one, not assumed.
 `ling-3.0-flash-fin-free` is the strongest model this key can actually reach,
-and it is the name the harness banner prints at the top of every run — say that
+and it is the name the harness banner prints at the top of every run. Say that
 name, not a friendlier one, because the judge can see it on screen.
 
-**"How stable is it, really?"** — answer this with the number, not a hedge.
+**"How stable is it, really?"** Answer this with the number, not a hedge.
 
 > Six of six clean, 51/51, plus 99/99 offline checks. The seventh is a
 > declared XFAIL and I will show you why it fails, because that is the more
 > useful half. The number I trust more than the total is this: across runs the
 > declared factor sets, the scores and the outcomes are identical. What varies
 > is tool-call ordering and how many times the guard bus refuses a submission
-> before accepting it — variance in how the agent gets there, not in what it
+> before accepting it: variance in how the agent gets there, not in what it
 > concludes.
 
 Say it in that order: the outcome is stable *because* the scoring is
 deterministic, and the trajectory varies *because* the agent genuinely chooses
 its own tools. If both were stable, the second one would be a script.
 
-### The XFAIL — lead with it, do not wait to be asked
+### The XFAIL: lead with it, do not wait to be asked
 
 `reports/CASE-7001.md`. The agent investigates SRV-HR-11, and on version and
 logs alone the case is indistinguishable from scenario 2: MySQL 5.7.24 sits
@@ -249,7 +249,7 @@ database. It calls `get_configuration` unprompted, and its own report says:
 > *"the database account `hr_portal_ro` lacked SELECT privileges on the targeted
 > tables, causing all UNION SELECT attempts to return ERROR 1142 with 0 rows"*
 
-It even rules out the WAF as the thing that saved the host — DetectionOnly, so
+It even rules out the WAF as the thing that saved the host: DetectionOnly, so
 the payload did reach the application. That is the asset + vulnerability +
 configuration correlation, done correctly.
 
@@ -258,7 +258,7 @@ configuration control. **The agent established a fact the scoring model has no
 way to represent.** The one sentence to have ready:
 
 > I built that factor, and I reverted it. It passed one full run and failed the
-> next — not because the factor was wrong, but because the guard protecting it
+> next, not because the factor was wrong, but because the guard protecting it
 > asked the agent to fill in a schema field instead of to call a tool, and on
 > one run in two the agent dropped the claim rather than satisfy the guard. A
 > guard that makes a claim harder to state than to abandon will get it
@@ -269,27 +269,27 @@ moves when you dislike its answer is not a gate, and the two runs needed to
 verify a fix are the two runs this demo was rehearsed in.
 
 Do not offer "a stronger model would fix it." It is a resource excuse dressed as
-a robustness story, and it invites "so why didn't you?" — to which the honest
+a robustness story, and it invites "so why didn't you?", to which the honest
 answer is that changing the model invalidates a passing 51/51 suite with no time
 to re-verify it. Better not to raise it.
 
 ---
 
-## Rehearsed set piece — the guard refusal (know this cold)
+## Rehearsed set piece: the guard refusal (know this cold)
 
 **Where:** `reports/CASE-1001.md`, section 2, steps **9–11**. Scenario 1.
 Do not go looking for this live; it is here because it is the strongest single
-artefact for the autonomy and verification criteria.
+artifact for the autonomy and verification criteria.
 
 The agent submitted its assessment. The bus refused it for **two** reasons in
-the same response — use both, they are different guards:
+the same response. Use both; they are different guards:
 
 > **Refused:** factor `related_alert_corroborates` cannot be declared: it
 > requires a successful result from `get_related_alerts`, which you have not
 > obtained.
 >
 > **Refused:** factor `version_patched` claims SRV-WEB-01 is outside ALL
-> affected ranges, but you have not looked up **openssh** — service(s) this host
+> affected ranges, but you have not looked up **openssh** - service(s) this host
 > runs that the CVE knowledge base covers.
 
 The agent's own next line, which is the one to read aloud:
@@ -303,7 +303,7 @@ two different correct responses:** it *gathered* what was missing, and *dropped*
 what it could not support. Both the refusal and the correction are steps in the
 evidence chain.
 
-### The settled wording on guard timing — say it exactly like this
+### The settled wording on guard timing: say it exactly like this
 
 Verified in code before being said out loud. **Say:**
 
@@ -311,8 +311,8 @@ Verified in code before being said out loud. **Say:**
 
 That is literally true, and here is what backs it if pressed. All four guard
 call sites sit inside the `submit_assessment` branch. During gathering the bus
-only *observes* — it records which tools returned `ok`, which services were
-looked up, which log windows were queried — and that bookkeeping is **write-only
+only *observes*. It records which tools returned `ok`, which services were
+looked up and which log windows were queried, and that bookkeeping is **write-only
 on the gather path**: nothing reads it, nothing alters a result, and a non-submit
 call can never come back `rejected`. `GATHER_TOOLS` is a module constant, never
 narrowed at runtime. Empirically, across every run, the only tool ever rejected
@@ -322,23 +322,23 @@ Two precisions to volunteer rather than be caught on:
 
 - A refusal *does* re-enter the loop, and the agent has answered one by going
   and calling `get_vulnerabilities` on the service it skipped. The guard did not
-  select that tool — the agent did, in response to being told which source was
+  select that tool; the agent did, in response to being told which source was
   unread. The refusal names **which source is unread, never what it will say**:
   across every refusal message there are zero version numbers, zero CVE ids and
   zero verdict words.
 - The one thing that *does* alter a gather-path result is Scenario 6's
-  `fail_tools`, and that is declared scenario config — fault injection we chose
-  to test recovery — not a guard.
+  `fail_tools`, and that is declared scenario config (fault injection we chose
+  to test recovery), not a guard.
 
 ### The one sentence, if asked "isn't the bus deciding the verdict?"
 
-> No — the bus refused the **form** of the claim, not its content. The agent said
+> No. The bus refused the **form** of the claim, not its content. The agent said
 > the host was outside *all* CVE ranges having looked up only two of its three
 > services; you cannot say "all" after checking "some". The bus never decides
-> whether MySQL 8.0.36 falls inside a range — that comparison is the agent's, and
+> whether MySQL 8.0.36 falls inside a range; that comparison is the agent's, and
 > it is the whole point of §5.1.
 
-### If a judge notices refusals everywhere — get ahead of this, do not defend it
+### If a judge notices refusals everywhere: get ahead of this, do not defend it
 
 Measured across the seven shipped traces: **11 refusals over 8 cases; 6 of the 8
 are refused at least once; the busiest case takes 4.** Refusal is the normal
@@ -361,7 +361,7 @@ Present it as the design:
 
 **Do not say "the bus refuses the form of a claim and the agent supplies the
 evidence."** The first half is right; the second is true of only 2 refusals in
-11. Use the measured three-way account instead — it is more precise and it is
+11. Use the measured three-way account instead. It is more precise and it is
 stronger:
 
 - **It gathers** when the remedy is a tool call it already knows how to make.
@@ -377,7 +377,7 @@ stronger:
   occurrences, every run measured.
 
 Lead with the third. It is the direct answer to "isn't this just a model being
-corrected?" — a model being corrected argues, rephrases, tries the same claim in
+corrected?" A model being corrected argues, rephrases, tries the same claim in
 softer words. This one treats a refusal as a genuine constraint: it either goes
 and gets what it was missing, or it withdraws the claim. It never negotiates.
 
@@ -388,7 +388,7 @@ than call a tool, and on one run in two it dropped a claim that was true and
 supportable. Which response a refusal gets is a property of how the remedy is
 shaped, not of the agent's willingness.
 
-**If asked why identical fixtures give different counts — one line, pinned:**
+**If asked why identical fixtures give different counts: one line, pinned.**
 
 > The model picks its own tool sequence and declaration timing each run, so the
 > refusal count is a property of the trajectory, not of the fixtures.
@@ -396,7 +396,7 @@ shaped, not of the agent's willingness.
 Volunteer that rather than concede it: it turns the most variable number in the
 project into evidence for dynamic action selection, the characteristic with the
 weakest independent support. Family mix moves the same way and for the same
-reason — provenance 6 / contradiction 3 / exhaustiveness 2 one run, 8 / 2 / 4
+reason: provenance 6 / contradiction 3 / exhaustiveness 2 one run, 8 / 2 / 4
 the next. What does not move is which response each family deserves.
 
 The three shapes it refuses, worth naming because they are different failures:
@@ -407,7 +407,7 @@ failed), and **contradiction** (declaring a finding and its negation together).
 The sharpest single instance is in Scenario 5: `logs_clean` was refused because
 **case 5002 had already concluded SUCCEEDED on that same asset over the window
 being called clean.** That one compares a declared factor against a verdict the
-agent itself produced in another case — and it is the one to reach for if
+agent itself produced in another case, and it is the one to reach for if
 someone suspects the guards are cosmetic.
 
 ### Two follow-ups to have ready
@@ -419,17 +419,17 @@ the hint is disclosed in the report rather than hidden, which is why the chain
 reads honestly.
 
 **"Why not just check the signature's service?"**
-That would be a hardcoded signature→service mapping — Python encoding detection
+That would be a hardcoded signature→service mapping: Python encoding detection
 knowledge, which is the D-001 violation. Exhaustive coverage encodes none: it is
 a statement about universal versus existential claims. `version_in_range` is
 existential and deliberately exempt.
 
-### Backup artefact
+### Backup artifact
 `reports/CASE-3001.md` has a precondition refusal (`related_alert_corroborates`
 claimed from a lookup that returned no data) with the same shape, if Scenario 1
 is not the one on screen.
 
-### Follow-up — "how do you know the evals themselves are sound?"
+### Follow-up: "how do you know the evals themselves are sound?"
 
 Lead with this. It is a stronger answer than any pass count, because it is about
 the failure mode that actually threatens a verification suite.
@@ -442,7 +442,7 @@ the failure mode that actually threatens a verification suite.
 > run" from a hard-coded string while the underlying span was wrong. A viewer
 > "defect" I was about to fix turned out never to have existed. The configuration
 > fixture shipped a `prevents_exploitation` boolean that would have handed the
-> agent the verdict it was supposed to derive — while three comments in the code
+> agent the verdict it was supposed to derive, while three comments in the code
 > asserted it did no such thing. And the deploy reported "ready" on a build where
 > every single path redirected visitors to a login wall.
 >
@@ -452,11 +452,11 @@ the failure mode that actually threatens a verification suite.
 > adversarially tested, and why every count in this project was re-derived
 > rather than quoted.
 
-### Second follow-up — the ablation numbers
+### Second follow-up: the ablation numbers
 
 Do not volunteer this; it belongs after the set piece, if asked.
 
-> Each guard is ablated — monkeypatched to a no-op — and the suite has to fail.
+> Each guard is ablated (monkeypatched to a no-op), and the suite has to fail.
 > Preconditions breaks 4 checks, the coverage guard 2, the negative-scope guard
 > 3; restore and it's back to 0. Worth saying: my first ablation method patched
 > the source with a regex and mis-attributed failures across two guards. It
@@ -470,7 +470,7 @@ fail. Verified for both Scenario 3 and Scenario 5 case A.
 ### The set piece, as spoken (181 words, ~83s deliberate / ~72s normal)
 
 Timed. Budget is 90s, leaving room for the two follow-ups. If it runs long, cut
-the first two lines — the refusal is the payload, the setup is not.
+the first two lines. The refusal is the payload; the setup is not.
 
 > This is Scenario 1. A critical-severity SQL injection alert against SRV-WEB-01.
 >
@@ -483,26 +483,26 @@ the first two lines — the refusal is the payload, the setup is not.
 > **And the tool refuses it.**
 >
 > Read the refusal: it claims SRV-WEB-01 is outside ALL affected ranges, but it
-> hasn't looked up OpenSSH — a third service this host runs that the knowledge
+> hasn't looked up OpenSSH, a third service this host runs that the knowledge
 > base covers.
 >
 > Step nine is `get_vulnerabilities` on openssh. Step ten, it resubmits, and that
 > one is accepted. FAILED, confidence 0.95, no action taken.
 >
-> Now — the obvious question is whether the tool just decided the verdict. It
+> Now, the obvious question is whether the tool just decided the verdict. It
 > didn't. It refused the **form** of the claim, not its content. The agent said
 > "outside all ranges" having checked two of three services. You can't say *all*
 > after checking *some*. The tool never decides whether MySQL 8.0.36 falls inside
-> a range — that comparison is the agent's, and it's the entire point of the
+> a range; that comparison is the agent's, and it's the entire point of the
 > design.
 
 ---
 
-## The guard families — what the artefacts actually show
+## The guard families: what the artifacts actually show
 
-Four guard families now exist. **Three are demonstrated live in the committed
-traces; three are verified offline only.** Say it that way — claiming a scope the
-artefact does not contain is the one thing that turns this set piece against you.
+**Three checks appear in the shipped traces, three more fired as live refusals in
+earlier recorded runs, and one has never fired live.** Say it that way: claiming a scope the
+artifact does not contain is the one thing that turns this set piece against you.
 
 **Demonstrated in `traces/` and visible in the reports:**
 
@@ -531,12 +531,12 @@ The one-sentence framing covers all of them regardless:
 
 > Case A reconsiders and reaches `SUCCEEDED` at 0.95 by declaring
 > `logs_consistent`. It is worth knowing it clears the threshold on the other
-> honest path too — dropping the log factor lands 0.80 — so the case no longer
+> honest path too (dropping the log factor lands 0.80), so the case no longer
 > turns on one factor's sign, which is what made it the flakiest scenario
 > earlier. `compliance.py` asserts both paths clear.
 
 **Known limitation, if pressed on the packet factor:** in the current S5 trace
-case A declares `exfil_indicators` citing ALERT-5002's packet record — a sibling
+case A declares `exfil_indicators` citing ALERT-5002's packet record, a sibling
 alert's flow. The provenance guard requires the case to have *read* its own
 alert's flow, which it did; it does not require the *citation* to be that flow.
 No outcome impact (1.30 and 1.15 both clamp to 0.95). Recorded rather than
@@ -545,13 +545,13 @@ passing suite.
 
 ---
 
-## Completeness pass — the things that get asked
+## Completeness pass: the things that get asked
 
 ### The model
 > It runs on `ling-3.0-flash-fin-free` through a multi-model gateway. The
 > architecture is Claude-native tool use and the provider is one config line;
 > the account is on a free plan with zero credits, so every Claude model returns
-> "insufficient credits" — verified by probing each one. The guards are
+> "insufficient credits", verified by probing each one. The guards are
 > structural, so they hold regardless of which model is behind them.
 
 Say it once, in that form. It is a fact about the account, not an apology.
@@ -577,18 +577,18 @@ python -m http.server 8000
 - Press **Play** for the timed reveal; **Show all** to jump to the end.
 - `viewer.html#3` deep-links straight to a scenario.
 - **If it shows "trace not found":** you opened it as a `file://` URL. Browsers
-  block `fetch` on local files. Serve it over HTTP — that is the only cause.
+  block `fetch` on local files. Serve it over HTTP; that is the only cause.
 - **If nothing animates:** `vendor/motion.js` did not load, or the machine has
   reduced-motion enabled. The viewer still reveals every card; motion is
   enhancement only and its absence breaks nothing.
 
 ### Fallback order if the live leg fails
 
-1. **Saved trace in the viewer** — every scenario already has a passing trace
+1. **Saved trace in the viewer**: every scenario already has a passing trace
    committed. Nothing about the demo depends on the live run succeeding.
-2. **`reports/CASE-1001.md`** — the set piece reads just as well on the page as
+2. **`reports/CASE-1001.md`**: the set piece reads just as well on the page as
    on screen; section 2, steps 9-11.
-3. **`python selfcheck.py` and `python compliance.py`** — 99 and 22 checks, no
+3. **`python selfcheck.py` and `python compliance.py`**: 99 and 22 checks, no
    API key, no network. These cannot fail for environmental reasons.
 
 Decide which of these you are on *before* standing up, not during.

@@ -1,7 +1,7 @@
-# fixtures/probe — generalisation probe (NOT part of the suite)
+# fixtures/probe: generalization probe (NOT part of the suite)
 
 Scenario 2's **shape** over a fixture set where every surface detail differs.
-It exists to answer one question an independent reviewer raised: every artefact
+It exists to answer one question an independent reviewer raised: every artifact
 in this project came from six scenarios we wrote ourselves, so nothing tested
 the system outside its own anticipated cases.
 
@@ -14,7 +14,7 @@ the system outside its own anticipated cases.
 | attack in logs | `UNION SELECT` + `information_schema` | stacked query + `pg_catalog`, bulk export via `COPY … TO STDOUT` |
 
 Log phrasing is the variable that matters. If `logs_consistent` were matched on
-fixture vocabulary rather than read semantically, the probe would fail here —
+fixture vocabulary rather than read semantically, the probe would fail here:
 the two log sets share only `after, bytes, from, select, where`.
 
 ## Result
@@ -24,7 +24,7 @@ Identical on every axis: same three factors (`version_in_range`,
 `SUCCEEDED`, same `block_ip`, same tool order, same single provenance refusal.
 No scenario 2 vocabulary appears anywhere in the probe's citations, and it
 selected the sql_injection CVE over the privilege-escalation one whose range did
-not match — a real version join on a service it had not seen.
+not match, a real version join on a service it had not seen.
 
 ## What this does and does not support
 
@@ -37,6 +37,6 @@ overclaiming from a result that says something else.
 
 ## Rules
 
-Not in `run_all.py`. Not a scenario. Never seeded by the suite — `run_all.py`
+Not in `run_all.py`. Not a scenario. Never seeded by the suite; `run_all.py`
 reseeds from `fixtures/seed` only. Nothing here was tuned to make it pass, and
 it was run exactly once. See `Toknow/DECISIONS.md` N-37.

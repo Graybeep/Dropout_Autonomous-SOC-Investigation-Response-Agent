@@ -285,9 +285,10 @@ the reconsideration check.
   guard confirms the case read its *own* alert's packet record before making a
   packet claim. It cannot confirm the claim is based on that record rather than a
   sibling's, because that would mean reading the citation text, and the guards
-  deliberately never judge what the agent wrote. In the shipped traces this can
-  only arise in one place: scenario 5 case A, the only case that reads two
-  alerts' packet records. Documented as `K-7`.
+  deliberately never judge what the agent wrote. It does happen once in the
+  shipped traces: scenario 5 case A reads both alerts' packet records and its
+  `exfil_indicators` factor cites ALERT-5002's, its sibling's. The outcome is
+  unaffected (0.95 with or without that factor). Documented as `K-7`.
 - **One guard check has never fired in a live run: the related-alert time
   window.** `selfcheck.py` exercises it directly, but the agent has not yet made
   the mistake it catches, and forcing that mistake would mean scripting the agent.
