@@ -434,7 +434,7 @@ is not the one on screen.
 Lead with this. It is a stronger answer than any pass count, because it is about
 the failure mode that actually threatens a verification suite.
 
-> Seven separate times my own tooling produced a **plausible wrong answer**, and
+> Ten separate times my own tooling produced a **plausible wrong answer**, and
 > every time the report looked fine. A regex-based guard ablation mis-attributed
 > failures across two guards. An invariant I had "verified" by reading turned out
 > never to have been asserted. A sandbox lock deleted itself, because it lived in
@@ -443,10 +443,14 @@ the failure mode that actually threatens a verification suite.
 > "defect" I was about to fix turned out never to have existed. The configuration
 > fixture shipped a `prevents_exploitation` boolean that would have handed the
 > agent the verdict it was supposed to derive, while three comments in the code
-> asserted it did no such thing. And the deploy reported "ready" on a build where
-> every single path redirected visitors to a login wall.
+> asserted it did no such thing. The deploy reported "ready" on a build where
+> every single path redirected visitors to a login wall. A check of the Start
+> button confirmed its label changed, while playback was frozen after one step. A
+> bounds check passed deck slides whose titles were clipped behind content. And a
+> phone-width test was really laid out at 500 pixels, so it reported a layout no
+> phone would ever show.
 >
-> None of those were caught by a suite going red. All seven were caught by
+> None of those were caught by a suite going red. All ten were caught by
 > re-reading the output instead of the summary. That is why the guards are now
 > ablated at runtime rather than by patching source, why fixture invariants are
 > adversarially tested, and why every count in this project was re-derived
