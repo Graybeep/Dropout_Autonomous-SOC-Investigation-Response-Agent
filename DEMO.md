@@ -1,8 +1,9 @@
 # Demo script
 
 Roughly 6–8 minutes. The viewer replays saved traces, so nothing can hang,
-rate-limit, or go off-script in front of judges. Run the agent live once
-(step 0) to prove it is real, then demo from the viewer.
+rate-limit, or go off-script in front of judges. The live run that used to open
+the demo is no longer possible (step 0 explains why), so the proof that it is real
+comes from the traces, the reports and the offline checks instead.
 
 ## Setup (before you present)
 
@@ -17,38 +18,46 @@ Have a second terminal ready in the project root.
 
 ## 0. Prove it is real (60s)
 
+**There is no live run in this demo.** The model that produced every committed
+trace, `ling-3.0-flash-fin-free` on a multi-model gateway, has been retired by
+the provider. On 14 September 2026 a verification run failed on all seven
+scenarios with `HTTP 400 "The requested model is not available."`, and the two
+other free models tried on the same gateway were refused as well. The failed run
+overwrote the traces with error traces; they were restored from git and
+confirmed byte-identical before anything else was touched. Do not attempt
+`python run_all.py` on stage with this key.
+
 > "Everything you're about to see in the UI was produced by the agent actually
-> running. Here it is running."
+> running, in full runs that passed. The gateway model it ran on has since been
+> retired, so rather than a live run I'll show you the checks that run without
+> any model at all."
+
+Show the guardrails are checkable, not just claimed:
 
 ```bash
-python run_all.py 1
+python compliance.py     # 22 structural checks
+python selfcheck.py      # 99 behavioral checks
 ```
 
-**The live slot is Scenario 1, 2 or 6, never 3, 4 or 5.** This is a deliberate
-choice, not a preference. Section 10 of the spec says demo from saved replay with
-one live run to prove the loop is real; the live run should therefore be a
-scenario whose outcome is structurally pinned rather than one that turns on a
-judgment call:
+Both need no API key and no network, so they cannot fail for environmental
+reasons.
 
-| | why it is safe live |
+If a judge wants to see the loop run, the provider is one config line: with an
+OpenAI or Anthropic key, set the four variables from README Setup step 4 and run
+`python run_all.py 1`. Say plainly that a different model takes its own path and
+that outcomes have only been verified on the model that produced the traces. If
+you do run one, pick **Scenario 1, 2 or 6, never 3, 4 or 5**: those three have
+outcomes pinned structurally rather than by a judgment call.
+
+| | why it is the safer choice |
 |---|---|
 | **S1** | `FAILED` at 0.05, clamped hard against the floor |
 | **S2** | `SUCCEEDED` at 0.95, clamped hard against the ceiling |
 | **S6** | forced `INCONCLUSIVE` by the degraded-evidence clamp regardless of what the agent finds |
 
-Scenario 5 case A is the one case in the suite whose verdict moves on a single
-factor's sign. It runs from its saved trace, which passed. Do not put it in the
-live slot.
-
-While it runs, say what it is doing: the agent is being handed eleven tool schemas
-and is choosing its own calls. Nothing about the order is scripted.
-
-Then show the guardrails are checkable, not just claimed:
-
-```bash
-python compliance.py     # 12 structural checks
-python selfcheck.py      # 84 behavioral checks
-```
+A run overwrites `traces/`, so restore them afterwards with
+`git checkout -- traces reports`; the demo script quotes the committed
+trajectories by step number.
 
 > "No outcome branches on scenario identity. No code branches on the alert's
 > severity label. Outcome values are produced in exactly one file."
@@ -221,9 +230,10 @@ the trace.
 See `Toknow/DECISIONS.md` D-002. The architecture is Claude-native tool use. The
 account is on a free plan with zero credits, so every Claude model returns
 "Insufficient credits", verified by probing each one, not assumed.
-`ling-3.0-flash-fin-free` is the strongest model this key can actually reach,
-and it is the name the harness banner prints at the top of every run. Say that
-name, not a friendlier one, because the judge can see it on screen.
+`ling-3.0-flash-fin-free` was the strongest model this key could reach, and it is
+the name in every committed trace. Say that name, not a friendlier one. Then say
+the second half without being asked: that model has since been retired by the
+provider, which is why there is no live run today.
 
 **"How stable is it, really?"** Answer this with the number, not a hedge.
 
@@ -552,11 +562,13 @@ passing suite.
 ## Completeness pass: the things that get asked
 
 ### The model
-> It runs on `ling-3.0-flash-fin-free` through a multi-model gateway. The
-> architecture is Claude-native tool use and the provider is one config line;
-> the account is on a free plan with zero credits, so every Claude model returns
-> "insufficient credits", verified by probing each one. The guards are
-> structural, so they hold regardless of which model is behind them.
+> The committed traces were produced by `ling-3.0-flash-fin-free` through a
+> multi-model gateway. The architecture is Claude-native tool use and the
+> provider is one config line; the account is on a free plan with zero credits,
+> so every Claude model returns "insufficient credits", verified by probing each
+> one. That gateway model has since been retired, so the traces cannot be
+> reproduced on it today. The guards are structural, so they apply to whichever
+> model is behind them, but outcomes have only been verified on that one.
 
 Say it once, in that form. It is a fact about the account, not an apology.
 
@@ -586,10 +598,13 @@ python -m http.server 8000
   reduced-motion enabled. The viewer still reveals every card; motion is
   enhancement only and its absence breaks nothing.
 
-### Fallback order if the live leg fails
+### Fallback order
 
-1. **Saved trace in the viewer**: every scenario already has a passing trace
-   committed. Nothing about the demo depends on the live run succeeding.
+There is no live leg to fail, so this is the order if a *display* fails.
+
+1. **Saved trace in the viewer**: local first, then the hosted copy at
+   <https://soc-agent-trace-viewer.vercel.app/viewer.html#1>. Every scenario
+   already has a passing trace committed.
 2. **`reports/CASE-1001.md`**: the set piece reads just as well on the page as
    on screen; section 2, steps 9-11.
 3. **`python selfcheck.py` and `python compliance.py`**: 99 and 22 checks, no

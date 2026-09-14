@@ -115,12 +115,19 @@ inspectable rather than hidden in a framework.
 so it works with no internet. Served under a strict CSP with no `unsafe-inline`.
 
 **Model: provider-agnostic.** `SOC_BASE_URL`, `SOC_MODEL` and `SOC_API_STYLE` are
-environment-driven, and the client speaks both wire formats. The default in
-`.env.example` is `ling-3.0-flash-fin-free`. The traces committed here were
-produced on that provider after a mid-project credit limit forced a swap away
-from the originally intended one. **The guards are structural rather than
-model-specific**, so the evidence they enforce holds regardless of which model
-produced the trace.
+environment-driven, and the client speaks both wire formats. The committed traces
+were produced with `ling-3.0-flash-fin-free` on a multi-model gateway, chosen
+after a mid-project credit limit ruled out the originally intended provider.
+
+**That model has since been retired.** On 14 September 2026 every request to it
+returned "The requested model is not available", and the gateway's other free
+models were no longer available on this plan either. The recorded traces are
+still the genuine output of full runs that passed, but they can no longer be
+reproduced on that exact model. To run the agent yourself, use one of the
+provider examples in Setup. **The guards and the scoring are structural rather
+than model-specific**, so they apply unchanged to any model; a different model
+will choose its own path, and outcomes have only been verified on the model that
+produced these traces.
 
 ---
 
@@ -152,7 +159,9 @@ just browse the recorded traces).
 cp .env.example .env
 ```
 
-Then set four variables. `SOC_API_STYLE` selects the wire format:
+Then set four variables. `SOC_API_STYLE` selects the wire format. The gateway
+model that produced the recorded traces has been retired (see Tech stack), so use
+a provider you have a key for:
 
 *OpenAI-compatible endpoint (`Authorization: Bearer`):*
 
@@ -247,7 +256,7 @@ API key, nothing server-side.
 |---|---|
 | `python selfcheck.py` | **99/99** behavioral, no API key |
 | `python compliance.py` | **22/22** guardrail, no API key |
-| `python run_all.py` | **51/51** live assertions across scenarios 1-6 |
+| `python run_all.py` | **51/51** live assertions across scenarios 1-6, on the since-retired model that produced the traces |
 | Stability | green on two consecutive full runs |
 
 Tool *ordering* is never asserted, because pinning a sequence would reintroduce the

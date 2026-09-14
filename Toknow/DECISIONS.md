@@ -2839,3 +2839,29 @@ root-absolute asset paths replaces Vercel's generic error, verified live to
 return status 404 with the site's styling even for nested bad paths. A structural
 HTML check over all eight pages found no mismatched tags, unclosed elements or
 duplicate ids.
+
+---
+
+## Part 32 - The model behind the traces was retired
+
+**P-047. The final verification run could not reach the model, and the docs
+still presented it as working.** On 14 September 2026 a verify-only run of
+`run_all.py` failed on all seven scenarios in seconds with `HTTP 400 "The
+requested model is not available."` for `ling-3.0-flash-fin-free`. The gateway's
+model list returned HTTP 500, and the two other free models probed were refused
+(one "not available", one "plan does not include the requested model"). The
+failed run had overwritten `traces/*.json` with error traces. They were restored
+with `git checkout` and checksummed against a snapshot taken before the run:
+identical. The committed traces remain the output of full runs that passed, and
+no agent code has changed since, so they stand.
+
+What did not stand was the documentation. `.env.example` offered the retired
+model as the default, the README described it as the current configuration, and
+`DEMO.md` opened the presentation with a live run on it. `.env.example` now
+defaults to an OpenAI example with an Anthropic alternative and records the
+retired model only as the source of the traces. The README says the model was
+retired, what that does and does not change, and points to the provider examples.
+`DEMO.md` drops the live run in favor of the offline checks, keeps the
+scenario 1, 2 or 6 guidance for anyone who runs it on their own key, and says to
+restore the traces afterwards. `soc_agent/config.py` still carries older code
+defaults; they are overridden by `.env` and were left alone as code, not docs.
