@@ -438,8 +438,19 @@ function fromHash() {
   return SCENARIOS.some(([v]) => v === k) ? k : SCENARIOS[0][0];
 }
 
+// An unknown hash (#9, #abc) falls back to scenario 1, and the address bar must
+// then say #1 too, or a copied link claims a scenario the page is not showing.
+// replaceState rewrites the URL without reloading, without a new Back-button
+// entry, and without firing hashchange, so it cannot loop.
+function syncHash(k) {
+  if (location.hash !== "#" + k) {
+    history.replaceState(null, "", location.pathname + location.search + "#" + k);
+  }
+}
+
 addEventListener("hashchange", () => {
   const k = fromHash();
+  syncHash(k);          // also when k === current: on #1, typing #9 must still correct
   if (k !== current) { current = k; setActive(k); load(k); }
 });
 $("foot").innerHTML =
@@ -448,5 +459,6 @@ $("foot").innerHTML =
   `<span class="foot-note">no model runs in this view</span>`;
 
 let current = fromHash();
+syncHash(current);
 setActive(current);
 load(current).then(fillBadges);
