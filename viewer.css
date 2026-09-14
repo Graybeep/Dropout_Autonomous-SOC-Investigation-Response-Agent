@@ -222,9 +222,11 @@
   .panel-bd{padding:16px}
 
   @media(max-width:900px){
-    .app{grid-template-columns:1fr}
+    /* align-content:start stops the 100vh min-height stretching the sidebar row
+       into empty space when the main column is short (e.g. while loading) */
+    .app{grid-template-columns:1fr;align-content:start}
     .sidebar{position:static;height:auto}
-    .nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px}
+    .nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px;flex:none;align-content:start}
     .sidebar-foot{display:none}
   }
   @media(max-width:640px){.side{grid-template-columns:1fr}select{min-width:0;width:100%}}
