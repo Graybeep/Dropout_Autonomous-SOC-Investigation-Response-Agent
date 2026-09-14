@@ -14,7 +14,7 @@ from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 # slide shows "[Insert Link]"; once set, the URL is written as a real hyperlink on
 # the text AND on the whole card, so it is clickable in slideshow mode.
 GITHUB_URL = "https://github.com/Graybeep/Dropout_Autonomous-SOC-Investigation-Response-Agent"
-VIDEO_URL = ""
+VIDEO_URL = "https://drive.google.com/drive/folders/1V1epYDk68tn1xAN9PbFEI_mInAyOuvKy"
 
 INK = RGBColor(0x1C, 0x1C, 0x1E)
 BODY = RGBColor(0x4A, 0x4A, 0x52)
