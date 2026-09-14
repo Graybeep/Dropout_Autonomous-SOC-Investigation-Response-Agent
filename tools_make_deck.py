@@ -217,124 +217,20 @@ box(s, Inches(7.13), Inches(5.4), Inches(5.1), Inches(1.3),
     size=12.5, color=BODY)
 
 # --------------------------------------------------------------- 3b. System architecture
-# Same nine components, same names, as docs/ARCHITECTURE.md and the README, so
-# the deck and the repository cannot contradict each other.
-from pptx.enum.shapes import MSO_CONNECTOR
-from pptx.oxml.ns import qn
-from lxml import etree
-
-def node(s, x, y, w, h, title, sub, fill=CARD, border=LINE, tcol=INK, thick=False):
-    r = s.shapes.add_shape(5, x, y, w, h)
-    r.fill.solid(); r.fill.fore_color.rgb = fill
-    r.line.color.rgb = border; r.line.width = Pt(2 if thick else 1)
-    r.shadow.inherit = False
-    try: r.adjustments[0] = 0.08
-    except Exception: pass
-    tf = r.text_frame; tf.word_wrap = True
-    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-    tf.margin_left = tf.margin_right = Inches(.06)
-    tf.margin_top = tf.margin_bottom = Inches(.02)
-    p1 = tf.paragraphs[0]; p1.alignment = PP_ALIGN.CENTER
-    a = p1.add_run(); a.text = title
-    a.font.size = Pt(10.5); a.font.bold = True; a.font.color.rgb = tcol; a.font.name = "Segoe UI"
-    p2 = tf.add_paragraph(); p2.alignment = PP_ALIGN.CENTER
-    b = p2.add_run(); b.text = sub
-    b.font.size = Pt(8.5); b.font.color.rgb = BODY; b.font.name = "Segoe UI"
-    return r
-
-def link(s, x1, y1, x2, y2, color=MUTED, dashed=False, head=True):
-    c = s.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, x1, y1, x2, y2)
-    c.line.color.rgb = color; c.line.width = Pt(1.4)
-    ln = c.line._get_or_add_ln()
-    if dashed:
-        d = etree.SubElement(ln, qn('a:prstDash')); d.set('val', 'dash')
-    if head:
-        t = etree.SubElement(ln, qn('a:tailEnd')); t.set('type', 'triangle')
-        t.set('w', 'med'); t.set('len', 'med')
-    return c
-
+# The SAME diagram as docs/architecture.svg (rendered at 2x to
+# docs/architecture.png), so the deck and the repository cannot disagree.
+import struct
 s = slide()
-header(s, "System architecture", "Nine components, one entry point", "25%")
-
-# External systems strip
-ext = s.shapes.add_shape(5, Inches(.85), Inches(1.78), Inches(11.6), Inches(.78))
-ext.fill.solid(); ext.fill.fore_color.rgb = WARM
-ext.line.color.rgb = ORNG; ext.shadow.inherit = False
-try: ext.adjustments[0] = 0.12
-except Exception: pass
-box(s, Inches(1.05), Inches(1.86), Inches(3.0), Inches(.25), "EXTERNAL SYSTEMS",
-    size=10.5, color=ORNG, bold=True)
-box(s, Inches(1.05), Inches(2.13), Inches(11.2), Inches(.35),
-    "alerts  ·  asset inventory  ·  CVE knowledge base  ·  configuration  ·  host logs  ·  "
-    "packet metadata  ·  firewall state (read AND written)", size=11, color=BODY)
-
-# Row 2: planning  <->  controller  <->  memory      human interaction on the far right
-PLANX, CTRLX, MEMX, HUMX = Inches(.85), Inches(3.95), Inches(7.05), Inches(10.15)
-R2Y, R2H, NW = Inches(2.95), Inches(.95), Inches(2.3)
-node(s, PLANX, R2Y, Inches(2.75), R2H, "PLANNING",
-     "hypothesis + falsifier\nre-plan after every result")
-node(s, CTRLX, R2Y, Inches(2.75), R2H, "AGENT / CONTROLLER",
-     "Investigation · Case\ninvestigate() · reconsider()", border=INK, thick=True)
-node(s, MEMX, R2Y, Inches(2.75), R2H, "MEMORY / STATE",
-     "trace · cases.json\nconclusions append-only")
-node(s, HUMX, R2Y, NW, R2H, "HUMAN INTERACTION",
-     "human_override()\ninject_new_evidence()", fill=RGBColor(0xE8,0xF6,0xEF),
-     border=GREEN, tcol=GREEN)
-
-# Row 3: the tool bus
-bus = s.shapes.add_shape(5, Inches(.85), Inches(4.3), Inches(8.95), Inches(1.28))
-bus.fill.solid(); bus.fill.fore_color.rgb = RGBColor(0xFA,0xF5,0xEE)
-bus.line.color.rgb = LINE; bus.shadow.inherit = False
-try: bus.adjustments[0] = 0.07
-except Exception: pass
-box(s, Inches(1.02), Inches(4.35), Inches(4), Inches(.22), "TOOL BUS · the one entry point",
-    size=9, color=MUTED, bold=True)
-node(s, Inches(1.02), Inches(4.62), Inches(2.72), Inches(.86), "RETRIEVAL",
-     "8 read tools, keyed lookup\n+ stored case verdicts")
-node(s, Inches(3.9), Inches(4.62), Inches(2.72), Inches(.86), "TOOLS",
-     "block_ip · unblock_ip\nsubmit_assessment")
-node(s, Inches(6.78), Inches(4.62), Inches(2.87), Inches(.86), "FAILURE HANDLING",
-     "retry · degraded clamp\nrefusal · impasse after 3", border=ORNG, tcol=ORNG)
-
-# Evaluation, the gate on every conclusion
-node(s, Inches(10.15), Inches(4.3), NW, Inches(1.28), "EVALUATION /\nVERIFICATION",
-     "4 guard families\nscore() · re-read from disk", fill=RGBColor(0xFF,0xE8,0xDC),
-     border=ORNG, tcol=ORNG, thick=True)
-
-# Connectors. Every line runs through a GAP between boxes, never across one:
-#   gap A  x 3.60-3.95  between Planning and Controller      (vertical)
-#   gap B  y 2.56-2.95  between External strip and row 2    (horizontal)
-#   gap C  y 3.90-4.30  between row 2 and the tool bus      (horizontal)
-mid2 = R2Y + R2H // 2
-CTRL_CX = CTRLX + Inches(1.375)
-link(s, CTRLX, mid2, PLANX + Inches(2.75), mid2)                        # controller -> planning
-link(s, CTRLX + Inches(2.75), mid2, MEMX, mid2)                         # controller -> memory
-link(s, Inches(2.2), R2Y + R2H, Inches(2.2), Inches(4.3))               # planning -> bus: choose a tool
-link(s, Inches(3.78), Inches(4.3), Inches(3.78), Inches(2.56),
-     color=ORNG, dashed=True)                                           # bus <-> external, via gap A
-# human -> controller, over the top through gap B
-HX = HUMX + NW // 2
-link(s, HX, R2Y, HX, Inches(2.76), color=GREEN, head=False)
-link(s, HX, Inches(2.76), CTRL_CX + Inches(.3), Inches(2.76), color=GREEN, head=False)
-link(s, CTRL_CX + Inches(.3), Inches(2.76), CTRL_CX + Inches(.3), R2Y, color=GREEN)
-# submit_assessment -> evaluation
-link(s, Inches(9.8), Inches(5.05), Inches(10.15), Inches(5.05), color=ORNG)
-# evaluation -> controller (accepted verdict), under row 2 through gap C
-EX = Inches(10.6)
-link(s, EX, Inches(4.3), EX, Inches(4.1), color=ORNG, head=False)
-link(s, EX, Inches(4.1), CTRL_CX - Inches(.3), Inches(4.1), color=ORNG, head=False)
-link(s, CTRL_CX - Inches(.3), Inches(4.1), CTRL_CX - Inches(.3), R2Y + R2H, color=ORNG)
-
-# Legend line
-box(s, Inches(.85), Inches(5.85), Inches(11.6), Inches(.35),
-    "reconsider() re-enters at HYPOTHESIZE, not at the verdict: evidence, failure and override all route through it.",
-    size=12, color=ORNG, bold=True)
-box(s, Inches(.85), Inches(6.28), Inches(11.6), Inches(.6),
-    "The model decides which tool, in what order, and what the evidence means. Code decides whether a claim is "
-    "well-formed, the score, and the action policy. Nothing reaches a real network, host or credential.",
-    size=12, color=BODY)
-box(s, Inches(.85), Inches(6.95), Inches(11.6), Inches(.3),
-    "Full breakdown: docs/ARCHITECTURE.md", size=10.5, color=MUTED, font="Consolas")
+header(s, "System architecture", "Nine components, one loop", "25%")
+img = "docs/architecture.png"
+raw = open(img, "rb").read()
+iw, ih = struct.unpack(">II", raw[16:24])
+box_x, box_y, box_w, box_h = Inches(.85), Inches(1.7), Inches(11.6), Inches(5.45)
+scale = min(box_w / iw, box_h / ih)
+pw, ph = int(iw * scale), int(ih * scale)
+s.shapes.add_picture(img, box_x + (box_w - pw) // 2, box_y + (box_h - ph) // 2, width=pw, height=ph)
+box(s, Inches(.85), Inches(7.12), Inches(11.6), Inches(.3),
+    "Full breakdown: docs/ARCHITECTURE.md", size=10.5, color=MUTED, font="Consolas", align=PP_ALIGN.RIGHT)
 
 # --------------------------------------------------------------- 4. Sandbox
 s = slide()
@@ -382,7 +278,7 @@ steps = [
     ("1  SUBMITS", "Declares the host patched, and cites a related alert as corroboration.", CARD, INK),
     ("2  REFUSED", "Two problems at once: it checked 2 of the host's 3 services, and the "
      "corroboration came from a lookup that returned no data.", RGBColor(0xFC, 0xED, 0xE9), RED),
-    ("3  ITS OWN WORDS", "\"I need to fix two issues. Let me check openssh CVEs and remove the "
+    ("3  ITS OWN WORDS", "\"Good catch - I need to fix two issues. Let me check openssh CVEs and remove the "
      "related_alert_corroborates factor since no_data is not a finding.\"", WARM, ORNG),
     ("4  RESOLVES BOTH", "Fetches the missing CVE data, and drops the claim it could not support. "
      "Resubmits. Accepted.", CARD, GREEN),
@@ -444,63 +340,17 @@ box(s, Inches(.85), Inches(6.85), Inches(11.6), Inches(.4),
 s_ = slide()
 s = s_
 header(s, "Prototype and UX", "Watch the investigation, step by step", "10%")
-# docs/viewer.png predates both the OLED restyle and the SaaS shell rebuild, so
-# it shows a UI that no longer exists. Rather than ship a stale screenshot, draw
-# the CURRENT layout to scale. Replace this block with a real capture when one
-# is taken.
-PANEL, SIDE, CARDBG = RGBColor(0x0D,0x0D,0x0D), RGBColor(0x08,0x08,0x08), RGBColor(0x16,0x16,0x16)
-NEON, ZINC, ZDIM = RGBColor(0x39,0xFF,0x14), RGBColor(0xE4,0xE4,0xE7), RGBColor(0x8A,0x8A,0x94)
-px, py, pw, ph = Inches(.85), Inches(1.9), Inches(7.5), Inches(4.4)
-sh = s_.shapes.add_shape(5, px, py, pw, ph)
-sh.fill.solid(); sh.fill.fore_color.rgb = PANEL
-sh.line.color.rgb = RGBColor(0x33,0x33,0x33); sh.shadow.inherit = False
-sb = s_.shapes.add_shape(1, px, py, Inches(1.72), ph)
-sb.fill.solid(); sb.fill.fore_color.rgb = SIDE; sb.line.fill.background()
-sb.shadow.inherit = False
-box(s_, px+Inches(.14), py+Inches(.13), Inches(1.5), Inches(.2), "SOC AGENT",
-    size=8.5, color=ZINC, bold=True)
-box(s_, px+Inches(.14), py+Inches(.42), Inches(1.5), Inches(.18), "SCENARIOS",
-    size=6.5, color=ZDIM, bold=True)
-names = [("1 False alarm","FAIL",GREEN),("2 True positive","SUCC",RED),
-         ("3 Delayed evidence","SUCC",RED),("4 Human override","SUCC",RED),
-         ("5 Correlation","SUCC",RED),("6 Tool failure","INC",AMBER),
-         ("7 Configuration","INC",AMBER)]
-yy = py+Inches(.66)
-for i,(n,b,c) in enumerate(names):
-    if i == 1:
-        hl = s_.shapes.add_shape(5, px+Inches(.08), yy-Inches(.02), Inches(1.56), Inches(.26))
-        hl.fill.solid(); hl.fill.fore_color.rgb = CARDBG
-        hl.line.color.rgb = RGBColor(0x33,0x33,0x33); hl.shadow.inherit = False
-    box(s_, px+Inches(.16), yy, Inches(1.05), Inches(.2), n, size=7,
-        color=ZINC if i==1 else ZDIM)
-    box(s_, px+Inches(1.24), yy, Inches(.36), Inches(.2), b, size=6, color=c, bold=True)
-    yy += Inches(.30)
-# KPI row
-kx = px+Inches(1.86)
-for lbl,val in [("OUTCOME","SUCCEEDED"),("CONFIDENCE","0.95"),("EVIDENCE","9"),("REFUSALS","1")]:
-    k = s_.shapes.add_shape(5, kx, py+Inches(.18), Inches(1.3), Inches(.62))
-    k.fill.solid(); k.fill.fore_color.rgb = CARDBG
-    k.line.color.rgb = RGBColor(0x2A,0x2A,0x2A); k.shadow.inherit = False
-    box(s_, kx+Inches(.09), py+Inches(.25), Inches(1.15), Inches(.16), lbl, size=6, color=ZDIM, bold=True)
-    box(s_, kx+Inches(.09), py+Inches(.44), Inches(1.15), Inches(.22), val, size=9,
-        color=RED if val=="SUCCEEDED" else ZINC, bold=True)
-    kx += Inches(1.36)
-# timeline cards, including the refusal
-ty = py+Inches(.95)
-tl = [("TOOL CALL","get_asset_info(asset_id='SRV-DB-02')",NEON,CARDBG),
-      ("RESULT  OK","mysql 5.7.21 running",ZDIM,CARDBG),
-      ("TOOL CALL","get_vulnerabilities(service_name='mysql')",NEON,CARDBG),
-      ("RESULT  REJECTED","factor 'version_patched' claims the host is outside ALL ranges, but openssh was never looked up",RED,RGBColor(0x24,0x10,0x0F)),
-      ("REASONING","I need to fix two issues. Let me check openssh CVEs.",ZINC,CARDBG),
-      ("SCORING","base 0.50 -> raw 1.15 -> score 0.95  SUCCEEDED",AMBER,CARDBG)]
-for lbl,txt,col,bg in tl:
-    c = s_.shapes.add_shape(5, px+Inches(1.86), ty, Inches(5.45), Inches(.5))
-    c.fill.solid(); c.fill.fore_color.rgb = bg
-    c.line.color.rgb = RGBColor(0x2A,0x2A,0x2A); c.shadow.inherit = False
-    box(s_, px+Inches(1.98), ty+Inches(.06), Inches(5.2), Inches(.16), lbl, size=6, color=col, bold=True)
-    box(s_, px+Inches(1.98), ty+Inches(.23), Inches(5.2), Inches(.24), txt, size=7,
-        color=ZINC, font="Consolas" if "get_" in txt or "base" in txt else "Segoe UI")
-    ty += Inches(.56)
+# Real capture of the deployed viewer, taken headless. Replaces the drawn
+# mock-up that stood in while no screenshot of the current UI existed.
+import struct
+img = "docs/viewer-overview.png"
+card(s_, Inches(.85), Inches(1.9), Inches(7.5), Inches(4.4), fill=RGBColor(0x0D,0x0D,0x0D))
+raw = open(img, "rb").read()
+iw, ih = struct.unpack(">II", raw[16:24])
+scale = min(Inches(7.34) / iw, Inches(4.24) / ih)
+pw, ph = int(iw * scale), int(ih * scale)
+s_.shapes.add_picture(img, Inches(.85) + (Inches(7.5) - pw) // 2,
+                      Inches(1.9) + (Inches(4.4) - ph) // 2, width=pw, height=ph)
 
 feats = [
     ("Every step, in order", "Each tool call with the reason the agent gave BEFORE making it."),
