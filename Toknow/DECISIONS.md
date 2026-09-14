@@ -2684,3 +2684,135 @@ mode, but the unverified tool was my own edit rather than a verification script.
 The generalisation is the same every time and it is worth saying plainly: **an
 operation that reports success has told you about itself, not about the thing
 you care about.** Check the artefact, not the summary.
+
+
+---
+
+## Part 29 - The public site, security, and the viewer
+
+**N-47. The landing site was rewritten for a reader with no security
+background, and the technical detail moved to the README.** Each page now answers
+one question: what is this, how does it work, why trust it, can I see it. Tool
+names, CVE identifiers, scores, file paths and commands were removed from the
+site entirely. Before removing anything, the README was checked to confirm it
+already carried each item, so detail was relocated rather than lost.
+
+**P-038. The site and README told readers to set a variable nothing reads.** The
+copy said "set `ANTHROPIC_API_KEY`". The agent reads `SOC_API_KEY`, and
+`ANTHROPIC_API_KEY` appears nowhere in the code, so following the instruction
+produced "No API key". Found only because the owner asked whether the key
+handling was Anthropic-specific. `.env.example` also still named a model id the
+working configuration no longer used. The site now says "an API key from
+whichever provider you like", which is accurate: the client speaks both wire
+formats and the provider is one line of configuration.
+
+**P-039. The Start button froze after one step, and the earlier check could not
+have caught it.** `reveal()` called the optional animation layer before updating
+the step counter. If the animation threw, the counter never advanced and every
+tick re-revealed the same card, with the button still reading Pause. Reordered so
+state is committed first and the animation runs inside a try/catch. The earlier
+browser check had confirmed the button label toggled between Start and Pause. It
+never confirmed that steps advanced, so it would have passed with the loop
+frozen: it tested the control rather than the effect. The owner later confirmed
+Start works on the deployed site.
+
+**N-48. The `file://` failure is explained where people set up, not where they
+fail.** Opening `viewer.html` by double-clicking gives a `file://` page, and
+browsers block it from fetching the traces. The viewer first reported "not
+found", which named a symptom and sent the reader looking for a file that was
+present. A prominent warning replaced it, which the owner found looked worse than
+the problem. The final shape is one quiet line in the viewer and an ordered
+README setup in which starting the server is an explicit step before opening a
+browser.
+
+**N-49. A nineteen-item security checklist was applied honestly rather than
+completely.** Thirteen items assume a database, accounts or a server: row level
+security, password hashing, session cookies, login rate limiting and similar.
+None of those exist here, and marking them done would have been theater. Four
+applied. Secrets were verified, not assumed: `.env` was never committed on any
+ref, and `git log -S` finds the live key in no commit. Escaping: of 121 template
+interpolations in the viewer, three carried trace values unescaped; fixed, and
+`esc()` now also escapes single quotes. Security headers were added in
+`vercel.json`. HTTPS was already enforced by the host, which was verified.
+
+**N-50. The Content-Security-Policy is fully strict, and the viewer is no longer
+a single file.** `script-src 'self'` required moving the viewer's inline script to
+`viewer.js`. `style-src 'self'` required removing 45 inline style attributes,
+including 20 generated inside `viewer.js` at runtime, since CSP covers attributes
+written into `innerHTML` as well as `<style>` blocks. Section 10 asked for a
+single-file viewer; it is now three files with still no build step. That was the
+cost of the strict policy and is stated rather than hidden.
+
+---
+
+## Part 30 - Deliverables, and a verification pass over all of them
+
+**N-51. The pitch deck is generated from the repository's own facts.** The
+supplied slide template described a different problem statement (PS10, cloud
+IAM). Its structure and rubric weights mapped onto PS9, so the structure was kept
+and the content replaced. Every figure and quote on the deck comes from the repo
+or the traces, and the generator is committed as `tools_make_deck.py` so the
+deck can be rebuilt when numbers move.
+
+**P-040. A geometry check passed four deck layout defects.** A bounds check found
+every shape inside the slide. Rendering each slide through PowerPoint and looking
+at the output found two titles wrapping into content and being clipped, a card
+overflowing its text, and a caption colliding with the paragraph beneath it. The
+same render found slide 9 quoting 105/105 where the README uses 99/99. Inside the
+slide is not the same as readable.
+
+**P-041. The shipped screenshot showed a UI that no longer existed.**
+`docs/viewer.png` predated two redesigns and was still referenced. With the
+browser extension disconnected, headless Edge was used to capture the live
+viewer; the old file was removed and replaced with overview, refusal and fork
+captures.
+
+**P-042. The demo script quoted one scenario while telling the presenter to show
+another.** It said to run the whole demo on scenario 3, but its 0:30 hypothesis
+and first-call quotes were scenario 1's text. Checking why exposed a real
+difference: scenario 3 states its hypothesis only just before submitting, so the
+claim "it writes down what would prove it wrong before looking" was not true of
+the scenario being shown. The script now uses scenario 1 until 2:30 and scenario
+3 after, and all eight quoted passages were verified word for word against the
+traces. A misquote in `DEMO.md` from an older run, and a paraphrase presented as a
+direct quote, were corrected in the same pass.
+
+**N-52. The architecture diagram is hand-built SVG.** A Mermaid flowchart
+rendered on GitHub but was not legible: automatic layout crossed lines, and group
+titles were nearly invisible in dark mode. Rearranging the source could not fix
+automatic placement. `docs/architecture.svg` shows the same nine components laid
+out so no two lines cross, numbers the main loop 1 to 5 in reading order, and
+carries its own background so it reads the same in both GitHub themes. Verified
+on GitHub after pushing.
+
+**P-043. The guard limitation was wrong in both directions.** The README said
+three guard checks were not exercised in any trace. Checked against every
+committed trace: four do not appear in the shipped traces, not three, but three
+of those four fired as real refusals in earlier recorded runs (packet provenance
+on scenario 3, log window on scenario 6, sibling verdict on scenario 5),
+confirmed by opening those traces rather than by string search. Only the
+related-alert time window has never fired live. Separately, the README said the
+K-7 packet-provenance gap "can only arise" in scenario 5 case A. It does occur
+there: that case's `exfil_indicators` factor cites its sibling alert's packet
+record. The outcome is unaffected.
+
+**P-044. The first phone-width check was invalid.** A desktop browser window has
+a minimum width of about 500px, so pages were laid out wider than the 390px
+screenshot and every page appeared clipped by the same fraction. Identical
+clipping on unrelated pages was the tell. Loading each page inside a 390px iframe
+gave a real phone layout and found two real bugs: padding shorthands on the hero
+and page headers zeroed the side gutter, and the viewer's sidebar stretched into
+empty space below 900px. Both fixed and verified at 390px.
+
+**P-045. A full run nobody started in this session left uncommitted traces.**
+Traces and reports changed over a 36-minute window during an account switch.
+Compared against the committed set, every outcome was identical and every
+trajectory differed: step counts, refusal positions and refusal counts all moved.
+They were discarded, because the demo script quotes the committed trajectories by
+step number. It is also a clean illustration of N-41: same fixtures, same
+verdicts, different paths.
+
+**Lineage update.** P-039, P-040 and P-044 extend the pattern recorded in P-037:
+each is a check that reported a result about itself rather than about the thing
+that mattered. A label toggling is not playback working, shapes inside a slide
+are not a readable slide, and a screenshot 390px wide is not a 390px layout.
